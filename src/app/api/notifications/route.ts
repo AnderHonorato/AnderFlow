@@ -1,0 +1,51 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { prisma } from '@/lib/prisma'
+
+export async function GET(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url)
+    const userId = searchParams.get('userId')
+    const unreadOnly = searchParams.get('unread') === 'true'
+
+    const where: any = {}
+    if (userId) where.userId = userId
+    if (unreadOnly) where.isRead = false
+
+    const notifications = await prisma.notification.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+    })
+
+    const unreadCount = await prisma.notification.count({
+      where: { ...where, isRead: false },
+    })
+
+    return NextResponse.json({ data: notifications, unreadCount })
+  } catch (error) {
+    return NextResponse.json({ error: 'Erro ao buscar notificações' }, { status: 500 })
+  }
+}
+
+export async function PATCH(request: NextRequest) {
+  try {
+    const body = await request.json()
+    const { ids, userId, markAll } = body
+
+    if (markAll && userId) {
+      await prisma.notification.updateMany({
+        where: { userId, isRead: false },
+        data: { isRead: true },
+      })
+    } else if (ids?.length) {
+      await prisma.notification.updateMany({
+        where: { id: { in: ids } },
+        data: { isRead: true },
+      })
+    }
+
+    return NextResponse.json({ message: 'Notificações atualizadas' })
+  } catch (error) {
+    return NextResponse.json({ error: 'Erro ao atualizar notificações' }, { status: 500 })
+  }
+}
