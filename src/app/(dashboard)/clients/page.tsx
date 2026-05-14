@@ -89,7 +89,7 @@ export default function ClientsPage() {
         <CardContent className="p-0">
           <div className="divide-y">
             {filtered.map(c => (
-              <div key={c.id} className="flex items-center gap-4 p-4 hover:bg-muted/50 transition-colors">
+              <div key={c.id} className="flex items-center gap-4 p-4 hover:bg-muted/50 transition-colors cursor-pointer" onClick={() => window.location.href = `/clients/${c.id}`}>
                 <Avatar className="h-10 w-10"><AvatarFallback>{c.name.slice(0,2).toUpperCase()}</AvatarFallback></Avatar>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">

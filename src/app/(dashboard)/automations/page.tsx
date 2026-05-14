@@ -1,5 +1,4 @@
-'use client'
-
+import { prisma } from '@/lib/prisma'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -22,40 +21,28 @@ import {
   CheckCircle2,
 } from 'lucide-react'
 
-const automations = [
-  {
-    id: '1', name: 'Boas-vindas ao Cliente', trigger: 'Novo cliente cadastrado',
-    actions: ['Enviar email de boas-vindas', 'Criar canal no chat', 'Iniciar onboarding'],
-    enabled: true, runs: 45, lastRun: '2h atrás', icon: Users,
-  },
-  {
-    id: '2', name: 'Cobrança Automática', trigger: 'Fatura vencida há 3 dias',
-    actions: ['Enviar email de lembrete', 'Notificar WhatsApp', 'Atualizar status'],
-    enabled: true, runs: 128, lastRun: '1h atrás', icon: CreditCard,
-  },
-  {
-    id: '3', name: 'Follow-up Comercial', trigger: 'Lead sem contato há 5 dias',
-    actions: ['Enviar email follow-up', 'Criar tarefa para vendedor', 'Atualizar score'],
-    enabled: true, runs: 67, lastRun: '4h atrás', icon: Mail,
-  },
-  {
-    id: '4', name: 'Notificação de Prazo', trigger: 'Prazo em 3 dias',
-    actions: ['Notificar equipe', 'Enviar email ao cliente', 'Atualizar dashboard'],
-    enabled: true, runs: 92, lastRun: '30min atrás', icon: Clock,
-  },
-  {
-    id: '5', name: 'Conclusão de Projeto', trigger: 'Projeto marcado como concluído',
-    actions: ['Gerar relatório', 'Enviar pesquisa de satisfação', 'Gerar fatura final'],
-    enabled: false, runs: 23, lastRun: '5d atrás', icon: CheckCircle2,
-  },
-  {
-    id: '6', name: 'Ticket SLA', trigger: 'Ticket sem resposta há 4h',
-    actions: ['Escalar para gerente', 'Notificar equipe', 'Atualizar prioridade'],
-    enabled: true, runs: 34, lastRun: '6h atrás', icon: MessageSquare,
-  },
-]
+const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
+  Users, CreditCard, Mail, Clock, CheckCircle2, MessageSquare,
+}
 
-export default function AutomationsPage() {
+function getActionIcon(trigger: string): React.ComponentType<{ className?: string }> {
+  if (trigger.includes('cliente')) return Users
+  if (trigger.includes('Fatura') || trigger.includes('pagamento')) return CreditCard
+  if (trigger.includes('Lead') || trigger.includes('email')) return Mail
+  if (trigger.includes('Prazo') || trigger.includes('dias')) return Clock
+  if (trigger.includes('conclu')) return CheckCircle2
+  if (trigger.includes('Ticket') || trigger.includes('resposta')) return MessageSquare
+  return Zap
+}
+
+export default async function AutomationsPage() {
+  const automations = await prisma.automation.findMany({
+    orderBy: { createdAt: 'desc' },
+  })
+
+  const activeCount = automations.filter(a => a.isActive).length
+  const totalRuns = automations.reduce((sum, a) => sum + a.runCount, 0)
+
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
@@ -78,7 +65,7 @@ export default function AutomationsPage() {
               <Zap className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <p className="text-xl font-semibold">{automations.filter(a => a.enabled).length}</p>
+              <p className="text-xl font-semibold">{activeCount}</p>
               <p className="text-xs text-muted-foreground">Automações Ativas</p>
             </div>
           </CardContent>
@@ -89,8 +76,8 @@ export default function AutomationsPage() {
               <Play className="h-5 w-5 text-success" />
             </div>
             <div>
-              <p className="text-xl font-semibold">389</p>
-              <p className="text-xs text-muted-foreground">Execuções (mês)</p>
+              <p className="text-xl font-semibold">{totalRuns}</p>
+              <p className="text-xs text-muted-foreground">Execuções (total)</p>
             </div>
           </CardContent>
         </Card>
@@ -100,8 +87,8 @@ export default function AutomationsPage() {
               <Clock className="h-5 w-5 text-info" />
             </div>
             <div>
-              <p className="text-xl font-semibold">124h</p>
-              <p className="text-xs text-muted-foreground">Tempo Economizado</p>
+              <p className="text-xl font-semibold">{automations.length}</p>
+              <p className="text-xs text-muted-foreground">Total de Automações</p>
             </div>
           </CardContent>
         </Card>
@@ -115,54 +102,68 @@ export default function AutomationsPage() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
-        {automations.map((automation) => (
-          <Card key={automation.id} className="card-hover">
-            <CardContent className="p-5">
-              <div className="flex items-start justify-between">
-                <div className="flex items-start gap-3">
-                  <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${automation.enabled ? 'bg-primary/10' : 'bg-muted'}`}>
-                    <automation.icon className={`h-5 w-5 ${automation.enabled ? 'text-primary' : 'text-muted-foreground'}`} />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm font-medium">{automation.name}</p>
-                      {automation.enabled ? (
-                        <Badge variant="success" className="text-2xs">Ativa</Badge>
-                      ) : (
-                        <Badge variant="secondary" className="text-2xs">Pausada</Badge>
-                      )}
+        {automations.map((automation) => {
+          const actionList: string[] = JSON.parse(automation.actions || '[]')
+          const Icon = getActionIcon(automation.trigger)
+
+          return (
+            <Card key={automation.id} className="card-hover">
+              <CardContent className="p-5">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-start gap-3">
+                    <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${automation.isActive ? 'bg-primary/10' : 'bg-muted'}`}>
+                      <Icon className={`h-5 w-5 ${automation.isActive ? 'text-primary' : 'text-muted-foreground'}`} />
                     </div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Trigger: {automation.trigger}
-                    </p>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-medium">{automation.name}</p>
+                        {automation.isActive ? (
+                          <Badge variant="success" className="text-2xs">Ativa</Badge>
+                        ) : (
+                          <Badge variant="secondary" className="text-2xs">Pausada</Badge>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Trigger: {automation.trigger}
+                      </p>
+                    </div>
                   </div>
+                  <Button variant="ghost" size="icon-sm">
+                    <MoreHorizontal className="h-4 w-4" />
+                  </Button>
                 </div>
-                <Button variant="ghost" size="icon-sm">
-                  <MoreHorizontal className="h-4 w-4" />
-                </Button>
-              </div>
 
-              <div className="mt-4 space-y-1.5 pl-[52px]">
-                {automation.actions.map((action, i) => (
-                  <div key={i} className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <ArrowRight className="h-3 w-3 text-primary/60" />
-                    {action}
+                {actionList.length > 0 && (
+                  <div className="mt-4 space-y-1.5 pl-[52px]">
+                    {actionList.map((action: string, i: number) => (
+                      <div key={i} className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <ArrowRight className="h-3 w-3 text-primary/60" />
+                        {action}
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
+                )}
 
-              <div className="mt-4 flex items-center justify-between pl-[52px]">
-                <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                  <span>{automation.runs} execuções</span>
-                  <span>Última: {automation.lastRun}</span>
+                <div className="mt-4 flex items-center justify-between pl-[52px]">
+                  <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                    <span>{automation.runCount} execuções</span>
+                    {automation.lastRunAt && (
+                      <span>Última: {automation.lastRunAt.toLocaleDateString('pt-BR')}</span>
+                    )}
+                  </div>
+                  <Button variant="ghost" size="icon-sm">
+                    {automation.isActive ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+                  </Button>
                 </div>
-                <Button variant="ghost" size="icon-sm">
-                  {automation.enabled ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+              </CardContent>
+            </Card>
+          )
+        })}
+        {automations.length === 0 && (
+          <div className="md:col-span-2 p-8 text-center text-sm text-muted-foreground border rounded-lg">
+            Nenhuma automação configurada. Crie sua primeira automação para começar.
+          </div>
+        )}
       </div>
     </div>
   )

@@ -1,6 +1,3 @@
-'use client'
-
-import { useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -41,9 +38,24 @@ const aiInsights = [
   { type: 'info', title: 'Sugestão de automação', description: 'Detectamos que você envia o mesmo tipo de email 12x por semana. Podemos automatizar.', action: 'Criar automação' },
 ]
 
-export default function AIPage() {
-  const [prompt, setPrompt] = useState('')
+function PromptInput() {
+  'use client'
 
+  return (
+    <div className="flex items-center gap-2 mt-4">
+      <Input
+        placeholder="Ex: Resuma o progresso do projeto E-commerce..."
+        className="flex-1"
+      />
+      <Button>
+        <Send className="mr-2 h-4 w-4" />
+        Enviar
+      </Button>
+    </div>
+  )
+}
+
+export default function AIPage() {
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
@@ -70,18 +82,7 @@ export default function AIPage() {
               <p className="text-sm text-muted-foreground mt-1">
                 Pergunte qualquer coisa sobre seus projetos, clientes ou finanças.
               </p>
-              <div className="flex items-center gap-2 mt-4">
-                <Input
-                  placeholder="Ex: Resuma o progresso do projeto E-commerce..."
-                  value={prompt}
-                  onChange={(e) => setPrompt(e.target.value)}
-                  className="flex-1"
-                />
-                <Button disabled={!prompt.trim()}>
-                  <Send className="mr-2 h-4 w-4" />
-                  Enviar
-                </Button>
-              </div>
+              <PromptInput />
             </div>
           </div>
         </CardContent>

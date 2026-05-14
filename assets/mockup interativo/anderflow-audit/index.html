@@ -1,0 +1,2603 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ANDERFLOW — Auditoria Enterprise Premium · 45 Melhorias</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ===================== CSS TOKENS ===================== */
+:root {
+  --bg-0: #02040a;
+  --bg-1: #080d18;
+  --bg-2: #0d1526;
+  --bg-3: #111d32;
+  --bg-card: #0f1a2e;
+  --bg-card2: #131f35;
+  --border: rgba(99,130,200,0.13);
+  --border-hover: rgba(99,130,200,0.28);
+  --text-1: #eaf2ff;
+  --text-2: #94a8c8;
+  --text-3: #566680;
+  --accent: #1d6fff;
+  --accent2: #4d93ff;
+  --accent-dim: rgba(29,111,255,0.12);
+  --accent-glow: rgba(29,111,255,0.25);
+  --red: #ff4d4d;
+  --red-dim: rgba(255,77,77,0.12);
+  --amber: #f5a623;
+  --amber-dim: rgba(245,166,35,0.12);
+  --green: #22c55e;
+  --green-dim: rgba(34,197,94,0.12);
+  --purple: #a78bfa;
+  --purple-dim: rgba(167,139,250,0.12);
+  --teal: #2dd4bf;
+  --teal-dim: rgba(45,212,191,0.12);
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  --radius-xl: 24px;
+  --shadow-card: 0 2px 24px rgba(0,0,0,0.35);
+  --shadow-glow: 0 0 32px rgba(29,111,255,0.12);
+  --font-display: 'Syne', sans-serif;
+  --font-body: 'DM Sans', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+  --transition: all 0.2s cubic-bezier(0.4,0,0.2,1);
+}
+
+/* ===================== RESET ===================== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: var(--font-body);
+  background: var(--bg-0);
+  color: var(--text-1);
+  font-size: 14px;
+  line-height: 1.6;
+  overflow-x: hidden;
+}
+
+/* ===================== SCROLLBAR ===================== */
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: var(--bg-1); }
+::-webkit-scrollbar-thumb { background: var(--bg-3); border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+
+/* ===================== LAYOUT ===================== */
+.app { display: flex; min-height: 100vh; }
+
+/* ===================== SIDEBAR ===================== */
+.sidebar {
+  width: 260px;
+  min-height: 100vh;
+  background: var(--bg-1);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+  flex-shrink: 0;
+  z-index: 100;
+}
+.sidebar-logo {
+  padding: 24px 20px 18px;
+  border-bottom: 1px solid var(--border);
+}
+.logo-mark {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.logo-icon {
+  width: 32px; height: 32px;
+  background: var(--accent);
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-display);
+  font-weight: 800; font-size: 16px;
+  color: #fff;
+  flex-shrink: 0;
+}
+.logo-text {
+  font-family: var(--font-display);
+  font-weight: 700; font-size: 15px;
+  color: var(--text-1);
+  letter-spacing: -0.3px;
+}
+.logo-sub {
+  font-size: 10px;
+  color: var(--text-3);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  margin-top: 1px;
+}
+.sidebar-section-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--text-3);
+  padding: 16px 20px 6px;
+}
+.sidebar-nav { padding: 8px 12px; flex: 1; overflow-y: auto; }
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  color: var(--text-2);
+  font-size: 13px;
+  font-weight: 400;
+  transition: var(--transition);
+  margin-bottom: 2px;
+  border: none;
+  background: none;
+  width: 100%;
+  text-align: left;
+  position: relative;
+}
+.nav-item:hover { background: var(--bg-2); color: var(--text-1); }
+.nav-item.active {
+  background: var(--accent-dim);
+  color: var(--accent2);
+  font-weight: 500;
+}
+.nav-item.active::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 50%;
+  transform: translateY(-50%);
+  width: 3px; height: 60%;
+  background: var(--accent);
+  border-radius: 0 3px 3px 0;
+}
+.nav-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.dot-red { background: var(--red); box-shadow: 0 0 6px var(--red); }
+.dot-amber { background: var(--amber); box-shadow: 0 0 6px var(--amber); }
+.dot-green { background: var(--green); box-shadow: 0 0 6px var(--green); }
+.dot-blue { background: var(--accent2); box-shadow: 0 0 6px var(--accent2); }
+.dot-purple { background: var(--purple); box-shadow: 0 0 6px var(--purple); }
+.dot-teal { background: var(--teal); box-shadow: 0 0 6px var(--teal); }
+
+.nav-badge {
+  margin-left: auto;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 10px;
+  background: var(--red-dim);
+  color: var(--red);
+}
+.nav-badge.amber { background: var(--amber-dim); color: var(--amber); }
+.nav-badge.green { background: var(--green-dim); color: var(--green); }
+
+.sidebar-footer {
+  padding: 16px;
+  border-top: 1px solid var(--border);
+  font-size: 11px;
+  color: var(--text-3);
+  text-align: center;
+}
+
+/* ===================== MAIN ===================== */
+.main { flex: 1; overflow-y: auto; min-width: 0; }
+
+/* ===================== HEADER / HERO ===================== */
+.hero {
+  background: linear-gradient(135deg, var(--bg-1) 0%, var(--bg-2) 100%);
+  border-bottom: 1px solid var(--border);
+  padding: 48px 48px 40px;
+  position: relative;
+  overflow: hidden;
+}
+.hero::before {
+  content: '';
+  position: absolute;
+  top: -60px; right: -60px;
+  width: 300px; height: 300px;
+  background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
+  pointer-events: none;
+}
+.hero-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: var(--accent2);
+  background: var(--accent-dim);
+  border: 1px solid rgba(77,147,255,0.2);
+  padding: 4px 12px;
+  border-radius: 20px;
+  margin-bottom: 16px;
+}
+.hero-title {
+  font-family: var(--font-display);
+  font-size: 36px;
+  font-weight: 800;
+  letter-spacing: -1px;
+  line-height: 1.1;
+  margin-bottom: 12px;
+  color: var(--text-1);
+}
+.hero-title span { color: var(--accent2); }
+.hero-desc {
+  font-size: 15px;
+  color: var(--text-2);
+  max-width: 580px;
+  line-height: 1.7;
+  margin-bottom: 28px;
+}
+.hero-stats {
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+.hero-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.hero-stat-num {
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 800;
+  line-height: 1;
+}
+.hero-stat-label {
+  font-size: 11px;
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.num-red { color: var(--red); }
+.num-amber { color: var(--amber); }
+.num-green { color: var(--green); }
+
+/* ===================== CONTENT AREA ===================== */
+.content { padding: 0 48px 80px; }
+
+/* ===================== SECTION ===================== */
+.section {
+  padding: 40px 0 20px;
+  display: none;
+}
+.section.active { display: block; }
+
+.section-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 28px;
+  gap: 20px;
+}
+.section-title-wrap {}
+.section-eyebrow {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--text-3);
+  margin-bottom: 6px;
+}
+.section-title {
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text-1);
+  letter-spacing: -0.5px;
+}
+.section-desc {
+  font-size: 13px;
+  color: var(--text-2);
+  max-width: 540px;
+  margin-top: 6px;
+  line-height: 1.7;
+}
+
+/* ===================== CARDS GRID ===================== */
+.cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+}
+.cards-grid-3 {
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+}
+.cards-grid-2 {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+/* ===================== AUDIT CARD ===================== */
+.audit-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 22px;
+  transition: var(--transition);
+  position: relative;
+  overflow: hidden;
+}
+.audit-card:hover {
+  border-color: var(--border-hover);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-card);
+}
+.audit-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+}
+.card-critical::before { background: linear-gradient(90deg, var(--red), transparent); }
+.card-medium::before { background: linear-gradient(90deg, var(--amber), transparent); }
+.card-good::before { background: linear-gradient(90deg, var(--green), transparent); }
+.card-blue::before { background: linear-gradient(90deg, var(--accent), transparent); }
+.card-purple::before { background: linear-gradient(90deg, var(--purple), transparent); }
+.card-teal::before { background: linear-gradient(90deg, var(--teal), transparent); }
+
+.card-number {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-3);
+  margin-bottom: 10px;
+}
+.card-title {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-1);
+  margin-bottom: 8px;
+  letter-spacing: -0.2px;
+}
+.card-desc {
+  font-size: 12.5px;
+  color: var(--text-2);
+  line-height: 1.65;
+  margin-bottom: 14px;
+}
+.card-impact {
+  font-size: 11.5px;
+  color: var(--text-3);
+  line-height: 1.5;
+  padding: 8px 12px;
+  background: rgba(0,0,0,0.25);
+  border-radius: var(--radius-sm);
+  border-left: 2px solid;
+  margin-bottom: 12px;
+}
+.impact-red { border-color: var(--red); }
+.impact-amber { border-color: var(--amber); }
+.impact-green { border-color: var(--green); }
+.impact-blue { border-color: var(--accent); }
+
+.card-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+.tag {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 6px;
+  letter-spacing: 0.3px;
+}
+.tag-red { background: var(--red-dim); color: var(--red); }
+.tag-amber { background: var(--amber-dim); color: var(--amber); }
+.tag-green { background: var(--green-dim); color: var(--green); }
+.tag-blue { background: var(--accent-dim); color: var(--accent2); }
+.tag-purple { background: var(--purple-dim); color: var(--purple); }
+.tag-teal { background: var(--teal-dim); color: var(--teal); }
+.tag-gray { background: rgba(148,168,200,0.1); color: var(--text-3); }
+
+.card-solution {
+  font-size: 12px;
+  color: var(--green);
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin-top: 10px;
+}
+.card-solution::before { content: '→'; flex-shrink: 0; }
+
+/* ===================== CODE BLOCK ===================== */
+.code-block {
+  background: rgba(0,0,0,0.4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-2);
+  margin: 10px 0;
+  overflow-x: auto;
+  line-height: 1.6;
+  white-space: pre;
+}
+.code-block .kw { color: var(--purple); }
+.code-block .str { color: var(--green); }
+.code-block .cm { color: var(--text-3); }
+.code-block .fn { color: var(--accent2); }
+.code-block .num { color: var(--amber); }
+.code-block .type { color: var(--teal); }
+
+/* ===================== SEVERITY BADGE ===================== */
+.severity {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 20px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 10px;
+}
+.severity-critical { background: var(--red-dim); color: var(--red); border: 1px solid rgba(255,77,77,0.2); }
+.severity-medium { background: var(--amber-dim); color: var(--amber); border: 1px solid rgba(245,166,35,0.2); }
+.severity-good { background: var(--green-dim); color: var(--green); border: 1px solid rgba(34,197,94,0.2); }
+.severity-info { background: var(--accent-dim); color: var(--accent2); border: 1px solid rgba(77,147,255,0.2); }
+.severity::before { content: '●'; font-size: 8px; }
+
+/* ===================== PRIORITY ROW ===================== */
+.priority-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  margin-bottom: 8px;
+  transition: var(--transition);
+}
+.priority-row:hover { border-color: var(--border-hover); background: var(--bg-card2); }
+.priority-num {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-3);
+  width: 28px;
+  flex-shrink: 0;
+}
+.priority-info { flex: 1; min-width: 0; }
+.priority-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-1);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.priority-desc {
+  font-size: 11px;
+  color: var(--text-3);
+  margin-top: 2px;
+}
+.priority-sprint {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 6px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.sprint-1 { background: var(--red-dim); color: var(--red); }
+.sprint-2 { background: var(--amber-dim); color: var(--amber); }
+.sprint-3 { background: var(--green-dim); color: var(--green); }
+.sprint-4 { background: var(--purple-dim); color: var(--purple); }
+.sprint-5 { background: var(--teal-dim); color: var(--teal); }
+
+/* ===================== PROGRESS BAR ===================== */
+.progress-wrap { margin-bottom: 14px; }
+.progress-header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--text-2);
+  margin-bottom: 5px;
+}
+.progress-bar {
+  height: 4px;
+  background: var(--bg-3);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.progress-fill {
+  height: 100%;
+  border-radius: 10px;
+  transition: width 1s ease;
+}
+.fill-red { background: var(--red); }
+.fill-amber { background: var(--amber); }
+.fill-green { background: var(--green); }
+.fill-blue { background: var(--accent); }
+.fill-purple { background: var(--purple); }
+
+/* ===================== DASHBOARD PREVIEW ===================== */
+.dashboard-preview {
+  background: var(--bg-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  margin: 16px 0;
+}
+.dash-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-2);
+}
+.dash-dots { display: flex; gap: 6px; }
+.dash-dot { width: 10px; height: 10px; border-radius: 50%; }
+.dot-r { background: #ff5f57; }
+.dot-y { background: #febc2e; }
+.dot-g { background: #28c840; }
+.dash-title {
+  font-size: 12px;
+  color: var(--text-3);
+  font-family: var(--font-mono);
+}
+.dash-body { padding: 20px; }
+.kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 16px; }
+.kpi-card {
+  background: var(--bg-card2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 14px;
+}
+.kpi-label { font-size: 10px; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+.kpi-value { font-family: var(--font-display); font-size: 20px; font-weight: 700; color: var(--text-1); }
+.kpi-change { font-size: 10px; color: var(--green); margin-top: 3px; }
+.kpi-change.down { color: var(--red); }
+
+.chart-area {
+  background: var(--bg-card2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  height: 120px;
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+.bar {
+  flex: 1;
+  border-radius: 4px 4px 0 0;
+  background: var(--accent);
+  opacity: 0.7;
+  transition: opacity 0.2s;
+  position: relative;
+}
+.bar:hover { opacity: 1; }
+.bar.highlight { background: var(--accent2); opacity: 1; }
+
+/* ===================== MINI CHARTS ===================== */
+.sparkline { display: flex; align-items: flex-end; gap: 2px; height: 30px; }
+.spark { flex: 1; background: var(--accent); border-radius: 2px 2px 0 0; opacity: 0.5; }
+.spark.high { opacity: 1; }
+
+/* ===================== ARCHITECTURE DIAGRAM ===================== */
+.arch-diagram {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  margin: 16px 0;
+  position: relative;
+}
+.arch-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  margin-bottom: 20px;
+}
+.arch-row {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 12px;
+  align-items: stretch;
+}
+.arch-box {
+  flex: 1;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  position: relative;
+}
+.arch-box.good { border-color: rgba(34,197,94,0.25); }
+.arch-box.bad { border-color: rgba(255,77,77,0.25); }
+.arch-box-title { font-size: 12px; font-weight: 600; color: var(--text-1); margin-bottom: 3px; }
+.arch-box-sub { font-size: 10.5px; color: var(--text-3); }
+.arch-arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-3);
+  font-size: 16px;
+  padding: 0 4px;
+}
+.arch-label {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 4px;
+  position: absolute;
+  top: -8px; left: 10px;
+}
+.label-bad { background: var(--red-dim); color: var(--red); }
+.label-good { background: var(--green-dim); color: var(--green); }
+.label-warn { background: var(--amber-dim); color: var(--amber); }
+
+/* ===================== COMMAND PALETTE ===================== */
+.cmd-palette {
+  background: var(--bg-card);
+  border: 1px solid var(--border-hover);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  box-shadow: 0 24px 60px rgba(0,0,0,0.6);
+  max-width: 500px;
+  margin: 0 auto;
+}
+.cmd-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border);
+}
+.cmd-icon { font-size: 16px; color: var(--text-3); }
+.cmd-input {
+  flex: 1;
+  background: none;
+  border: none;
+  outline: none;
+  color: var(--text-1);
+  font-size: 14px;
+  font-family: var(--font-body);
+}
+.cmd-input::placeholder { color: var(--text-3); }
+.cmd-shortcut {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-3);
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+.cmd-results { max-height: 280px; overflow-y: auto; }
+.cmd-group-label {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--text-3);
+  padding: 8px 18px 4px;
+}
+.cmd-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 18px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.cmd-item:hover, .cmd-item.selected { background: var(--accent-dim); }
+.cmd-item-icon {
+  width: 30px; height: 30px;
+  border-radius: 7px;
+  background: var(--bg-2);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+.cmd-item-text { flex: 1; }
+.cmd-item-title { font-size: 13px; color: var(--text-1); }
+.cmd-item-sub { font-size: 11px; color: var(--text-3); }
+.cmd-item-key {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-3);
+}
+
+/* ===================== NOTIFICATION SYSTEM ===================== */
+.notif-list { display: flex; flex-direction: column; gap: 8px; }
+.notif-item {
+  display: flex;
+  gap: 12px;
+  padding: 14px 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  transition: var(--transition);
+  cursor: pointer;
+}
+.notif-item:hover { border-color: var(--border-hover); }
+.notif-item.unread { border-left: 3px solid var(--accent); }
+.notif-avatar {
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+.notif-body { flex: 1; }
+.notif-title { font-size: 13px; font-weight: 500; color: var(--text-1); }
+.notif-desc { font-size: 11.5px; color: var(--text-2); margin-top: 2px; }
+.notif-time { font-size: 10.5px; color: var(--text-3); margin-top: 4px; }
+.notif-action {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent2);
+  padding: 4px 10px;
+  background: var(--accent-dim);
+  border-radius: 6px;
+  align-self: flex-start;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+/* ===================== RBAC MATRIX ===================== */
+.rbac-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.rbac-table th {
+  background: var(--bg-2);
+  color: var(--text-2);
+  padding: 10px 14px;
+  text-align: left;
+  font-weight: 600;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.rbac-table td {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-2);
+}
+.rbac-table tr:last-child td { border-bottom: none; }
+.rbac-table tr:hover td { background: var(--bg-card2); }
+.check { color: var(--green); font-size: 14px; }
+.cross { color: var(--red); font-size: 14px; opacity: 0.4; }
+.partial { color: var(--amber); font-size: 14px; }
+
+/* ===================== PIPELINE CRM ===================== */
+.pipeline-cols {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+}
+.pipeline-col {
+  min-width: 180px;
+  flex-shrink: 0;
+}
+.pipeline-header {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-2);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 8px 0;
+  margin-bottom: 8px;
+  border-bottom: 2px solid;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.ph-novo { border-color: var(--text-3); }
+.ph-contato { border-color: var(--amber); }
+.ph-quali { border-color: var(--accent); }
+.ph-prop { border-color: var(--purple); }
+.ph-fechado { border-color: var(--green); }
+
+.pipeline-count { color: var(--text-3); font-weight: 400; }
+.lead-card {
+  background: var(--bg-card2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  margin-bottom: 6px;
+  cursor: grab;
+  transition: var(--transition);
+}
+.lead-card:hover { border-color: var(--border-hover); transform: translateY(-1px); }
+.lead-name { font-size: 12px; font-weight: 500; color: var(--text-1); margin-bottom: 3px; }
+.lead-company { font-size: 10.5px; color: var(--text-3); margin-bottom: 6px; }
+.lead-footer { display: flex; justify-content: space-between; align-items: center; }
+.lead-value { font-size: 11px; color: var(--green); font-weight: 600; }
+.lead-score {
+  font-size: 9.5px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+.score-high { background: var(--green-dim); color: var(--green); }
+.score-mid { background: var(--amber-dim); color: var(--amber); }
+.score-low { background: rgba(148,168,200,0.1); color: var(--text-3); }
+
+/* ===================== FINANCIAL CHART ===================== */
+.fin-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+.fin-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 18px;
+}
+.fin-label { font-size: 11px; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+.fin-value { font-family: var(--font-display); font-size: 26px; font-weight: 800; margin-bottom: 6px; }
+.fin-sub { font-size: 11px; color: var(--text-2); }
+.aging-bars { display: flex; gap: 6px; margin: 10px 0; }
+.aging-bar-wrap { flex: 1; }
+.aging-bar-label { font-size: 9.5px; color: var(--text-3); margin-bottom: 4px; text-align: center; }
+.aging-bar-bg { height: 60px; background: var(--bg-2); border-radius: var(--radius-sm); overflow: hidden; display: flex; align-items: flex-end; }
+.aging-fill { width: 100%; border-radius: var(--radius-sm) var(--radius-sm) 0 0; }
+.aging-amount { font-size: 10px; font-weight: 600; text-align: center; margin-top: 3px; }
+
+/* ===================== MOBILE NAV ===================== */
+.mobile-nav-preview {
+  background: var(--bg-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  max-width: 320px;
+  margin: 0 auto;
+}
+.mobile-nav-header {
+  background: var(--bg-2);
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border);
+}
+.mobile-nav-title { font-size: 15px; font-weight: 600; color: var(--text-1); }
+.hamburger {
+  display: flex; flex-direction: column; gap: 4px; cursor: pointer;
+}
+.hamburger span { width: 20px; height: 2px; background: var(--text-2); border-radius: 2px; }
+.mobile-content {
+  height: 200px;
+  background: var(--bg-1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-3);
+  font-size: 12px;
+}
+.mobile-bottom-nav {
+  display: flex;
+  border-top: 1px solid var(--border);
+  background: var(--bg-2);
+}
+.mobile-nav-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 10px 4px 8px;
+  cursor: pointer;
+  font-size: 9px;
+  color: var(--text-3);
+  gap: 4px;
+  transition: color 0.2s;
+}
+.mobile-nav-item.active { color: var(--accent2); }
+.mobile-nav-icon { font-size: 18px; }
+
+/* ===================== EMPTY STATE ===================== */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 40px 20px;
+  text-align: center;
+  background: var(--bg-card);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-lg);
+}
+.empty-illustration {
+  width: 60px; height: 60px;
+  background: var(--bg-2);
+  border-radius: var(--radius-lg);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 28px;
+  margin-bottom: 14px;
+  border: 1px solid var(--border);
+}
+.empty-title { font-size: 15px; font-weight: 600; color: var(--text-1); margin-bottom: 6px; }
+.empty-desc { font-size: 12.5px; color: var(--text-2); max-width: 260px; margin-bottom: 16px; }
+.btn-primary {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 8px 18px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: var(--font-body);
+  transition: var(--transition);
+}
+.btn-primary:hover { background: var(--accent2); transform: translateY(-1px); }
+
+/* ===================== WEBHOOK CARD ===================== */
+.webhook-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  margin-bottom: 8px;
+}
+.webhook-url {
+  flex: 1;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.webhook-status {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 6px;
+}
+.ws-active { background: var(--green-dim); color: var(--green); }
+.ws-fail { background: var(--red-dim); color: var(--red); }
+.webhook-events {
+  display: flex; gap: 4px;
+}
+.event-tag {
+  font-size: 9px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--accent-dim);
+  color: var(--accent2);
+}
+
+/* ===================== OBSERVABILITY ===================== */
+.obs-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.obs-card {
+  background: var(--bg-card2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  text-align: center;
+}
+.obs-icon { font-size: 24px; margin-bottom: 8px; }
+.obs-value { font-family: var(--font-display); font-size: 22px; font-weight: 700; }
+.obs-label { font-size: 10.5px; color: var(--text-3); margin-top: 3px; }
+
+/* ===================== FEATURE FLAG ===================== */
+.ff-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  margin-bottom: 8px;
+}
+.ff-name { flex: 1; }
+.ff-key { font-family: var(--font-mono); font-size: 12px; color: var(--text-2); margin-bottom: 2px; }
+.ff-desc-small { font-size: 11px; color: var(--text-3); }
+.ff-plans { display: flex; gap: 4px; }
+.ff-plan {
+  font-size: 9px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--amber-dim);
+  color: var(--amber);
+}
+.ff-plan.all { background: var(--green-dim); color: var(--green); }
+.toggle-switch {
+  width: 36px; height: 20px;
+  background: var(--bg-3);
+  border-radius: 10px;
+  position: relative;
+  cursor: pointer;
+  flex-shrink: 0;
+  border: 1px solid var(--border);
+}
+.toggle-switch.on { background: var(--accent); border-color: var(--accent); }
+.toggle-thumb {
+  position: absolute;
+  top: 2px; left: 2px;
+  width: 14px; height: 14px;
+  background: #fff;
+  border-radius: 50%;
+  transition: transform 0.2s;
+}
+.toggle-switch.on .toggle-thumb { transform: translateX(16px); }
+
+/* ===================== LOG VIEWER ===================== */
+.log-viewer {
+  background: #000;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 14px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+.log-line { padding: 2px 0; display: flex; gap: 10px; }
+.log-time { color: var(--text-3); flex-shrink: 0; }
+.log-level-info { color: var(--accent2); }
+.log-level-warn { color: var(--amber); }
+.log-level-error { color: var(--red); }
+.log-msg { color: var(--text-2); }
+
+/* ===================== OVERVIEW SECTION ===================== */
+.overview-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 28px;
+}
+.ov-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  position: relative;
+  overflow: hidden;
+}
+.ov-card::after {
+  content: '';
+  position: absolute;
+  bottom: -20px; right: -20px;
+  width: 80px; height: 80px;
+  border-radius: 50%;
+  opacity: 0.07;
+}
+.ov-c::after { background: var(--red); }
+.ov-m::after { background: var(--amber); }
+.ov-g::after { background: var(--green); }
+.ov-big {
+  font-family: var(--font-display);
+  font-size: 42px;
+  font-weight: 800;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+.ov-title { font-size: 13px; font-weight: 600; color: var(--text-2); margin-bottom: 10px; }
+.ov-list {
+  list-style: none;
+  font-size: 11.5px;
+  color: var(--text-3);
+}
+.ov-list li { padding: 3px 0; display: flex; align-items: center; gap: 6px; }
+.ov-list li::before { content: '›'; color: var(--text-3); }
+
+/* ===================== TABS ===================== */
+.tabs {
+  display: flex;
+  gap: 4px;
+  background: var(--bg-2);
+  border-radius: var(--radius-md);
+  padding: 4px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+.tab {
+  padding: 7px 16px;
+  border-radius: var(--radius-sm);
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--text-3);
+  cursor: pointer;
+  transition: var(--transition);
+  border: none;
+  background: none;
+  font-family: var(--font-body);
+}
+.tab.active { background: var(--bg-card); color: var(--text-1); box-shadow: 0 1px 4px rgba(0,0,0,0.3); }
+.tab:hover:not(.active) { color: var(--text-2); }
+
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+
+/* ===================== INFO BOX ===================== */
+.info-box {
+  display: flex;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: var(--radius-md);
+  margin: 12px 0;
+  font-size: 12.5px;
+  line-height: 1.6;
+}
+.info-box.info { background: var(--accent-dim); border: 1px solid rgba(77,147,255,0.2); color: var(--text-2); }
+.info-box.warning { background: var(--amber-dim); border: 1px solid rgba(245,166,35,0.2); color: var(--text-2); }
+.info-box.danger { background: var(--red-dim); border: 1px solid rgba(255,77,77,0.2); color: var(--text-2); }
+.info-box.success { background: var(--green-dim); border: 1px solid rgba(34,197,94,0.2); color: var(--text-2); }
+.info-box-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+
+/* ===================== PRISMA SCHEMA PREVIEW ===================== */
+.schema-preview {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+.schema-model {
+  background: var(--bg-card2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+.schema-model-header {
+  background: var(--bg-2);
+  padding: 8px 14px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent2);
+  border-bottom: 1px solid var(--border);
+}
+.schema-field {
+  display: flex;
+  gap: 10px;
+  padding: 5px 14px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  border-bottom: 1px solid var(--border);
+}
+.schema-field:last-child { border-bottom: none; }
+.sf-name { color: var(--text-2); flex: 1; }
+.sf-type { color: var(--teal); }
+.sf-mod { color: var(--text-3); font-size: 9.5px; }
+.sf-pk { color: var(--amber); font-size: 9px; font-weight: 700; }
+
+/* ===================== FOOTER STATUS ===================== */
+.status-bar {
+  position: fixed;
+  bottom: 0;
+  right: 0;
+  left: 260px;
+  height: 32px;
+  background: var(--bg-1);
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 24px;
+  gap: 20px;
+  font-size: 11px;
+  color: var(--text-3);
+  z-index: 50;
+}
+.status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); box-shadow: 0 0 6px var(--green); }
+.status-item { display: flex; align-items: center; gap: 6px; }
+
+/* ===================== ANIMATION ===================== */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+.animate-in { animation: fadeIn 0.3s ease forwards; }
+.pulsing { animation: pulse 2s ease-in-out infinite; }
+
+@keyframes barGrow {
+  from { height: 0; }
+  to { height: var(--target-height); }
+}
+.bar { animation: barGrow 0.8s cubic-bezier(0.4,0,0.2,1) forwards; }
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- ===================== SIDEBAR ===================== -->
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-mark">
+      <div class="logo-icon">A</div>
+      <div>
+        <div class="logo-text">ANDERFLOW</div>
+        <div class="logo-sub">Auditoria Enterprise</div>
+      </div>
+    </div>
+  </div>
+
+  <nav class="sidebar-nav">
+    <div class="sidebar-section-label">Visão Geral</div>
+    <button class="nav-item active" onclick="showSection('overview')">
+      <span class="nav-dot dot-blue"></span>
+      Painel da Auditoria
+    </button>
+    <button class="nav-item" onclick="showSection('action-plan')">
+      <span class="nav-dot dot-green"></span>
+      Plano de Ação
+      <span class="nav-badge green">45</span>
+    </button>
+
+    <div class="sidebar-section-label">🔴 Críticos</div>
+    <button class="nav-item" onclick="showSection('critical')">
+      <span class="nav-dot dot-red"></span>
+      Server Components
+      <span class="nav-badge">#01</span>
+    </button>
+    <button class="nav-item" onclick="showSection('critical2')">
+      <span class="nav-dot dot-red"></span>
+      Bundle &amp; Performance
+      <span class="nav-badge">#02–03</span>
+    </button>
+    <button class="nav-item" onclick="showSection('critical3')">
+      <span class="nav-dot dot-red"></span>
+      Segurança &amp; Auth
+      <span class="nav-badge">#04–08</span>
+    </button>
+
+    <div class="sidebar-section-label">🟡 Médios</div>
+    <button class="nav-item" onclick="showSection('medium')">
+      <span class="nav-dot dot-amber"></span>
+      Design System
+      <span class="nav-badge amber">#09–12</span>
+    </button>
+    <button class="nav-item" onclick="showSection('medium2')">
+      <span class="nav-dot dot-amber"></span>
+      UX &amp; Acessibilidade
+      <span class="nav-badge amber">#13–20</span>
+    </button>
+    <button class="nav-item" onclick="showSection('medium3')">
+      <span class="nav-dot dot-amber"></span>
+      Zustand &amp; State
+      <span class="nav-badge amber">#21–23</span>
+    </button>
+
+    <div class="sidebar-section-label">🚀 Enterprise</div>
+    <button class="nav-item" onclick="showSection('enterprise')">
+      <span class="nav-dot dot-purple"></span>
+      Multi-tenancy &amp; RBAC
+      <span class="nav-badge amber">#24–26</span>
+    </button>
+    <button class="nav-item" onclick="showSection('enterprise2')">
+      <span class="nav-dot dot-purple"></span>
+      Webhooks &amp; Feature Flags
+      <span class="nav-badge amber">#27–29</span>
+    </button>
+    <button class="nav-item" onclick="showSection('enterprise3')">
+      <span class="nav-dot dot-purple"></span>
+      Observabilidade &amp; CI/CD
+      <span class="nav-badge amber">#30–32</span>
+    </button>
+
+    <div class="sidebar-section-label">🎨 UX Premium</div>
+    <button class="nav-item" onclick="showSection('ux')">
+      <span class="nav-dot dot-teal"></span>
+      Dashboard Redesign
+      <span class="nav-badge green">#33–35</span>
+    </button>
+    <button class="nav-item" onclick="showSection('ux2')">
+      <span class="nav-dot dot-teal"></span>
+      CRM &amp; Notificações
+      <span class="nav-badge green">#36–38</span>
+    </button>
+    <button class="nav-item" onclick="showSection('ux3')">
+      <span class="nav-dot dot-teal"></span>
+      Mobile &amp; Command
+      <span class="nav-badge green">#39–41</span>
+    </button>
+
+    <div class="sidebar-section-label">🔧 Dev &amp; Dados</div>
+    <button class="nav-item" onclick="showSection('dev')">
+      <span class="nav-dot dot-blue"></span>
+      Prisma &amp; Banco
+      <span class="nav-badge">#42–43</span>
+    </button>
+    <button class="nav-item" onclick="showSection('dev2')">
+      <span class="nav-dot dot-blue"></span>
+      React Query &amp; tRPC
+      <span class="nav-badge">#44–45</span>
+    </button>
+  </nav>
+
+  <div class="sidebar-footer">
+    ANDERFLOW v2.0 · 47 problemas · 120+ sugestões
+  </div>
+</aside>
+
+<!-- ===================== MAIN CONTENT ===================== -->
+<main class="main" style="padding-bottom:32px;">
+
+  <!-- HERO -->
+  <div class="hero">
+    <div class="hero-tag">🔍 Auditoria Enterprise Completa</div>
+    <h1 class="hero-title">ANDERFLOW <span>Sistemas</span><br>Relatório de Auditoria Premium</h1>
+    <p class="hero-desc">Análise arquitetural completa do sistema SaaS. 45 melhorias organizadas por criticidade, impacto e esforço de implementação — com exemplos visuais funcionais para cada ponto.</p>
+    <div class="hero-stats">
+      <div class="hero-stat">
+        <div class="hero-stat-num num-red">14</div>
+        <div class="hero-stat-label">Críticos</div>
+      </div>
+      <div class="hero-stat">
+        <div class="hero-stat-num num-amber">19</div>
+        <div class="hero-stat-label">Médios</div>
+      </div>
+      <div class="hero-stat">
+        <div class="hero-stat-num num-green">12</div>
+        <div class="hero-stat-label">Melhorias</div>
+      </div>
+      <div class="hero-stat">
+        <div class="hero-stat-num" style="color:var(--purple)">5</div>
+        <div class="hero-stat-label">Sprints</div>
+      </div>
+      <div class="hero-stat">
+        <div class="hero-stat-num" style="color:var(--teal)">45</div>
+        <div class="hero-stat-label">Sugestões Total</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="content">
+
+<!-- ==================== SECTION: OVERVIEW ==================== -->
+<section class="section active" id="overview">
+  <div class="section-header">
+    <div class="section-title-wrap">
+      <div class="section-eyebrow">Visão Geral</div>
+      <div class="section-title">Painel da Auditoria</div>
+      <div class="section-desc">Resumo executivo com todos os 45 pontos de melhoria distribuídos por categoria e sprint.</div>
+    </div>
+  </div>
+
+  <div class="overview-grid">
+    <div class="ov-card ov-c">
+      <div class="ov-big num-red">14</div>
+      <div class="ov-title">Problemas Críticos</div>
+      <ul class="ov-list">
+        <li>Nenhum Server Component usado</li>
+        <li>Dados todos no cliente (useEffect)</li>
+        <li>Bundle JS sem code splitting</li>
+        <li>Sem validação Zod nas APIs</li>
+        <li>SQLite em vez de PostgreSQL</li>
+        <li>Socket.IO sem reconexão</li>
+        <li>Sem rate limiting</li>
+        <li>Secret JWT hardcoded</li>
+      </ul>
+    </div>
+    <div class="ov-card ov-m">
+      <div class="ov-big num-amber">19</div>
+      <div class="ov-title">Problemas Médios</div>
+      <ul class="ov-list">
+        <li>Design system incompleto</li>
+        <li>Dialog customizado (Radix disponível)</li>
+        <li>Zustand sem persist/devtools</li>
+        <li>Roles MANAGER/DEVELOPER sem uso</li>
+        <li>localStorage sem SSR safety</li>
+        <li>Reply quebrado no CommentThread</li>
+        <li>Sem error boundaries globais</li>
+        <li>Analytics 100% hardcoded</li>
+        <li>Sem optimistic updates</li>
+      </ul>
+    </div>
+    <div class="ov-card ov-g">
+      <div class="ov-big num-green">12</div>
+      <div class="ov-title">Oportunidades Enterprise</div>
+      <ul class="ov-list">
+        <li>Multi-tenancy real</li>
+        <li>Permissões granulares (RBAC)</li>
+        <li>Webhook system de saída</li>
+        <li>Feature flags por plano</li>
+        <li>Exportação real (PDF/Excel)</li>
+        <li>Chat com paginação</li>
+        <li>Dashboard premium redesign</li>
+        <li>Command palette (⌘K)</li>
+      </ul>
+    </div>
+  </div>
+
+  <div style="margin-bottom:20px">
+    <div class="section-eyebrow" style="margin-bottom:14px">Distribuição por Domínio</div>
+    <div class="progress-wrap">
+      <div class="progress-header"><span>Arquitetura / App Router</span><span style="color:var(--red)">Crítico</span></div>
+      <div class="progress-bar"><div class="progress-fill fill-red" style="width:90%"></div></div>
+    </div>
+    <div class="progress-wrap">
+      <div class="progress-header"><span>Performance / Bundle</span><span style="color:var(--red)">Crítico</span></div>
+      <div class="progress-bar"><div class="progress-fill fill-red" style="width:85%"></div></div>
+    </div>
+    <div class="progress-wrap">
+      <div class="progress-header"><span>Segurança / Auth</span><span style="color:var(--red)">Crítico</span></div>
+      <div class="progress-bar"><div class="progress-fill fill-red" style="width:80%"></div></div>
+    </div>
+    <div class="progress-wrap">
+      <div class="progress-header"><span>UX / Design System</span><span style="color:var(--amber)">Médio</span></div>
+      <div class="progress-bar"><div class="progress-fill fill-amber" style="width:65%"></div></div>
+    </div>
+    <div class="progress-wrap">
+      <div class="progress-header"><span>Banco de Dados / Prisma</span><span style="color:var(--amber)">Médio</span></div>
+      <div class="progress-bar"><div class="progress-fill fill-amber" style="width:55%"></div></div>
+    </div>
+    <div class="progress-wrap">
+      <div class="progress-header"><span>Features Enterprise</span><span style="color:var(--green)">Oportunidade</span></div>
+      <div class="progress-bar"><div class="progress-fill fill-green" style="width:40%"></div></div>
+    </div>
+    <div class="progress-wrap">
+      <div class="progress-header"><span>Observabilidade / DevOps</span><span style="color:var(--purple)">Ausente</span></div>
+      <div class="progress-bar"><div class="progress-fill fill-purple" style="width:15%"></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== SECTION: ACTION PLAN ==================== -->
+<section class="section" id="action-plan">
+  <div class="section-header">
+    <div class="section-title-wrap">
+      <div class="section-eyebrow">Execução</div>
+      <div class="section-title">Plano de Ação — 5 Sprints</div>
+      <div class="section-desc">Todas as 45 melhorias priorizadas por impacto, organizadas em sprints de 2 semanas.</div>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab(this,'sprint1')">Sprint 1 · Fundação</button>
+    <button class="tab" onclick="switchTab(this,'sprint2')">Sprint 2 · Performance</button>
+    <button class="tab" onclick="switchTab(this,'sprint3')">Sprint 3 · UX Premium</button>
+    <button class="tab" onclick="switchTab(this,'sprint4')">Sprint 4 · Enterprise</button>
+    <button class="tab" onclick="switchTab(this,'sprint5')">Sprint 5 · DevOps</button>
+  </div>
+
+  <div class="tab-content active" id="sprint1">
+    <div class="info-box info"><span class="info-box-icon">ℹ️</span> <strong>Sprint 1 — Semanas 1–2:</strong> Fundação técnica. Corrigir os maiores riscos antes de qualquer feature nova.</div>
+    <div class="priority-row"><div class="priority-num">#01</div><div class="priority-info"><div class="priority-title">Migrar páginas estáticas para Server Components</div><div class="priority-desc">changelog, audit-logs, analytics, automations, calendar</div></div><span class="priority-sprint sprint-1">CRÍTICO</span></div>
+    <div class="priority-row"><div class="priority-num">#02</div><div class="priority-info"><div class="priority-title">Adicionar validação Zod em todas as APIs</div><div class="priority-desc">Schemas por entidade + validação no início de cada route handler</div></div><span class="priority-sprint sprint-1">CRÍTICO</span></div>
+    <div class="priority-row"><div class="priority-num">#03</div><div class="priority-info"><div class="priority-title">Mover ambiente dev para PostgreSQL</div><div class="priority-desc">Unificar schema.prisma para um único provider</div></div><span class="priority-sprint sprint-1">CRÍTICO</span></div>
+    <div class="priority-row"><div class="priority-num">#04</div><div class="priority-info"><div class="priority-title">Implementar rate limiting nas APIs públicas</div><div class="priority-desc">@upstash/ratelimit em /api/auth/register, /api/forgot-password</div></div><span class="priority-sprint sprint-1">CRÍTICO</span></div>
+    <div class="priority-row"><div class="priority-num">#05</div><div class="priority-info"><div class="priority-title">Migrar Dialog customizado para Radix Dialog</div><div class="priority-desc">Acessibilidade, trap de foco, aria attributes corretos</div></div><span class="priority-sprint sprint-2">MÉDIO</span></div>
+    <div class="priority-row"><div class="priority-num">#06</div><div class="priority-info"><div class="priority-title">Adicionar índices no schema Prisma</div><div class="priority-desc">@@index em clientId, userId, status, createdAt</div></div><span class="priority-sprint sprint-2">MÉDIO</span></div>
+    <div class="priority-row"><div class="priority-num">#07</div><div class="priority-info"><div class="priority-title">Corrigir NEXTAUTH_SECRET com validação no startup</div><div class="priority-desc">Verificar variável presente e com entropia suficiente</div></div><span class="priority-sprint sprint-1">CRÍTICO</span></div>
+    <div class="priority-row"><div class="priority-num">#08</div><div class="priority-info"><div class="priority-title">Corrigir fetch duplicado Header + Sidebar</div><div class="priority-desc">Centralizar no useOnlineStore, um único fetch</div></div><span class="priority-sprint sprint-2">MÉDIO</span></div>
+  </div>
+  <div class="tab-content" id="sprint2">
+    <div class="info-box warning"><span class="info-box-icon">⚡</span> <strong>Sprint 2 — Semanas 3–4:</strong> Performance extrema. Usuário vai sentir a diferença imediatamente.</div>
+    <div class="priority-row"><div class="priority-num">#09</div><div class="priority-info"><div class="priority-title">Dynamic imports para recharts, framer-motion</div><div class="priority-desc">Redução estimada de 60–70% no bundle inicial</div></div><span class="priority-sprint sprint-1">CRÍTICO</span></div>
+    <div class="priority-row"><div class="priority-num">#10</div><div class="priority-info"><div class="priority-title">Migrar useEffect fetches para React Query</div><div class="priority-desc">useQuery com staleTime, cache, refetch policies</div></div><span class="priority-sprint sprint-2">MÉDIO</span></div>
+    <div class="priority-row"><div class="priority-num">#11</div><div class="priority-info"><div class="priority-title">Optimistic updates nas ações do usuário</div><div class="priority-desc">useMutation + onMutate para kanban, notificações, status</div></div><span class="priority-sprint sprint-2">MÉDIO</span></div>
+    <div class="priority-row"><div class="priority-num">#12</div><div class="priority-info"><div class="priority-title">Implementar next/font para eliminar FOUT</div><div class="priority-desc">Carregar Syne/Inter via next/font com display:swap</div></div><span class="priority-sprint sprint-3">BOA PRÁTICA</span></div>
+    <div class="priority-row"><div class="priority-num">#13</div><div class="priority-info"><div class="priority-title">Command palette com cmdk (já instalado)</div><div class="priority-desc">Busca global ⌘K — projetos, clientes, ações</div></div><span class="priority-sprint sprint-3">BOA PRÁTICA</span></div>
+    <div class="priority-row"><div class="priority-num">#14</div><div class="priority-info"><div class="priority-title">Error boundaries em todas as seções do dashboard</div><div class="priority-desc">Usar SafeSection nas seções críticas, criar error.tsx global</div></div><span class="priority-sprint sprint-2">MÉDIO</span></div>
+    <div class="priority-row"><div class="priority-num">#15</div><div class="priority-info"><div class="priority-title">Content Security Policy no next.config.js</div><div class="priority-desc">X-Frame-Options, X-Content-Type-Options, Referrer-Policy</div></div><span class="priority-sprint sprint-2">MÉDIO</span></div>
+  </div>
+  <div class="tab-content" id="sprint3">
+    <div class="info-box success"><span class="info-box-icon">🎨</span> <strong>Sprint 3 — Semanas 5–6:</strong> UX Premium. O sistema começa a parecer enterprise de verdade.</div>
+    <div class="priority-row"><div class="priority-num">#16</div><div class="priority-info"><div class="priority-title">Mobile navigation — bottom bar + hamburger</div><div class="priority-desc">Bottom nav com 5 seções mais usadas, swipe gesture</div></div><span class="priority-sprint sprint-3">BOA PRÁTICA</span></div>
+    <div class="priority-row"><div class="priority-num">#17</div><div class="priority-info"><div class="priority-title">Empty states ilustrados em todos os módulos</div><div class="priority-desc">Componente EmptyState com ícone SVG + CTA contextual</div></div><span class="priority-sprint sprint-3">BOA PRÁTICA</span></div>
+    <div class="priority-row"><div class="priority-num">#18</div><div class="priority-info"><div class="priority-title">Dashboard redesign — sparklines, activity feed</div><div class="priority-desc">KPIs com mini gráficos, timeline de atividades, health board</div></div><span class="priority-sprint sprint-3">BOA PRÁTICA</span></div>
+    <div class="priority-row"><div class="priority-num">#19</div><div class="priority-info"><div class="priority-title">Sistema de notificações inteligentes</div><div class="priority-desc">Agrupamento, priorização, ação inline, digest mode</div></div><span class="priority-sprint sprint-3">BOA PRÁTICA</span></div>
+    <div class="priority-row"><div class="priority-num">#20</div><div class="priority-info"><div class="priority-title">Feedback visual padronizado com Sonner</div><div class="priority-desc">Loading state em botões, toast sucesso/erro em todas as ações</div></div><span class="priority-sprint sprint-2">MÉDIO</span></div>
+    <div class="priority-row"><div class="priority-num">#21</div><div class="priority-info"><div class="priority-title">Reorganizar navegação da sidebar em grupos</div><div class="priority-desc">Workspace / Clientes / Financeiro / Operações / Sistema</div></div><span class="priority-sprint sprint-3">BOA PRÁTICA</span></div>
+    <div class="priority-row"><div class="priority-num">#22</div><div class="priority-info"><div class="priority-title">Pipeline CRM com drag-and-drop real</div><div class="priority-desc">@dnd-kit/core — colunas por stage, bulk actions, quick edit</div></div><span class="priority-sprint sprint-3">BOA PRÁTICA</span></div>
+  </div>
+  <div class="tab-content" id="sprint4">
+    <div class="info-box" style="background:var(--purple-dim);border-color:rgba(167,139,250,0.2);color:var(--text-2)"><span class="info-box-icon">🏢</span> <strong>Sprint 4 — Semanas 7–8:</strong> Features enterprise. O sistema suporta múltiplas empresas e integrações.</div>
+    <div class="priority-row"><div class="priority-num">#23</div><div class="priority-info"><div class="priority-title">Multi-tenancy com isolamento por Organization</div><div class="priority-desc">organizationId obrigatório em queries, middleware de contexto</div></div><span class="priority-sprint sprint-4">ENTERPRISE</span></div>
+    <div class="priority-row"><div class="priority-num">#24</div><div class="priority-info"><div class="priority-title">RBAC — permissões granulares por recurso</div><div class="priority-desc">projects:read/write, financial:read, admin:all etc.</div></div><span class="priority-sprint sprint-4">ENTERPRISE</span></div>
+    <div class="priority-row"><div class="priority-num">#25</div><div class="priority-info"><div class="priority-title">Roles MANAGER e DEVELOPER implementados</div><div class="priority-desc">Middleware + API checks para roles intermediários</div></div><span class="priority-sprint sprint-4">ENTERPRISE</span></div>
+    <div class="priority-row"><div class="priority-num">#26</div><div class="priority-info"><div class="priority-title">Webhook system de saída</div><div class="priority-desc">Tabela Webhook, triggers por evento, retry logic</div></div><span class="priority-sprint sprint-4">ENTERPRISE</span></div>
+    <div class="priority-row"><div class="priority-num">#27</div><div class="priority-info"><div class="priority-title">Feature flags por plano/organização</div><div class="priority-desc">Tabela FeatureFlag + hook useFeatureFlag()</div></div><span class="priority-sprint sprint-4">ENTERPRISE</span></div>
+    <div class="priority-row"><div class="priority-num">#28</div><div class="priority-info"><div class="priority-title">Exportação real — PDF e Excel</div><div class="priority-desc">@react-pdf/renderer para faturas, SheetJS para relatórios</div></div><span class="priority-sprint sprint-4">ENTERPRISE</span></div>
+    <div class="priority-row"><div class="priority-num">#29</div><div class="priority-info"><div class="priority-title">Analytics reais — dados do banco Prisma</div><div class="priority-desc">API /api/analytics com group by, aggregate, períodos</div></div><span class="priority-sprint sprint-4">ENTERPRISE</span></div>
+    <div class="priority-row"><div class="priority-num">#30</div><div class="priority-info"><div class="priority-title">Chat com cursor pagination + infinite scroll</div><div class="priority-desc">useInfiniteQuery, últimas 50 msgs, scroll para cima pagina</div></div><span class="priority-sprint sprint-4">ENTERPRISE</span></div>
+  </div>
+  <div class="tab-content" id="sprint5">
+    <div class="info-box" style="background:var(--teal-dim);border-color:rgba(45,212,191,0.2);color:var(--text-2)"><span class="info-box-icon">🔧</span> <strong>Sprint 5 — Semanas 9–10:</strong> Observabilidade, testes e DevOps. O sistema fica produção-grade.</div>
+    <div class="priority-row"><div class="priority-num">#31</div><div class="priority-info"><div class="priority-title">Sentry — error tracking em produção</div><div class="priority-desc">Source maps, alertas, performance monitoring</div></div><span class="priority-sprint sprint-5">DEVOPS</span></div>
+    <div class="priority-row"><div class="priority-num">#32</div><div class="priority-info"><div class="priority-title">Pino — logging estruturado (JSON)</div><div class="priority-desc">Logger wrapper com níveis, contexto de request, trace ID</div></div><span class="priority-sprint sprint-5">DEVOPS</span></div>
+    <div class="priority-row"><div class="priority-num">#33</div><div class="priority-info"><div class="priority-title">Storybook para o Design System</div><div class="priority-desc">Todos componentes UI com variantes, estados e exemplos</div></div><span class="priority-sprint sprint-5">DEVOPS</span></div>
+    <div class="priority-row"><div class="priority-num">#34</div><div class="priority-info"><div class="priority-title">Playwright — E2E tests nos fluxos críticos</div><div class="priority-desc">Login, criação projeto, fatura, chat — executar no CI</div></div><span class="priority-sprint sprint-5">DEVOPS</span></div>
+    <div class="priority-row"><div class="priority-num">#35</div><div class="priority-info"><div class="priority-title">GitHub Actions — CI/CD pipeline completo</div><div class="priority-desc">lint → typecheck → build → test → preview → prod</div></div><span class="priority-sprint sprint-5">DEVOPS</span></div>
+    <div class="priority-row"><div class="priority-num">#36</div><div class="priority-info"><div class="priority-title">Socket.IO com namespace + reconexão robusta</div><div class="priority-desc">Namespace /workspace, JWT auth, cleanup de listeners</div></div><span class="priority-sprint sprint-5">DEVOPS</span></div>
+    <div class="priority-row"><div class="priority-num">#37</div><div class="priority-info"><div class="priority-title">Zustand com persist middleware + devtools</div><div class="priority-desc">Preferências persistidas, debugging em desenvolvimento</div></div><span class="priority-sprint sprint-5">DEVOPS</span></div>
+    <div class="priority-row"><div class="priority-num">#38</div><div class="priority-info"><div class="priority-title">Estrutura de pastas Feature-Sliced Design</div><div class="priority-desc">features/ por domínio, separação clara de responsabilidades</div></div><span class="priority-sprint sprint-5">DEVOPS</span></div>
+    <div class="priority-row"><div class="priority-num">#39</div><div class="priority-info"><div class="priority-title">tRPC ou Route Handlers com inferência de tipos</div><div class="priority-desc">Type safety end-to-end entre frontend e backend</div></div><span class="priority-sprint sprint-5">DEVOPS</span></div>
+    <div class="priority-row"><div class="priority-num">#40</div><div class="priority-info"><div class="priority-title">Financeiro — fluxo de caixa e aging report</div><div class="priority-desc">Waterfall chart, 0-30-60-90 dias, projeção 3 meses</div></div><span class="priority-sprint sprint-4">ENTERPRISE</span></div>
+    <div class="priority-row"><div class="priority-num">#41</div><div class="priority-info"><div class="priority-title">Card variants com cva para spacing</div><div class="priority-desc">size: sm/default/lg — eliminar overrides inline</div></div><span class="priority-sprint sprint-3">BOA PRÁTICA</span></div>
+    <div class="priority-row"><div class="priority-num">#42</div><div class="priority-info"><div class="priority-title">Skeletons específicos por componente</div><div class="priority-desc">Evitar layout shift (CLS) com dims exatas do conteúdo real</div></div><span class="priority-sprint sprint-3">BOA PRÁTICA</span></div>
+    <div class="priority-row"><div class="priority-num">#43</div><div class="priority-info"><div class="priority-title">CommentThread — corrigir bug de reply</div><div class="priority-desc">replyText precisa ser enviado, não newComment no handleSubmit</div></div><span class="priority-sprint sprint-2">MÉDIO</span></div>
+    <div class="priority-row"><div class="priority-num">#44</div><div class="priority-info"><div class="priority-title">Escala tipográfica definida no design system</div><div class="priority-desc">h1/h2/h3 com sizes, pesos e line-heights distintos</div></div><span class="priority-sprint sprint-3">BOA PRÁTICA</span></div>
+    <div class="priority-row"><div class="priority-num">#45</div><div class="priority-info"><div class="priority-title">localStorage com SSR safety em page-tips</div><div class="priority-desc">Try-catch + typeof window !== 'undefined' check</div></div><span class="priority-sprint sprint-2">MÉDIO</span></div>
+  </div>
+</section>
+
+<!-- ==================== CRITICAL 1: Server Components ==================== -->
+<section class="section" id="critical">
+  <div class="section-header">
+    <div class="section-title-wrap">
+      <div class="section-eyebrow">Crítico #01</div>
+      <div class="section-title">Server Components — App Router Mal Usado</div>
+      <div class="section-desc">Todas as páginas usam 'use client' desnecessariamente. O Next.js 14 App Router permite Server Components que eliminam JS do cliente para páginas estáticas.</div>
+    </div>
+  </div>
+
+  <div class="audit-card card-critical">
+    <div class="severity severity-critical">● Crítico</div>
+    <div class="card-number">PROBLEMA #01 — Arquitetura</div>
+    <div class="card-title">Ausência total de Server Components</div>
+    <div class="card-desc">Páginas como changelog, audit-logs, analytics têm 'use client' mas não precisam. Isso força o Next.js a enviar todo o JavaScript dessas páginas para o browser, incluindo bibliotecas como lucide-react, recharts e framer-motion.</div>
+    <div class="card-impact impact-red">⚠ Impacto: Bundle +300KB desnecessário. TTI (Time to Interactive) 2–4x maior. Experiência degradada em mobile e conexões lentas.</div>
+    <div class="card-tags">
+      <span class="tag tag-red">App Router</span>
+      <span class="tag tag-red">Performance</span>
+      <span class="tag tag-red">Bundle Size</span>
+      <span class="tag tag-blue">Next.js 14</span>
+    </div>
+  </div>
+
+  <div class="arch-diagram">
+    <div class="arch-title">Arquitetura Atual (Errada) vs Arquitetura Correta</div>
+    <div class="arch-row">
+      <div class="arch-box bad">
+        <div class="arch-label label-bad">ATUAL — ERRADO</div>
+        <div class="arch-box-title">'use client' em tudo</div>
+        <div class="arch-box-sub">changelog, audit-logs, analytics, automations...</div>
+      </div>
+      <div class="arch-arrow">→</div>
+      <div class="arch-box bad">
+        <div class="arch-box-title">Todo JS no cliente</div>
+        <div class="arch-box-sub">Bundle ~500KB+ enviado ao browser</div>
+      </div>
+      <div class="arch-arrow">→</div>
+      <div class="arch-box bad">
+        <div class="arch-box-title">TTI Alto</div>
+        <div class="arch-box-sub">3–5s em conexões lentas</div>
+      </div>
+    </div>
+    <div style="height:12px; border-left:2px dashed var(--border); margin:0 0 0 20px;"></div>
+    <div class="arch-row">
+      <div class="arch-box good">
+        <div class="arch-label label-good">CORRETO — SERVER COMP.</div>
+        <div class="arch-box-title">page.tsx sem 'use client'</div>
+        <div class="arch-box-sub">Busca dados no servidor com Prisma</div>
+      </div>
+      <div class="arch-arrow">→</div>
+      <div class="arch-box good">
+        <div class="arch-box-title">Props para Client</div>
+        <div class="arch-box-sub">Apenas componentes interativos com JS</div>
+      </div>
+      <div class="arch-arrow">→</div>
+      <div class="arch-box good">
+        <div class="arch-box-title">TTI &lt;1s</div>
+        <div class="arch-box-sub">HTML pronto no primeiro byte</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="code-block"><span class="cm">// ❌ ATUAL: página estática com 'use client' desnecessário</span>
+<span class="kw">'use client'</span>
+<span class="kw">export default function</span> <span class="fn">ChangelogPage</span>() {
+  <span class="cm">// sem hooks, sem estado — 'use client' é inútil aqui</span>
+  <span class="kw">return</span> &lt;<span class="type">div</span>&gt;...dados hardcoded...&lt;/<span class="type">div</span>&gt;
+}
+
+<span class="cm">// ✅ CORRETO: Server Component com dados reais</span>
+<span class="cm">// page.tsx (sem 'use client')</span>
+<span class="kw">import</span> { prisma } <span class="kw">from</span> <span class="str">'@/lib/prisma'</span>
+<span class="kw">import</span> { ChangelogClient } <span class="kw">from</span> <span class="str">'./changelog-client'</span>
+
+<span class="kw">export default async function</span> <span class="fn">ChangelogPage</span>() {
+  <span class="kw">const</span> releases = <span class="kw">await</span> prisma.release.<span class="fn">findMany</span>({ orderBy: { version: <span class="str">'desc'</span> } })
+  <span class="kw">return</span> &lt;<span class="type">ChangelogClient</span> releases={releases} /&gt;
+}</div>
+
+  <div class="card-solution">Migrar 8 páginas estáticas para Server Components. Estimar redução de 60–70% no bundle JS enviado ao cliente.</div>
+</section>
+
+<!-- ==================== CRITICAL 2: Bundle & Performance ==================== -->
+<section class="section" id="critical2">
+  <div class="section-header">
+    <div class="section-title-wrap">
+      <div class="section-eyebrow">Críticos #02–03</div>
+      <div class="section-title">Bundle & Performance</div>
+      <div class="section-desc">Sem code splitting, todas as bibliotecas pesadas são carregadas no bundle inicial. Framer Motion, Recharts e Socket.IO somam ~270KB de JS desnecessário.</div>
+    </div>
+  </div>
+
+  <div class="cards-grid">
+    <div class="audit-card card-critical">
+      <div class="severity severity-critical">● Crítico</div>
+      <div class="card-number">PROBLEMA #02 — Bundle</div>
+      <div class="card-title">Sem Dynamic Imports / Code Splitting</div>
+      <div class="card-desc">framer-motion (~60KB), recharts (~170KB), socket.io-client (~40KB) são carregados em todas as páginas mesmo quando não são usados.</div>
+      <div class="card-impact impact-red">⚠ Bundle inicial estimado em 500KB+. Lighthouse Performance Score abaixo de 60 em mobile.</div>
+      <div class="card-tags">
+        <span class="tag tag-red">Bundle Size</span>
+        <span class="tag tag-blue">Dynamic Import</span>
+        <span class="tag tag-blue">Code Splitting</span>
+      </div>
+      <div class="code-block"><span class="cm">// ✅ dynamic import para Recharts</span>
+<span class="kw">const</span> RevenueChart = <span class="fn">dynamic</span>(
+  () =&gt; <span class="kw">import</span>(<span class="str">'@/components/charts/revenue'</span>),
+  { ssr: <span class="kw">false</span>, loading: () =&gt; &lt;<span class="type">Skeleton</span> h=<span class="str">"48"</span> /&gt; }
+)</div>
+    </div>
+
+    <div class="audit-card card-critical">
+      <div class="severity severity-critical">● Crítico</div>
+      <div class="card-number">PROBLEMA #03 — Data Fetching</div>
+      <div class="card-title">useEffect + fetch em vez de React Query</div>
+      <div class="card-desc">Dashboard usa useEffect para buscar dados, causando double-render, flash de skeleton e sem cache. @tanstack/react-query está instalado mas não usado.</div>
+      <div class="card-impact impact-red">⚠ Usuário vê skeleton → dados toda vez que navega. Sem cache = dados re-fetched mesmo sem mudança.</div>
+      <div class="code-block"><span class="cm">// ✅ React Query com cache</span>
+<span class="kw">function</span> <span class="fn">useDashboard</span>() {
+  <span class="kw">return</span> <span class="fn">useQuery</span>({
+    queryKey: [<span class="str">'dashboard'</span>],
+    queryFn: () =&gt; <span class="fn">fetch</span>(<span class="str">'/api/dashboard'</span>)
+      .then(r =&gt; r.<span class="fn">json</span>()),
+    staleTime: <span class="num">30_000</span>
+  })
+}</div>
+    </div>
+  </div>
+
+  <div class="dashboard-preview">
+    <div class="dash-topbar">
+      <div class="dash-dots"><div class="dash-dot dot-r"></div><div class="dash-dot dot-y"></div><div class="dash-dot dot-g"></div></div>
+      <div class="dash-title">Performance — Bundle Atual vs Otimizado</div>
+    </div>
+    <div class="dash-body">
+      <div class="kpi-row">
+        <div class="kpi-card">
+          <div class="kpi-label">Bundle Atual</div>
+          <div class="kpi-value" style="color:var(--red)">~520KB</div>
+          <div class="kpi-change down">↑ Muito pesado</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Após Otimização</div>
+          <div class="kpi-value" style="color:var(--green)">~140KB</div>
+          <div class="kpi-change">↓ 73% redução</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">TTI Atual (mobile)</div>
+          <div class="kpi-value" style="color:var(--red)">4.2s</div>
+          <div class="kpi-change down">↑ Ruim</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">TTI Pós-otimização</div>
+          <div class="kpi-value" style="color:var(--green)">0.9s</div>
+          <div class="kpi-change">↓ Excelente</div>
+        </div>
+      </div>
+      <div class="chart-area">
+        <div class="bar" style="height:90%;--target-height:90%" title="framer-motion: 60KB"></div>
+        <div class="bar" style="height:85%;--target-height:85%" title="recharts: 170KB"></div>
+        <div class="bar" style="height:40%;--target-height:40%" title="socket.io: 40KB"></div>
+        <div class="bar" style="height:25%;--target-height:25%" title="lucide: 25KB"></div>
+        <div class="bar highlight" style="height:15%;--target-height:15%" title="app code: 50KB"></div>
+        <div class="bar" style="height:30%;--target-height:30%" title="next.js: 90KB"></div>
+        <div class="bar" style="height:10%;--target-height:10%" title="outros: 80KB"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== CRITICAL 3: Security ==================== -->
+<section class="section" id="critical3">
+  <div class="section-header">
+    <div class="section-title-wrap">
+      <div class="section-eyebrow">Críticos #04–08</div>
+      <div class="section-title">Segurança &amp; Auth</div>
+      <div class="section-desc">APIs públicas sem proteção, validação ausente, secret JWT padrão e Socket.IO sem autenticação por token.</div>
+    </div>
+  </div>
+
+  <div class="cards-grid">
+    <div class="audit-card card-critical">
+      <div class="severity severity-critical">● Crítico</div>
+      <div class="card-number">PROBLEMA #04 — Rate Limiting</div>
+      <div class="card-title">Sem Rate Limiting nas APIs Públicas</div>
+      <div class="card-desc">Rotas /api/auth/register e /api/forgot-password completamente abertas para brute-force, spam de cadastro e DDoS em nível de aplicação.</div>
+      <div class="card-impact impact-red">⚠ Atacante pode criar 10.000 contas ou tentar 100K senhas sem bloqueio.</div>
+      <div class="code-block"><span class="cm">// ✅ middleware.ts com rate limiting</span>
+<span class="kw">const</span> ratelimit = <span class="kw">new</span> <span class="fn">Ratelimit</span>({
+  redis: Redis.<span class="fn">fromEnv</span>(),
+  limiter: Ratelimit.<span class="fn">slidingWindow</span>(<span class="num">10</span>, <span class="str">'10 s'</span>),
+})</div>
+    </div>
+
+    <div class="audit-card card-critical">
+      <div class="severity severity-critical">● Crítico</div>
+      <div class="card-number">PROBLEMA #05 — Validação</div>
+      <div class="card-title">Sem Validação Zod nas APIs</div>
+      <div class="card-desc">Corpos de requisição chegam direto ao Prisma sem validação. Dados malformados causam erros 500 silenciosos ou comportamento inesperado.</div>
+      <div class="card-impact impact-red">⚠ Injection attacks, erros de runtime no Prisma, dados corrompidos no banco.</div>
+      <div class="code-block"><span class="cm">// ✅ Validação em toda API</span>
+<span class="kw">const</span> schema = z.<span class="fn">object</span>({
+  name: z.<span class="fn">string</span>().<span class="fn">min</span>(<span class="num">1</span>).<span class="fn">max</span>(<span class="num">100</span>),
+  clientId: z.<span class="fn">string</span>().<span class="fn">cuid</span>(),
+  budget: z.<span class="fn">number</span>().<span class="fn">positive</span>().<span class="fn">optional</span>()
+})
+<span class="kw">const</span> body = schema.<span class="fn">parse</span>(<span class="kw">await</span> req.<span class="fn">json</span>())</div>
+    </div>
+
+    <div class="audit-card card-critical">
+      <div class="severity severity-critical">● Crítico</div>
+      <div class="card-number">PROBLEMA #06 — Secret JWT</div>
+      <div class="card-title">NEXTAUTH_SECRET Padrão e Inseguro</div>
+      <div class="card-desc">O .env contém NEXTAUTH_SECRET="super-secret-key-change-in-production" — uma chave conhecida publicamente. Sessions JWT podem ser forjadas.</div>
+      <div class="card-impact impact-red">⚠ Qualquer pessoa pode criar um token de admin válido e acessar o sistema.</div>
+    </div>
+
+    <div class="audit-card card-medium">
+      <div class="severity severity-medium">● Médio</div>
+      <div class="card-number">PROBLEMA #07 — Socket.IO Auth</div>
+      <div class="card-title">WebSocket sem Autenticação por Token</div>
+      <div class="card-desc">O socket.ts do servidor não verifica identidade. Qualquer cliente pode conectar passando qualquer userId e receber mensagens de qualquer canal.</div>
+      <div class="card-impact impact-amber">⚡ Vazamento de mensagens entre clientes. Falsificação de userId em tempo real.</div>
+      <div class="code-block"><span class="cm">// ✅ Socket com JWT verification</span>
+io.<span class="fn">use</span>(<span class="kw">async</span> (socket, next) =&gt; {
+  <span class="kw">const</span> token = socket.handshake.auth.token
+  <span class="kw">const</span> user = <span class="kw">await</span> <span class="fn">verifyJWT</span>(token)
+  <span class="kw">if</span> (!user) <span class="kw">return</span> <span class="fn">next</span>(<span class="kw">new</span> <span class="fn">Error</span>(<span class="str">'Unauthorized'</span>))
+  socket.data.userId = user.id
+  <span class="fn">next</span>()
+})</div>
+    </div>
+
+    <div class="audit-card card-critical">
+      <div class="severity severity-critical">● Crítico</div>
+      <div class="card-number">PROBLEMA #08 — CSP Headers</div>
+      <div class="card-title">Sem Headers de Segurança HTTP</div>
+      <div class="card-desc">next.config.js sem Content-Security-Policy, X-Frame-Options, X-Content-Type-Options. Sistema vulnerável a clickjacking e XSS.</div>
+      <div class="code-block"><span class="cm">// ✅ next.config.js com headers</span>
+<span class="kw">async</span> <span class="fn">headers</span>() {
+  <span class="kw">return</span> [{ source: <span class="str">'/(.*)'</span>, headers: [
+    { key: <span class="str">'X-Frame-Options'</span>, value: <span class="str">'DENY'</span> },
+    { key: <span class="str">'X-Content-Type-Options'</span>, value: <span class="str">'nosniff'</span> },
+  ]}]
+}</div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== MEDIUM 1: Design System ==================== -->
+<section class="section" id="medium">
+  <div class="section-header">
+    <div class="section-title-wrap">
+      <div class="section-eyebrow">Médios #09–12</div>
+      <div class="section-title">Design System Incompleto</div>
+      <div class="section-desc">tailwind_config.ts tem apenas 3 cores e alguns border-radius. Sem tokens de spacing, typography, shadows ou animation. Cores hardcoded direto nos componentes.</div>
+    </div>
+  </div>
+
+  <div class="cards-grid">
+    <div class="audit-card card-medium">
+      <div class="severity severity-medium">● Médio</div>
+      <div class="card-number">PROBLEMA #09 — Design System</div>
+      <div class="card-title">Tokens de Design Ausentes</div>
+      <div class="card-desc">Cores HSL hardcoded nos componentes: hsl(228,88%,5%), hsl(222,47%,11%). Impossível fazer white-label ou mudar o tema sem busca e substituição global.</div>
+      <div class="card-impact impact-amber">⚡ Inconsistências visuais acumulam. Qualquer mudança de marca exige refatoração massiva.</div>
+      <div class="code-block"><span class="cm">// ✅ design-tokens.ts</span>
+<span class="kw">export const</span> tokens = {
+  colors: {
+    bg: { <span class="num">0</span>: <span class="str">'hsl(228,88%,5%)'</span>, <span class="num">1</span>: <span class="str">'hsl(222,47%,9%)'</span> },
+    brand: { primary: <span class="str">'hsl(217,100%,56%)'</span> }
+  },
+  radius: { sm: <span class="str">'10px'</span>, md: <span class="str">'14px'</span>, lg: <span class="str">'18px'</span> },
+  spacing: { xs: <span class="str">'4px'</span>, sm: <span class="str">'8px'</span>, md: <span class="str">'16px'</span> }
+}</div>
+    </div>
+
+    <div class="audit-card card-medium">
+      <div class="severity severity-medium">● Médio</div>
+      <div class="card-number">PROBLEMA #10 — Dialog</div>
+      <div class="card-title">Dialog Customizado em Vez de Radix</div>
+      <div class="card-desc">dialog.tsx é um implementation customizada inferior. @radix-ui/react-dialog está instalado mas não usado. O customizado não tem focus trap, aria, scroll lock.</div>
+      <div class="card-impact impact-amber">⚡ Acessibilidade comprometida. Screen readers anunciam incorretamente. Usuários de teclado presos.</div>
+    </div>
+
+    <div class="audit-card card-medium">
+      <div class="severity severity-medium">● Médio</div>
+      <div class="card-number">PROBLEMA #11 — Typography</div>
+      <div class="card-title">Escala Tipográfica Não Definida</div>
+      <div class="card-desc">Todos os títulos usam text-2xl font-semibold. Sem distinção de h1/h2/h3. Fonte Inter não carregada via next/font — causa FOUT (Flash of Unstyled Text).</div>
+      <div class="card-impact impact-amber">⚡ CLS (Cumulative Layout Shift) causado pelo carregamento tardio da fonte. Hierarquia visual fraca.</div>
+    </div>
+
+    <div class="audit-card card-medium">
+      <div class="severity severity-medium">● Médio</div>
+      <div class="card-number">PROBLEMA #12 — Card Variants</div>
+      <div class="card-title">Card Sem Variantes de Espaçamento</div>
+      <div class="card-desc">card.tsx usa p-6 fixo, mas páginas sobrescrevem com p-4, p-5 via className. Sem sistema de variantes com cva para compact/default/relaxed.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== MEDIUM 2: UX ==================== -->
+<section class="section" id="medium2">
+  <div class="section-header">
+    <div class="section-title-wrap">
+      <div class="section-eyebrow">Médios #13–20</div>
+      <div class="section-title">UX &amp; Acessibilidade</div>
+    </div>
+  </div>
+
+  <div class="cards-grid">
+    <div class="audit-card card-medium">
+      <div class="severity severity-medium">● Médio</div>
+      <div class="card-number">PROBLEMA #13</div>
+      <div class="card-title">Sem Error Boundaries Globais</div>
+      <div class="card-desc">SafeSection existe mas não está aplicado nas seções do dashboard. Um erro em qualquer widget apaga toda a interface — experiência catastrófica.</div>
+    </div>
+    <div class="audit-card card-medium">
+      <div class="severity severity-medium">● Médio</div>
+      <div class="card-number">PROBLEMA #14</div>
+      <div class="card-title">Analytics 100% Hardcoded</div>
+      <div class="card-desc">Página de Analytics tem dados falsos em arrays JS. Usuário toma decisões de negócio baseadas em números inventados. Descoberta destrói confiança.</div>
+    </div>
+    <div class="audit-card card-medium">
+      <div class="severity severity-medium">● Médio</div>
+      <div class="card-number">PROBLEMA #15</div>
+      <div class="card-title">Sem Optimistic Updates</div>
+      <div class="card-desc">Toda ação aguarda round-trip do servidor. Em conexão lenta (3G), usuário espera 1–3 segundos por feedback visual após qualquer clique.</div>
+    </div>
+    <div class="audit-card card-medium">
+      <div class="severity severity-medium">● Médio</div>
+      <div class="card-number">PROBLEMA #16</div>
+      <div class="card-title">CommentThread com Reply Quebrado</div>
+      <div class="card-desc">handleSubmit usa newComment mas deveria usar replyText quando replyTo está setado. Funcionalidade de resposta silenciosamente quebrada.</div>
+    </div>
+    <div class="audit-card card-medium">
+      <div class="severity severity-medium">● Médio</div>
+      <div class="card-number">PROBLEMA #17</div>
+      <div class="card-title">localStorage Sem SSR Safety</div>
+      <div class="card-desc">page-tips.tsx acessa localStorage diretamente. Crash silencioso em Safari privado. Erro potencial em SSR se o componente vazar para Server Components.</div>
+    </div>
+    <div class="audit-card card-medium">
+      <div class="severity severity-medium">● Médio</div>
+      <div class="card-number">PROBLEMA #18</div>
+      <div class="card-title">Fetch Duplicado Header + Sidebar</div>
+      <div class="card-desc">Dois fetches idênticos para /api/analytics/online a cada 30s em paralelo. Dobro de carga no servidor, race conditions no estado compartilhado.</div>
+    </div>
+    <div class="audit-card card-medium">
+      <div class="severity severity-medium">● Médio</div>
+      <div class="card-number">PROBLEMA #19</div>
+      <div class="card-title">Skeletons Não Correspondem ao Layout Real</div>
+      <div class="card-desc">loading.tsx mostra skeletons genéricos com dimensões diferentes do conteúdo real. Causa layout shift (CLS alto) visível a cada carregamento.</div>
+    </div>
+    <div class="audit-card card-medium">
+      <div class="severity severity-medium">● Médio</div>
+      <div class="card-number">PROBLEMA #20</div>
+      <div class="card-title">Sem Feedback Visual em Ações Assíncronas</div>
+      <div class="card-desc">Formulários de auth e ações críticas sem loading state em botões, toast de sucesso/erro padronizado. Sonner instalado mas subutilizado.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== MEDIUM 3: Zustand ==================== -->
+<section class="section" id="medium3">
+  <div class="section-header">
+    <div class="section-title-wrap">
+      <div class="section-eyebrow">Médios #21–23</div>
+      <div class="section-title">Zustand &amp; State Management</div>
+    </div>
+  </div>
+
+  <div class="cards-grid">
+    <div class="audit-card card-medium">
+      <div class="severity severity-medium">● Médio</div>
+      <div class="card-number">PROBLEMA #21</div>
+      <div class="card-title">Zustand Sem Persist Middleware</div>
+      <div class="card-desc">useProjectStore perde estado (view kanban/lista) ao navegar. useUIStore reseta preferências a cada reload. Experiência inconsistente e frustrante.</div>
+      <div class="code-block"><span class="cm">// ✅ Com persist + devtools</span>
+<span class="kw">const</span> useProjectStore = <span class="fn">create</span>(
+  <span class="fn">devtools</span>(<span class="fn">persist</span>(
+    (set) =&gt; ({ view: <span class="str">'kanban'</span>, ... }),
+    { name: <span class="str">'anderflow-prefs'</span> }
+  ), { name: <span class="str">'ProjectStore'</span> })
+)</div>
+    </div>
+    <div class="audit-card card-medium">
+      <div class="severity severity-medium">● Médio</div>
+      <div class="card-number">PROBLEMA #22</div>
+      <div class="card-title">Sem Redux/Zustand DevTools</div>
+      <div class="card-desc">Debugging de estado em desenvolvimento é cego. Impossível inspecionar valores, time-travel ou rastrear actions no navegador.</div>
+    </div>
+    <div class="audit-card card-medium">
+      <div class="severity severity-medium">● Médio</div>
+      <div class="card-number">PROBLEMA #23</div>
+      <div class="card-title">Estrutura de Pastas Flat — Difícil Escalar</div>
+      <div class="card-desc">Todos os arquivos em /src sem separação por feature/domínio. Com 23 páginas e crescendo, manutenção se torna exponencialmente mais difícil.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== ENTERPRISE 1: Multi-tenancy ==================== -->
+<section class="section" id="enterprise">
+  <div class="section-header">
+    <div class="section-title-wrap">
+      <div class="section-eyebrow">Enterprise #24–26</div>
+      <div class="section-title">Multi-tenancy &amp; RBAC</div>
+    </div>
+  </div>
+
+  <div class="cards-grid">
+    <div class="audit-card card-purple">
+      <div class="severity severity-info">● Enterprise</div>
+      <div class="card-number">MELHORIA #24</div>
+      <div class="card-title">Multi-tenancy Real com Organization Isolation</div>
+      <div class="card-desc">Modelo Organization existe no schema mas não isola dados. O mesmo ANDERFLOW pode servir múltiplas empresas com dados completamente separados (SaaS real).</div>
+      <div class="code-block"><span class="cm">// middleware injeta contexto org</span>
+<span class="kw">export async function</span> <span class="fn">withOrg</span>(req, handler) {
+  <span class="kw">const</span> orgId = <span class="kw">await</span> <span class="fn">getOrgFromDomain</span>(req)
+  <span class="kw">return</span> <span class="fn">handler</span>(req, { orgId })
+}</div>
+    </div>
+
+    <div class="audit-card card-purple">
+      <div class="severity severity-info">● Enterprise</div>
+      <div class="card-number">MELHORIA #25</div>
+      <div class="card-title">RBAC — Permissões Granulares</div>
+      <div class="card-desc">Roles MANAGER e DEVELOPER definidos em types mas sem implementação. Sistema precisa de permissões por recurso e ação para times maiores.</div>
+    </div>
+  </div>
+
+  <div style="overflow-x:auto; margin:16px 0;">
+    <table class="rbac-table">
+      <thead>
+        <tr>
+          <th>Recurso / Ação</th>
+          <th>ADMIN</th>
+          <th>MANAGER</th>
+          <th>DEVELOPER</th>
+          <th>CLIENT</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>projects:read</td><td><span class="check">✓</span></td><td><span class="check">✓</span></td><td><span class="check">✓</span></td><td><span class="partial">~</span></td></tr>
+        <tr><td>projects:write</td><td><span class="check">✓</span></td><td><span class="check">✓</span></td><td><span class="partial">~</span></td><td><span class="cross">✗</span></td></tr>
+        <tr><td>projects:delete</td><td><span class="check">✓</span></td><td><span class="cross">✗</span></td><td><span class="cross">✗</span></td><td><span class="cross">✗</span></td></tr>
+        <tr><td>financial:read</td><td><span class="check">✓</span></td><td><span class="check">✓</span></td><td><span class="cross">✗</span></td><td><span class="partial">~</span></td></tr>
+        <tr><td>financial:write</td><td><span class="check">✓</span></td><td><span class="partial">~</span></td><td><span class="cross">✗</span></td><td><span class="cross">✗</span></td></tr>
+        <tr><td>users:manage</td><td><span class="check">✓</span></td><td><span class="cross">✗</span></td><td><span class="cross">✗</span></td><td><span class="cross">✗</span></td></tr>
+        <tr><td>audit:read</td><td><span class="check">✓</span></td><td><span class="check">✓</span></td><td><span class="cross">✗</span></td><td><span class="cross">✗</span></td></tr>
+        <tr><td>tickets:resolve</td><td><span class="check">✓</span></td><td><span class="check">✓</span></td><td><span class="check">✓</span></td><td><span class="cross">✗</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ==================== ENTERPRISE 2: Webhooks ==================== -->
+<section class="section" id="enterprise2">
+  <div class="section-header">
+    <div class="section-title-wrap">
+      <div class="section-eyebrow">Enterprise #27–29</div>
+      <div class="section-title">Webhooks &amp; Feature Flags</div>
+    </div>
+  </div>
+
+  <div class="audit-card card-purple" style="margin-bottom:20px">
+    <div class="severity severity-info">● Enterprise</div>
+    <div class="card-number">MELHORIA #27 — Webhooks de Saída</div>
+    <div class="card-title">Sistema de Webhooks para Integrações</div>
+    <div class="card-desc">Clientes precisam integrar o ANDERFLOW com seus próprios sistemas (ERP, CRM externo, Slack). Um sistema de webhooks permite notificações automáticas para URLs configuradas pelo cliente.</div>
+  </div>
+
+  <div class="notif-list" style="margin-bottom:20px">
+    <div style="font-size:12px;color:var(--text-3);margin-bottom:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px">Webhooks Configurados</div>
+    <div class="webhook-row">
+      <div class="webhook-url">https://erp.techstore.com/webhooks/anderflow</div>
+      <div class="webhook-events"><span class="event-tag">project.completed</span><span class="event-tag">invoice.paid</span></div>
+      <div class="webhook-status ws-active">● Ativo</div>
+    </div>
+    <div class="webhook-row">
+      <div class="webhook-url">https://slack.com/hooks/T0XXXX/BXXXX/token</div>
+      <div class="webhook-events"><span class="event-tag">ticket.created</span></div>
+      <div class="webhook-status ws-active">● Ativo</div>
+    </div>
+    <div class="webhook-row">
+      <div class="webhook-url">https://api.datacorp.com/events</div>
+      <div class="webhook-events"><span class="event-tag">message.sent</span><span class="event-tag">contract.signed</span></div>
+      <div class="webhook-status ws-fail">● Falhou</div>
+    </div>
+  </div>
+
+  <div class="audit-card card-purple" style="margin-bottom:16px">
+    <div class="severity severity-info">● Enterprise</div>
+    <div class="card-number">MELHORIA #28 — Feature Flags</div>
+    <div class="card-title">Feature Flags por Plano e Organização</div>
+    <div class="card-desc">Features como IA, Automações e Contratos Digitais devem ser controladas por flags dinâmicos, não hardcode. Permite rollout gradual, beta testing e controle por plano de assinatura.</div>
+  </div>
+
+  <div class="notif-list">
+    <div style="font-size:12px;color:var(--text-3);margin-bottom:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px">Feature Flags do Sistema</div>
+    <div class="ff-row">
+      <div class="ff-name"><div class="ff-key">ai-assistant</div><div class="ff-desc-small">Assistente IA integrado nas páginas</div></div>
+      <div class="ff-plans"><span class="ff-plan">PRO</span><span class="ff-plan">ENTERPRISE</span></div>
+      <div class="toggle-switch on"><div class="toggle-thumb"></div></div>
+    </div>
+    <div class="ff-row">
+      <div class="ff-name"><div class="ff-key">digital-contracts</div><div class="ff-desc-small">Assinatura digital de contratos</div></div>
+      <div class="ff-plans"><span class="ff-plan">ENTERPRISE</span></div>
+      <div class="toggle-switch on"><div class="toggle-thumb"></div></div>
+    </div>
+    <div class="ff-row">
+      <div class="ff-name"><div class="ff-key">webhook-system</div><div class="ff-desc-small">Webhooks de saída para integrações</div></div>
+      <div class="ff-plans"><span class="ff-plan all">TODOS</span></div>
+      <div class="toggle-switch"><div class="toggle-thumb"></div></div>
+    </div>
+    <div class="ff-row">
+      <div class="ff-name"><div class="ff-key">advanced-analytics</div><div class="ff-desc-small">Analytics avançado com filtros</div></div>
+      <div class="ff-plans"><span class="ff-plan">PRO</span><span class="ff-plan">ENTERPRISE</span></div>
+      <div class="toggle-switch on"><div class="toggle-thumb"></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== ENTERPRISE 3: Observability ==================== -->
+<section class="section" id="enterprise3">
+  <div class="section-header">
+    <div class="section-title-wrap">
+      <div class="section-eyebrow">Enterprise #30–32</div>
+      <div class="section-title">Observabilidade &amp; CI/CD</div>
+    </div>
+  </div>
+
+  <div class="obs-grid" style="margin-bottom:20px">
+    <div class="obs-card">
+      <div class="obs-icon">🐛</div>
+      <div class="obs-value" style="color:var(--red)">0</div>
+      <div class="obs-label">Error Tracking Ativo</div>
+    </div>
+    <div class="obs-card">
+      <div class="obs-icon">📊</div>
+      <div class="obs-value" style="color:var(--red)">0</div>
+      <div class="obs-label">Métricas Coletadas</div>
+    </div>
+    <div class="obs-card">
+      <div class="obs-icon">📋</div>
+      <div class="obs-value" style="color:var(--red)">0</div>
+      <div class="obs-label">Logs Estruturados</div>
+    </div>
+  </div>
+
+  <div class="info-box danger"><span class="info-box-icon">⚠️</span> <strong>Problema crítico:</strong> Erros em produção são completamente invisíveis. A página de audit logs mostra dados hardcoded. Não há forma de saber o que está quebrando em produção sem usuários reportando.</div>
+
+  <div class="audit-card card-teal" style="margin:16px 0">
+    <div class="card-title">Logging Estruturado com Pino</div>
+    <div class="card-desc">Substituir console.log por logger estruturado que emite JSON com contexto rico: userId, requestId, duration, statusCode.</div>
+    <div class="log-viewer">
+      <div class="log-line"><span class="log-time">10:23:45</span><span class="log-level-info">INFO</span><span class="log-msg">POST /api/projects 201 - userId:clx1 org:techstore duration:124ms</span></div>
+      <div class="log-line"><span class="log-time">10:23:47</span><span class="log-level-warn">WARN</span><span class="log-msg">Rate limit approaching - ip:192.168.1.100 route:/api/auth/register count:8/10</span></div>
+      <div class="log-line"><span class="log-time">10:23:51</span><span class="log-level-error">ERROR</span><span class="log-msg">Prisma query failed - model:Invoice field:total err:invalid_type</span></div>
+      <div class="log-line"><span class="log-time">10:24:02</span><span class="log-level-info">INFO</span><span class="log-msg">Socket connection - userId:clx4 namespace:/workspace rooms:techstore-ch1</span></div>
+      <div class="log-line"><span class="log-time">10:24:15</span><span class="log-level-info">INFO</span><span class="log-msg">Webhook dispatched - event:invoice.paid url:erp.techstore.com status:200</span></div>
+      <div class="log-line"><span class="log-time">10:24:23</span><span class="log-level-warn">WARN</span><span class="log-msg">Slow query detected - 890ms - Project.findMany with includes</span></div>
+    </div>
+  </div>
+
+  <div class="audit-card card-teal">
+    <div class="card-title">GitHub Actions — Pipeline CI/CD</div>
+    <div class="arch-diagram" style="margin:10px 0;padding:16px">
+      <div class="arch-row">
+        <div class="arch-box good"><div class="arch-box-title">📦 Lint</div><div class="arch-box-sub">eslint + typecheck</div></div>
+        <div class="arch-arrow">→</div>
+        <div class="arch-box good"><div class="arch-box-title">🏗 Build</div><div class="arch-box-sub">next build</div></div>
+        <div class="arch-arrow">→</div>
+        <div class="arch-box good"><div class="arch-box-title">🧪 Test</div><div class="arch-box-sub">playwright E2E</div></div>
+        <div class="arch-arrow">→</div>
+        <div class="arch-box good"><div class="arch-box-title">🚀 Deploy</div><div class="arch-box-sub">Preview → Prod</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== UX 1: Dashboard ==================== -->
+<section class="section" id="ux">
+  <div class="section-header">
+    <div class="section-title-wrap">
+      <div class="section-eyebrow">UX Premium #33–35</div>
+      <div class="section-title">Dashboard Redesign</div>
+      <div class="section-desc">O dashboard atual é básico. Proposta de redesign premium inspirado em Linear e Stripe com sparklines, activity feed e quick actions.</div>
+    </div>
+  </div>
+
+  <div class="dashboard-preview">
+    <div class="dash-topbar">
+      <div class="dash-dots"><div class="dash-dot dot-r"></div><div class="dash-dot dot-y"></div><div class="dash-dot dot-g"></div></div>
+      <div class="dash-title">ANDERFLOW — Dashboard Premium (Proposta)</div>
+    </div>
+    <div class="dash-body">
+      <div style="margin-bottom:16px;padding:12px 14px;background:var(--bg-card2);border:1px solid var(--border);border-radius:var(--radius-md);display:flex;align-items:center;justify-content:space-between">
+        <div>
+          <div style="font-size:14px;font-weight:600;color:var(--text-1)">Bom dia, Anderson ☀️</div>
+          <div style="font-size:11px;color:var(--text-3);margin-top:2px">3 tarefas urgentes hoje · Fatura INV-0003 vencida</div>
+        </div>
+        <div style="display:flex;gap:8px">
+          <div style="font-size:10px;padding:5px 10px;background:var(--red-dim);color:var(--red);border-radius:6px;font-weight:600;cursor:pointer">3 Urgentes</div>
+          <div style="font-size:10px;padding:5px 10px;background:var(--accent-dim);color:var(--accent2);border-radius:6px;font-weight:600;cursor:pointer">+ Novo Projeto</div>
+        </div>
+      </div>
+
+      <div class="kpi-row">
+        <div class="kpi-card">
+          <div class="kpi-label">Projetos Ativos</div>
+          <div style="display:flex;align-items:flex-end;justify-content:space-between">
+            <div class="kpi-value">4</div>
+            <div class="sparkline" style="height:24px;width:50px">
+              <div class="spark" style="height:40%"></div><div class="spark" style="height:60%"></div>
+              <div class="spark" style="height:45%"></div><div class="spark" style="height:80%"></div>
+              <div class="spark high" style="height:100%"></div>
+            </div>
+          </div>
+          <div class="kpi-change">+1 este mês</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Receita Total</div>
+          <div style="display:flex;align-items:flex-end;justify-content:space-between">
+            <div class="kpi-value">R$35k</div>
+            <div class="sparkline" style="height:24px;width:50px">
+              <div class="spark" style="height:30%"></div><div class="spark" style="height:50%"></div>
+              <div class="spark" style="height:70%"></div><div class="spark" style="height:60%"></div>
+              <div class="spark high" style="height:90%"></div>
+            </div>
+          </div>
+          <div class="kpi-change">+18% vs mês anterior</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">A Receber</div>
+          <div class="kpi-value" style="color:var(--amber)">R$20.5k</div>
+          <div class="kpi-change down">2 faturas vencidas</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Tickets Abertos</div>
+          <div class="kpi-value">3</div>
+          <div class="kpi-change down">1 urgente</div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="kpi-card">
+          <div style="font-size:11px;color:var(--text-3);margin-bottom:10px;font-weight:600">PROJETOS EM RISCO</div>
+          <div style="padding:6px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+            <div style="font-size:12px;color:var(--text-1)">App de Delivery</div>
+            <div style="font-size:10px;background:var(--red-dim);color:var(--red);padding:2px 7px;border-radius:4px;font-weight:600">Prazo 15/05</div>
+          </div>
+          <div style="padding:6px 0;display:flex;justify-content:space-between;align-items:center">
+            <div style="font-size:12px;color:var(--text-1)">CRM Personalizado</div>
+            <div style="font-size:10px;background:var(--amber-dim);color:var(--amber);padding:2px 7px;border-radius:4px;font-weight:600">Revisão</div>
+          </div>
+        </div>
+        <div class="kpi-card">
+          <div style="font-size:11px;color:var(--text-3);margin-bottom:10px;font-weight:600">ATIVIDADE RECENTE</div>
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <div style="display:flex;gap:8px;align-items:center">
+              <div style="width:6px;height:6px;border-radius:50%;background:var(--green);flex-shrink:0"></div>
+              <div style="font-size:11px;color:var(--text-2)">Carlos pagou INV-0001</div>
+              <div style="font-size:10px;color:var(--text-3);margin-left:auto">2h</div>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center">
+              <div style="width:6px;height:6px;border-radius:50%;background:var(--accent);flex-shrink:0"></div>
+              <div style="font-size:11px;color:var(--text-2)">Nova mensagem de Ana</div>
+              <div style="font-size:10px;color:var(--text-3);margin-left:auto">4h</div>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center">
+              <div style="width:6px;height:6px;border-radius:50%;background:var(--amber);flex-shrink:0"></div>
+              <div style="font-size:11px;color:var(--text-2)">Ticket #3 aberto</div>
+              <div style="font-size:10px;color:var(--text-3);margin-left:auto">6h</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="cards-grid" style="margin-top:16px">
+    <div class="audit-card card-teal">
+      <div class="card-number">MELHORIA #33</div>
+      <div class="card-title">Hero Section Personalizada</div>
+      <div class="card-desc">Saudação com nome do usuário, contagem de tarefas urgentes do dia e alertas financeiros contextuais. Transforma o dashboard de relatório passivo para painel ativo.</div>
+    </div>
+    <div class="audit-card card-teal">
+      <div class="card-number">MELHORIA #34</div>
+      <div class="card-title">KPIs com Sparklines Inline</div>
+      <div class="card-desc">Mini gráficos de tendência embutidos nos cards de KPI. Usuário vê a direção da métrica sem precisar navegar para Analytics.</div>
+    </div>
+    <div class="audit-card card-teal">
+      <div class="card-number">MELHORIA #35</div>
+      <div class="card-title">Activity Feed em Tempo Real</div>
+      <div class="card-desc">Timeline de atividades recentes com tipo, ator e timestamp. Conectado ao Socket.IO para atualizações em tempo real sem refresh.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== UX 2: CRM & Notifications ==================== -->
+<section class="section" id="ux2">
+  <div class="section-header">
+    <div class="section-title-wrap">
+      <div class="section-eyebrow">UX Premium #36–38</div>
+      <div class="section-title">CRM Pipeline &amp; Notificações Inteligentes</div>
+    </div>
+  </div>
+
+  <div class="audit-card card-teal" style="margin-bottom:20px">
+    <div class="card-number">MELHORIA #36 — CRM Pipeline</div>
+    <div class="card-title">Pipeline com Drag-and-Drop Real</div>
+    <div class="card-desc">Implementar com @dnd-kit/core. Colunas por stage com valor total acumulado, leads arrastáveis, filtros, bulk actions e quick edit inline.</div>
+  </div>
+
+  <div class="pipeline-cols" style="margin-bottom:20px">
+    <div class="pipeline-col">
+      <div class="pipeline-header ph-novo"><span>Novo</span><span class="pipeline-count">3</span></div>
+      <div class="lead-card"><div class="lead-name">Pedro Martins</div><div class="lead-company">AutoSys</div><div class="lead-footer"><span class="lead-value">R$18k</span><span class="lead-score score-low">45</span></div></div>
+    </div>
+    <div class="pipeline-col">
+      <div class="pipeline-header ph-contato"><span>Contato</span><span class="pipeline-count">2</span></div>
+      <div class="lead-card"><div class="lead-name">Fernanda Dias</div><div class="lead-company">ScaleUp</div><div class="lead-footer"><span class="lead-value">R$40k</span><span class="lead-score score-mid">60</span></div></div>
+    </div>
+    <div class="pipeline-col">
+      <div class="pipeline-header ph-quali"><span>Qualificado</span><span class="pipeline-count">1</span></div>
+      <div class="lead-card"><div class="lead-name">Maria Lima</div><div class="lead-company">CloudBase</div><div class="lead-footer"><span class="lead-value">R$22k</span><span class="lead-score score-mid">72</span></div></div>
+    </div>
+    <div class="pipeline-col">
+      <div class="pipeline-header ph-prop"><span>Proposta</span><span class="pipeline-count">1</span></div>
+      <div class="lead-card"><div class="lead-name">Fernando Alves</div><div class="lead-company">InnovateTech</div><div class="lead-footer"><span class="lead-value">R$30k</span><span class="lead-score score-high">85</span></div></div>
+    </div>
+    <div class="pipeline-col">
+      <div class="pipeline-header ph-fechado"><span>Fechado</span><span class="pipeline-count">0</span></div>
+      <div class="empty-state" style="padding:20px 10px;border-radius:10px">
+        <div style="font-size:12px;color:var(--text-3)">Nenhum fechado</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="audit-card card-teal" style="margin-bottom:16px">
+    <div class="card-number">MELHORIA #37–38 — Notificações Inteligentes</div>
+    <div class="card-title">Agrupamento, Priorização e Ação Inline</div>
+    <div class="card-desc">Agrupar notificações do mesmo tipo, priorizar por urgência, permitir ação direta sem navegar para outra página.</div>
+  </div>
+
+  <div class="notif-list">
+    <div class="notif-item unread">
+      <div class="notif-avatar" style="background:var(--red-dim);font-size:18px">🔴</div>
+      <div class="notif-body">
+        <div class="notif-title">Fatura vencida — ação necessária</div>
+        <div class="notif-desc">INV-0003 · Vendas Plus · R$12.000 · 45 dias de atraso</div>
+        <div class="notif-time">Hoje às 08:00</div>
+      </div>
+      <div class="notif-action">Cobrar agora</div>
+    </div>
+    <div class="notif-item unread">
+      <div class="notif-avatar" style="background:var(--green-dim);font-size:18px">💳</div>
+      <div class="notif-body">
+        <div class="notif-title">Pagamento recebido · PIX</div>
+        <div class="notif-desc">TechStore pagou R$15.000 · INV-0001 quitada</div>
+        <div class="notif-time">Ontem às 16:22</div>
+      </div>
+      <div class="notif-action">Ver fatura</div>
+    </div>
+    <div class="notif-item">
+      <div class="notif-avatar" style="background:var(--accent-dim);font-size:18px">💬</div>
+      <div class="notif-body">
+        <div class="notif-title">3 mensagens — Carlos (TechStore)</div>
+        <div class="notif-desc">"O PIX já funciona?" · "Quando entrega?" · "Obrigado!"</div>
+        <div class="notif-time">Hoje às 09:45</div>
+      </div>
+      <div class="notif-action">Responder</div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== UX 3: Mobile & Command ==================== -->
+<section class="section" id="ux3">
+  <div class="section-header">
+    <div class="section-title-wrap">
+      <div class="section-eyebrow">UX Premium #39–41</div>
+      <div class="section-title">Mobile Navigation &amp; Command Palette</div>
+    </div>
+  </div>
+
+  <div class="cards-grid cards-grid-2" style="margin-bottom:24px">
+    <div>
+      <div class="audit-card card-teal" style="margin-bottom:16px">
+        <div class="card-number">MELHORIA #39 — Mobile Navigation</div>
+        <div class="card-title">Bottom Navigation Bar</div>
+        <div class="card-desc">Em mobile, a sidebar some mas não há alternativa. Bottom nav com 5 itens principais + hamburger para o menu completo resolve a navegação mobile.</div>
+      </div>
+      <div class="mobile-nav-preview">
+        <div class="mobile-nav-header">
+          <div class="mobile-nav-title">Dashboard</div>
+          <div class="hamburger"><span></span><span></span><span></span></div>
+        </div>
+        <div class="mobile-content">Conteúdo da página</div>
+        <div class="mobile-bottom-nav">
+          <div class="mobile-nav-item active"><div class="mobile-nav-icon">🏠</div>Início</div>
+          <div class="mobile-nav-item"><div class="mobile-nav-icon">📁</div>Projetos</div>
+          <div class="mobile-nav-item"><div class="mobile-nav-icon">💬</div>Chat</div>
+          <div class="mobile-nav-item"><div class="mobile-nav-icon">💰</div>Financ.</div>
+          <div class="mobile-nav-item"><div class="mobile-nav-icon">⚙️</div>Config.</div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="audit-card card-teal" style="margin-bottom:16px">
+        <div class="card-number">MELHORIA #40 — Command Palette ⌘K</div>
+        <div class="card-title">Busca Global com cmdk (já instalado)</div>
+        <div class="card-desc">cmdk está no package.json mas sem implementação. Command palette com ⌘K para navegar entre módulos, buscar clientes e executar ações.</div>
+      </div>
+      <div class="cmd-palette">
+        <div class="cmd-input-wrap">
+          <div class="cmd-icon">🔍</div>
+          <input class="cmd-input" placeholder="Buscar projetos, clientes, ações..." value="e-comm">
+          <div class="cmd-shortcut">ESC</div>
+        </div>
+        <div class="cmd-results">
+          <div class="cmd-group-label">Projetos</div>
+          <div class="cmd-item selected">
+            <div class="cmd-item-icon">📁</div>
+            <div class="cmd-item-text"><div class="cmd-item-title">E-commerce Premium</div><div class="cmd-item-sub">TechStore · 75% concluído</div></div>
+            <div class="cmd-item-key">↵</div>
+          </div>
+          <div class="cmd-group-label">Clientes</div>
+          <div class="cmd-item">
+            <div class="cmd-item-icon">👤</div>
+            <div class="cmd-item-text"><div class="cmd-item-title">Carlos Silva · TechStore</div><div class="cmd-item-sub">carlos@techstore.com</div></div>
+          </div>
+          <div class="cmd-group-label">Ações Rápidas</div>
+          <div class="cmd-item">
+            <div class="cmd-item-icon">➕</div>
+            <div class="cmd-item-text"><div class="cmd-item-title">Criar nova fatura</div><div class="cmd-item-sub">Abrir formulário de fatura</div></div>
+          </div>
+          <div class="cmd-item">
+            <div class="cmd-item-icon">💬</div>
+            <div class="cmd-item-text"><div class="cmd-item-title">Ir para Chat · TechStore</div><div class="cmd-item-sub">Canal ativo · 2 msgs não lidas</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="audit-card card-teal">
+    <div class="card-number">MELHORIA #41 — Empty States</div>
+    <div class="card-title">Estados Vazios Ilustrados com CTAs Contextuais</div>
+    <div class="card-desc">Módulos sem dados mostram apenas texto simples. Empty states com ilustração SVG e botão de ação contextual melhoram onboarding e experiência de novos usuários.</div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:14px">
+      <div class="empty-state">
+        <div class="empty-illustration">📁</div>
+        <div class="empty-title">Sem projetos</div>
+        <div class="empty-desc">Crie seu primeiro projeto e comece a trabalhar</div>
+        <button class="btn-primary">+ Novo Projeto</button>
+      </div>
+      <div class="empty-state">
+        <div class="empty-illustration">💬</div>
+        <div class="empty-title">Nenhuma mensagem</div>
+        <div class="empty-desc">Inicie uma conversa com seu cliente</div>
+        <button class="btn-primary">Iniciar Chat</button>
+      </div>
+      <div class="empty-state">
+        <div class="empty-illustration">🎯</div>
+        <div class="empty-title">Sem leads</div>
+        <div class="empty-desc">Adicione prospects ao seu funil de vendas</div>
+        <button class="btn-primary">+ Novo Lead</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== DEV 1: Prisma ==================== -->
+<section class="section" id="dev">
+  <div class="section-header">
+    <div class="section-title-wrap">
+      <div class="section-eyebrow">Desenvolvedor #42–43</div>
+      <div class="section-title">Prisma &amp; Banco de Dados</div>
+    </div>
+  </div>
+
+  <div class="audit-card card-blue" style="margin-bottom:20px">
+    <div class="card-number">MELHORIA #42 — Índices Prisma</div>
+    <div class="card-title">Schema Sem Índices — Full Table Scans</div>
+    <div class="card-desc">Nenhum @@index declarado no schema.prisma. Queries por clientId, userId, status serão full table scans conforme o banco cresce. Com 1000+ registros, queries de 500ms+ são comuns.</div>
+    <div class="card-impact impact-amber">⚡ Performance degrada linearmente com crescimento dos dados. Dashboard com 10k registros pode travar.</div>
+  </div>
+
+  <div class="schema-preview" style="margin-bottom:20px">
+    <div class="schema-model">
+      <div class="schema-model-header">model Project</div>
+      <div class="schema-field"><span class="sf-name">id</span><span class="sf-type">String</span><span class="sf-pk">@id</span></div>
+      <div class="schema-field"><span class="sf-name">clientId</span><span class="sf-type">String</span><span class="sf-mod">→ needs index</span></div>
+      <div class="schema-field"><span class="sf-name">status</span><span class="sf-type">String</span><span class="sf-mod">→ needs index</span></div>
+      <div class="schema-field"><span class="sf-name">createdAt</span><span class="sf-type">DateTime</span><span class="sf-mod">→ needs index</span></div>
+    </div>
+    <div class="schema-model">
+      <div class="schema-model-header">model Notification</div>
+      <div class="schema-field"><span class="sf-name">id</span><span class="sf-type">String</span><span class="sf-pk">@id</span></div>
+      <div class="schema-field"><span class="sf-name">userId</span><span class="sf-type">String</span><span class="sf-mod">→ needs index</span></div>
+      <div class="schema-field"><span class="sf-name">isRead</span><span class="sf-type">Boolean</span><span class="sf-mod">→ compound index</span></div>
+      <div class="schema-field"><span class="sf-name">createdAt</span><span class="sf-type">DateTime</span><span class="sf-mod">→ needs index</span></div>
+    </div>
+  </div>
+
+  <div class="code-block"><span class="cm">// ✅ Adicionar em schema.prisma</span>
+<span class="kw">model</span> <span class="type">Project</span> {
+  <span class="cm">// ... fields ...</span>
+  <span class="kw">@@index</span>([clientId])
+  <span class="kw">@@index</span>([status, priority])
+  <span class="kw">@@index</span>([organizationId, createdAt])
+}
+
+<span class="kw">model</span> <span class="type">Notification</span> {
+  <span class="cm">// ... fields ...</span>
+  <span class="kw">@@index</span>([userId, isRead])   <span class="cm">// query mais comum</span>
+  <span class="kw">@@index</span>([userId, createdAt])
+}
+
+<span class="kw">model</span> <span class="type">Message</span> {
+  <span class="cm">// ... fields ...</span>
+  <span class="kw">@@index</span>([channelId, createdAt])
+}</div>
+
+  <div class="audit-card card-blue" style="margin-top:16px">
+    <div class="card-number">MELHORIA #43 — SQLite → PostgreSQL</div>
+    <div class="card-title">Unificar Provider em Dev e Produção</div>
+    <div class="card-desc">schema.prisma usa SQLite, .env referencia PostgreSQL. Tipos incompatíveis, enums fake, sem índices avançados. Unificar para PostgreSQL desde o desenvolvimento elimina surpresas em produção.</div>
+  </div>
+</section>
+
+<!-- ==================== DEV 2: React Query & tRPC ==================== -->
+<section class="section" id="dev2">
+  <div class="section-header">
+    <div class="section-title-wrap">
+      <div class="section-eyebrow">Desenvolvedor #44–45</div>
+      <div class="section-title">React Query &amp; Type Safety End-to-End</div>
+    </div>
+  </div>
+
+  <div class="cards-grid">
+    <div class="audit-card card-blue">
+      <div class="card-number">MELHORIA #44 — React Query Pattern</div>
+      <div class="card-title">Server State com React Query</div>
+      <div class="card-desc">@tanstack/react-query instalado mas subutilizado. Migrar todos os useEffect+fetch para useQuery/useMutation dá cache automático, refetch inteligente e optimistic updates.</div>
+      <div class="code-block"><span class="cm">// ✅ Hook reutilizável</span>
+<span class="kw">export function</span> <span class="fn">useProjects</span>(filters?) {
+  <span class="kw">return</span> <span class="fn">useQuery</span>({
+    queryKey: [<span class="str">'projects'</span>, filters],
+    queryFn: () =&gt; api.projects.<span class="fn">list</span>(filters),
+    staleTime: <span class="num">60_000</span>,
+    gcTime: <span class="num">5 * 60_000</span>
+  })
+}
+
+<span class="kw">export function</span> <span class="fn">useUpdateProject</span>() {
+  <span class="kw">const</span> client = <span class="fn">useQueryClient</span>()
+  <span class="kw">return</span> <span class="fn">useMutation</span>({
+    mutationFn: api.projects.update,
+    <span class="kw">onMutate</span>: <span class="kw">async</span> (data) =&gt; {
+      <span class="cm">// optimistic update</span>
+      <span class="kw">await</span> client.<span class="fn">cancelQueries</span>([<span class="str">'projects'</span>])
+      <span class="kw">const</span> prev = client.<span class="fn">getQueryData</span>([<span class="str">'projects'</span>])
+      client.<span class="fn">setQueryData</span>([<span class="str">'projects'</span>], old =&gt; ...)
+      <span class="kw">return</span> { prev }
+    }
+  })
+}</div>
+    </div>
+
+    <div class="audit-card card-blue">
+      <div class="card-number">MELHORIA #45 — Type Safety E2E</div>
+      <div class="card-title">tRPC ou Typed Route Handlers</div>
+      <div class="card-desc">api.ts faz fetch manual sem type safety. Com tRPC, o type do Prisma model é inferido automaticamente no frontend sem duplicação. Erros de type são detectados em tempo de compilação.</div>
+      <div class="code-block"><span class="cm">// ✅ Com tRPC — type inferido do Prisma</span>
+<span class="cm">// server: router/projects.ts</span>
+<span class="kw">export const</span> projectsRouter = <span class="fn">router</span>({
+  list: <span class="fn">publicProcedure</span>
+    .input(listProjectsSchema)
+    .query(<span class="kw">async</span> ({ input }) =&gt; {
+      <span class="kw">return</span> prisma.project.<span class="fn">findMany</span>(...)
+    })
+})
+
+<span class="cm">// client — tipo inferido automaticamente</span>
+<span class="kw">const</span> { data } = trpc.projects.<span class="fn">list</span>.<span class="fn">useQuery</span>({
+  status: <span class="str">'IN_PROGRESS'</span>  <span class="cm">// TS valida aqui ✓</span>
+})</div>
+    </div>
+  </div>
+
+  <div class="info-box success" style="margin-top:16px">
+    <span class="info-box-icon">✅</span>
+    <div><strong>Resumo Final:</strong> Com todas as 45 melhorias implementadas, o ANDERFLOW passa de um MVP bem construído para um SaaS enterprise competitivo com Linear, Basecamp e Teamwork. Tempo estimado: 10 semanas em 5 sprints de 2 semanas cada.</div>
+  </div>
+</section>
+
+  </div><!-- /content -->
+</main>
+
+</div><!-- /app -->
+
+<!-- STATUS BAR -->
+<div class="status-bar">
+  <div class="status-item"><div class="status-dot"></div><span>Sistema Ativo</span></div>
+  <div class="status-item">45 sugestões documentadas</div>
+  <div class="status-item">5 sprints · 10 semanas</div>
+  <div style="margin-left:auto;font-family:var(--font-mono);font-size:10px;">ANDERFLOW v2.0 Audit · 2026</div>
+</div>
+
+<script>
+function showSection(id) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  const sec = document.getElementById(id);
+  if (sec) { sec.classList.add('active'); sec.classList.add('animate-in'); }
+  event.currentTarget.classList.add('active');
+  document.querySelector('.main').scrollTop = 0;
+}
+
+function switchTab(btn, id) {
+  const parent = btn.closest('.section') || document;
+  parent.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  parent.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  const content = document.getElementById(id);
+  if (content) content.classList.add('active');
+}
+
+// Toggle switches interativos
+document.querySelectorAll('.toggle-switch').forEach(sw => {
+  sw.addEventListener('click', () => sw.classList.toggle('on'));
+});
+
+// Keyboard shortcut ⌘K
+document.addEventListener('keydown', e => {
+  if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+    e.preventDefault();
+    showSection_cmd();
+  }
+  if (e.key === 'Escape') document.querySelector('.main').scrollTop = 0;
+});
+
+function showSection_cmd() {
+  const ux3sec = document.querySelector('.nav-item[onclick="showSection(\'ux3\')"]');
+  if (ux3sec) ux3sec.click();
+}
+
+// Animate bars on visibility
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      entry.target.querySelectorAll('.progress-fill').forEach(bar => {
+        const w = bar.style.width;
+        bar.style.width = '0';
+        setTimeout(() => bar.style.width = w, 100);
+      });
+    }
+  });
+}, { threshold: 0.2 });
+
+document.querySelectorAll('.section').forEach(s => observer.observe(s));
+</script>
+</body>
+</html>

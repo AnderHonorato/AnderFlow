@@ -174,9 +174,12 @@ model Project {
   organizationId  String?
   briefing        String?
   tags            String   @default("[]")
-  isArchived      Boolean  @default(false)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  headerImage     String?
+  completedSummary String?
+  completedLink    String?
+  isArchived       Boolean  @default(false)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
   client       User          @relation("ProjectOwner", fields: [clientId], references: [id])
   organization Organization? @relation(fields: [organizationId], references: [id])

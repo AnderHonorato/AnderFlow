@@ -1,5 +1,4 @@
-'use client'
-
+import { prisma } from '@/lib/prisma'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -18,14 +17,6 @@ import {
   AlertCircle,
 } from 'lucide-react'
 
-const contracts = [
-  { id: '1', title: 'Contrato de Desenvolvimento - E-commerce', client: 'TechStore', status: 'ACTIVE', value: 45000, startDate: '01 Jan 2024', endDate: '30 Jun 2024', signed: true, autoRenew: true },
-  { id: '2', title: 'Contrato de Manutenção Mensal', client: 'FastFood Co', status: 'ACTIVE', value: 3500, startDate: '01 Fev 2024', endDate: '01 Fev 2025', signed: true, autoRenew: true },
-  { id: '3', title: 'Proposta - CRM Personalizado', client: 'Vendas Plus', status: 'PENDING_SIGNATURE', value: 28000, startDate: '15 Mar 2024', endDate: '15 Set 2024', signed: false, autoRenew: false },
-  { id: '4', title: 'Contrato SaaS - Dashboard', client: 'DataCorp', status: 'ACTIVE', value: 5000, startDate: '01 Mar 2024', endDate: '01 Mar 2025', signed: true, autoRenew: true },
-  { id: '5', title: 'Contrato Encerrado - Landing Page', client: 'StartupXYZ', status: 'EXPIRED', value: 3500, startDate: '01 Dez 2023', endDate: '28 Fev 2024', signed: true, autoRenew: false },
-]
-
 function getStatusBadge(status: string) {
   switch (status) {
     case 'ACTIVE': return <Badge variant="success">Ativo</Badge>
@@ -36,7 +27,18 @@ function getStatusBadge(status: string) {
   }
 }
 
-export default function ContractsPage() {
+export default async function ContractsPage() {
+  const contracts = await prisma.contract.findMany({
+    include: {
+      client: { select: { name: true } },
+    },
+    orderBy: { createdAt: 'desc' },
+  })
+
+  const activeCount = contracts.filter(c => c.status === 'ACTIVE').length
+  const pendingCount = contracts.filter(c => c.status === 'PENDING_SIGNATURE').length
+  const totalValue = contracts.reduce((sum, c) => sum + (c.value || 0), 0)
+
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
@@ -59,7 +61,7 @@ export default function ContractsPage() {
               <CheckCircle2 className="h-5 w-5 text-success" />
             </div>
             <div>
-              <p className="text-xl font-semibold">12</p>
+              <p className="text-xl font-semibold">{activeCount}</p>
               <p className="text-xs text-muted-foreground">Ativos</p>
             </div>
           </CardContent>
@@ -70,7 +72,7 @@ export default function ContractsPage() {
               <Clock className="h-5 w-5 text-warning" />
             </div>
             <div>
-              <p className="text-xl font-semibold">3</p>
+              <p className="text-xl font-semibold">{pendingCount}</p>
               <p className="text-xs text-muted-foreground">Aguardando</p>
             </div>
           </CardContent>
@@ -81,7 +83,7 @@ export default function ContractsPage() {
               <PenTool className="h-5 w-5 text-info" />
             </div>
             <div>
-              <p className="text-xl font-semibold">R$ 185k</p>
+              <p className="text-xl font-semibold">R$ {Math.round(totalValue / 1000)}k</p>
               <p className="text-xs text-muted-foreground">Valor Total</p>
             </div>
           </CardContent>
@@ -121,11 +123,11 @@ export default function ContractsPage() {
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium truncate">{contract.title}</p>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    {contract.client} &middot; {contract.startDate} - {contract.endDate}
+                    {contract.client.name} &middot; {contract.startDate?.toLocaleDateString('pt-BR')} - {contract.endDate?.toLocaleDateString('pt-BR')}
                   </p>
                 </div>
                 <div className="flex items-center gap-4">
-                  <span className="text-sm font-semibold">R$ {contract.value.toLocaleString('pt-BR')}</span>
+                  <span className="text-sm font-semibold">R$ {(contract.value || 0).toLocaleString('pt-BR')}</span>
                   {getStatusBadge(contract.status)}
                   {contract.autoRenew && (
                     <Badge variant="secondary" className="text-2xs">Auto-renovação</Badge>
@@ -144,6 +146,11 @@ export default function ContractsPage() {
                 </div>
               </div>
             ))}
+            {contracts.length === 0 && (
+              <div className="p-8 text-center text-sm text-muted-foreground">
+                Nenhum contrato encontrado. Crie seu primeiro contrato.
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>

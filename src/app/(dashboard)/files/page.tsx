@@ -1,5 +1,4 @@
-'use client'
-
+import { prisma } from '@/lib/prisma'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -22,33 +21,37 @@ import {
   HardDrive,
 } from 'lucide-react'
 
-const folders = [
-  { id: '1', name: 'E-commerce Premium', files: 24, size: '156 MB', updated: '2h atrás' },
-  { id: '2', name: 'App de Delivery', files: 18, size: '89 MB', updated: '5h atrás' },
-  { id: '3', name: 'CRM Personalizado', files: 12, size: '45 MB', updated: '1d atrás' },
-  { id: '4', name: 'Contratos', files: 8, size: '12 MB', updated: '2d atrás' },
-]
-
-const recentFiles = [
-  { id: '1', name: 'mockup-checkout-v3.fig', type: 'design', size: '24.5 MB', uploaded: '30min atrás', project: 'E-commerce Premium' },
-  { id: '2', name: 'briefing-final.pdf', type: 'document', size: '2.1 MB', uploaded: '2h atrás', project: 'App de Delivery' },
-  { id: '3', name: 'logo-redesign.png', type: 'image', size: '4.8 MB', uploaded: '4h atrás', project: 'Landing Page' },
-  { id: '4', name: 'demo-video.mp4', type: 'video', size: '128 MB', uploaded: '1d atrás', project: 'CRM Personalizado' },
-  { id: '5', name: 'contrato-techstore.pdf', type: 'document', size: '1.2 MB', uploaded: '2d atrás', project: 'E-commerce Premium' },
-  { id: '6', name: 'wireframes-mobile.fig', type: 'design', size: '18.3 MB', uploaded: '3d atrás', project: 'App de Delivery' },
-]
-
-function getFileIcon(type: string) {
-  switch (type) {
-    case 'image': return <Image className="h-5 w-5 text-purple-500" />
-    case 'video': return <Film className="h-5 w-5 text-info" />
-    case 'document': return <FileText className="h-5 w-5 text-warning" />
-    case 'design': return <File className="h-5 w-5 text-primary" />
-    default: return <File className="h-5 w-5 text-muted-foreground" />
-  }
+function getFileIcon(mimeType: string) {
+  if (mimeType.startsWith('image/')) return <Image className="h-5 w-5 text-purple-500" />
+  if (mimeType.startsWith('video/')) return <Film className="h-5 w-5 text-info" />
+  if (mimeType.includes('pdf') || mimeType.includes('document')) return <FileText className="h-5 w-5 text-warning" />
+  if (mimeType.includes('figma') || mimeType.includes('design')) return <File className="h-5 w-5 text-primary" />
+  return <File className="h-5 w-5 text-muted-foreground" />
 }
 
-export default function FilesPage() {
+function formatSize(bytes: number): string {
+  if (bytes >= 1073741824) return `${(bytes / 1073741824).toFixed(1)} GB`
+  if (bytes >= 1048576) return `${(bytes / 1048576).toFixed(1)} MB`
+  if (bytes >= 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${bytes} B`
+}
+
+export default async function FilesPage() {
+  const [folders, recentFiles, totalSize] = await Promise.all([
+    prisma.fileFolder.findMany({
+      include: { _count: { select: { files: true } } },
+      orderBy: { createdAt: 'desc' },
+    }),
+    prisma.file.findMany({
+      orderBy: { createdAt: 'desc' },
+      take: 10,
+      include: { project: { select: { name: true } } },
+    }),
+    prisma.file.aggregate({ _sum: { size: true } }),
+  ])
+
+  const usedSize = totalSize._sum.size ?? 0
+
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
@@ -85,7 +88,7 @@ export default function FilesPage() {
         </Button>
         <div className="ml-auto flex items-center gap-1 text-xs text-muted-foreground">
           <HardDrive className="h-3.5 w-3.5" />
-          <span>2.4 GB / 10 GB usado</span>
+          <span>{formatSize(usedSize)} usado</span>
         </div>
       </div>
 
@@ -102,13 +105,18 @@ export default function FilesPage() {
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate">{folder.name}</p>
                     <p className="text-xs text-muted-foreground mt-0.5">
-                      {folder.files} arquivos &middot; {folder.size}
+                      {folder._count.files} arquivos
                     </p>
                   </div>
                 </div>
               </CardContent>
             </Card>
           ))}
+          {folders.length === 0 && (
+            <div className="md:col-span-4 p-8 text-center text-sm text-muted-foreground border rounded-lg">
+              Nenhuma pasta criada.
+            </div>
+          )}
         </div>
       </div>
 
@@ -120,13 +128,17 @@ export default function FilesPage() {
               {recentFiles.map((file) => (
                 <div key={file.id} className="flex items-center gap-4 p-3 hover:bg-muted/50 transition-colors cursor-pointer">
                   <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-muted">
-                    {getFileIcon(file.type)}
+                    {getFileIcon(file.mimeType)}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{file.name}</p>
-                    <p className="text-xs text-muted-foreground">{file.project} &middot; {file.size}</p>
+                    <p className="text-sm font-medium truncate">{file.originalName || file.name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {file.project?.name || 'Sem projeto'} &middot; {formatSize(file.size)}
+                    </p>
                   </div>
-                  <span className="text-xs text-muted-foreground">{file.uploaded}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {file.createdAt.toLocaleDateString('pt-BR')}
+                  </span>
                   <div className="flex items-center gap-1">
                     <Button variant="ghost" size="icon-sm">
                       <Eye className="h-4 w-4" />
@@ -140,6 +152,11 @@ export default function FilesPage() {
                   </div>
                 </div>
               ))}
+              {recentFiles.length === 0 && (
+                <div className="p-8 text-center text-sm text-muted-foreground">
+                  Nenhum arquivo enviado ainda.
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>

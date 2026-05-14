@@ -2,7 +2,122 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ===== DESIGN SYSTEM: ANDERFLOW ===== */
+/* ===== DESIGN SYSTEM: ANDERFLOW / Material Design 3 ===== */
+
+/* MD3 Elevation tokens */
+:root {
+  --elevation-1: 0 1px 2px 0 rgba(0,0,0,.3), 0 1px 3px 1px rgba(0,0,0,.15);
+  --elevation-2: 0 1px 2px 0 rgba(0,0,0,.3), 0 2px 6px 2px rgba(0,0,0,.15);
+  --elevation-3: 0 4px 8px 3px rgba(0,0,0,.15), 0 1px 3px 0 rgba(0,0,0,.3);
+  --elevation-4: 0 6px 10px 4px rgba(0,0,0,.15), 0 2px 3px 0 rgba(0,0,0,.3);
+  --elevation-5: 0 8px 12px 6px rgba(0,0,0,.15), 0 4px 4px 0 rgba(0,0,0,.3);
+
+  /* MD3 State layers */
+  --state-hover: rgba(255,255,255,.04);
+  --state-focus: rgba(255,255,255,.08);
+  --state-pressed: rgba(255,255,255,.12);
+  --state-drag: rgba(255,255,255,.16);
+
+  /* MD3 Duration tokens */
+  --duration-short: 150ms;
+  --duration-medium: 250ms;
+  --duration-long: 350ms;
+
+  /* MD3 Easing */
+  --ease-standard: cubic-bezier(.2,0,0,1);
+  --ease-emphasized: cubic-bezier(.05,.7,.1,1);
+  --ease-decelerated: cubic-bezier(0,.0,.0,1);
+  --ease-accelerated: cubic-bezier(.3,0,1,1);
+}
+
+/* MD3 Ripple */
+.md3-ripple {
+  position: relative; overflow: hidden;
+}
+.md3-ripple::after {
+  content: ''; position: absolute; inset: 0;
+  background: radial-gradient(circle, var(--state-pressed) 10%, transparent 10%);
+  background-position: center; background-repeat: no-repeat;
+  background-size: 0; opacity: 0; transition: background-size .5s, opacity .3s;
+}
+.md3-ripple:active::after {
+  background-size: 1000%; opacity: 1; transition: background-size 0s;
+}
+
+/* MD3 Card elevations */
+.card-e1 { box-shadow: var(--elevation-1); }
+.card-e2 { box-shadow: var(--elevation-2); }
+.card-e3 { box-shadow: var(--elevation-3); }
+.card-e4 { box-shadow: var(--elevation-4); }
+.card-e5 { box-shadow: var(--elevation-5); }
+
+.card-md3 {
+  background: hsl(222 47% 9%);
+  border-radius: 16px;
+  transition: box-shadow var(--duration-medium) var(--ease-standard),
+              background-color var(--duration-short) var(--ease-standard);
+  border: 1px solid transparent;
+}
+.card-md3:hover {
+  box-shadow: var(--elevation-3);
+  background: hsl(222 47% 11%);
+}
+.card-md3:active {
+  box-shadow: var(--elevation-1);
+}
+
+/* MD3 Button */
+.btn-md3 {
+  position: relative; overflow: hidden; border-radius: 20px;
+  font-weight: 500; letter-spacing: .01em;
+  transition: box-shadow var(--duration-short) var(--ease-standard),
+              background var(--duration-short) var(--ease-standard);
+}
+.btn-md3::after {
+  content: ''; position: absolute; inset: 0;
+  background: radial-gradient(circle, rgba(255,255,255,.2) 10%, transparent 10%);
+  background-position: center; background-repeat: no-repeat;
+  background-size: 0; opacity: 0; transition: background-size .5s, opacity .3s;
+}
+.btn-md3:active::after {
+  background-size: 1000%; opacity: 1; transition: background-size 0s;
+}
+
+/* MD3 Surface tint */
+.surface-tint {
+  background: hsl(222 47% 9%);
+  position: relative;
+}
+.surface-tint::before {
+  content: ''; position: absolute; inset: 0; border-radius: inherit;
+  background: linear-gradient(0deg, hsl(217 100% 56% / .05), transparent);
+  pointer-events: none;
+}
+
+/* MD3 expressive motion */
+.motion-enter {
+  animation: md3Enter var(--duration-long) var(--ease-emphasized) both;
+}
+.motion-exit {
+  animation: md3Exit var(--duration-medium) var(--ease-accelerated) both;
+}
+
+@keyframes md3Enter {
+  from { opacity: 0; transform: translateY(24px) scale(.95); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes md3Exit {
+  from { opacity: 1; transform: translateY(0) scale(1); }
+  to { opacity: 0; transform: translateY(12px) scale(.98); }
+}
+
+/* MD3 stagger */
+.stagger-1 { animation-delay: .05s; }
+.stagger-2 { animation-delay: .1s; }
+.stagger-3 { animation-delay: .15s; }
+.stagger-4 { animation-delay: .2s; }
+.stagger-5 { animation-delay: .25s; }
+.stagger-6 { animation-delay: .3s; }
 
 @layer base {
   :root {

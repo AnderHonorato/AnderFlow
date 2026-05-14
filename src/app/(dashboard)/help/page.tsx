@@ -1,6 +1,3 @@
-'use client'
-
-import { useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -42,8 +39,6 @@ const faqs = [
 ]
 
 export default function HelpPage() {
-  const [searchQuery, setSearchQuery] = useState('')
-
   return (
     <div className="p-6 space-y-8 max-w-5xl mx-auto">
       <div className="text-center space-y-4">
@@ -55,8 +50,6 @@ export default function HelpPage() {
           <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Buscar artigos, tutoriais..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-10 h-12 text-base"
           />
         </div>

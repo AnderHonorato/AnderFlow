@@ -1,52 +1,54 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { useSession, signOut } from 'next-auth/react'
-import { useUIStore, useOnlineStore } from '@/stores/app-store'
+import { signOut, useSession } from 'next-auth/react'
+import { Bell, BookOpen } from 'lucide-react'
 
 export function Header() {
   const { data: session } = useSession()
-  const { mobileMenuOpen, toggleMobileMenu } = useUIStore()
-  const { onlineNow, maxSimultaneous, visitsToday } = useOnlineStore()
+  const initials = (session?.user?.name || 'AD').split(' ').slice(0, 2).map((n: string) => n[0]).join('').toUpperCase()
+  const [stats, setStats] = useState({ onlineNow: 0, maxSimultaneous: 0, visitsToday: 0 })
 
-  const initials = (session?.user?.name || 'AD').split(' ').map((n: string) => n[0]).slice(0, 2).join('').toUpperCase()
+  useEffect(() => {
+    const fetchStats = () => fetch('/api/analytics/online').then(r => r.json()).then(setStats).catch(() => {})
+    fetchStats()
+    const interval = setInterval(fetchStats, 30000)
+    return () => clearInterval(interval)
+  }, [])
 
   return (
     <header className="sticky top-0 z-30 h-16 border-b border-[hsl(222,25%,14%)] bg-[hsl(228,88%,5%)]/90 backdrop-blur flex items-center justify-between px-4 lg:px-6">
-      {/* Mobile hamburger */}
-      <button
-        onClick={toggleMobileMenu}
-        className="btn btn-icon btn-ghost lg:hidden"
-        aria-label="Menu"
-      >
-        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" strokeWidth="1.8" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
-        </svg>
-      </button>
-
-      {/* Stats inline */}
+      {/* Contadores */}
       <div className="hidden md:flex items-center gap-4 text-xs text-[#94A3B8]">
         <span className="flex items-center gap-1.5">
-          <span className="h-1.5 w-1.5 rounded-full bg-green-400" />
-          {onlineNow} online
+          <span className="h-2 w-2 rounded-full bg-green-400 animate-pulse" />
+          {stats.onlineNow} online
         </span>
-        <span className="opacity-50">|</span>
-        <span>Pico: {maxSimultaneous}</span>
-        <span className="opacity-50">|</span>
-        <span>{visitsToday} visitas hoje</span>
+        <span className="opacity-40">|</span>
+        <span>Pico: {stats.maxSimultaneous}</span>
+        <span className="opacity-40">|</span>
+        <span>{stats.visitsToday} visitas hoje</span>
       </div>
 
       <div className="flex items-center gap-1.5 ml-auto">
-        {/* Notifications */}
-        <Link href="/notifications" className="btn btn-icon btn-ghost relative">
-          <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" strokeWidth="1.8" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
-          </svg>
+        {/* Conhecimento - ícone animado */}
+        <Link
+          href="/knowledge"
+          className="btn btn-icon btn-ghost relative group"
+          title="Meu Conhecimento"
+        >
+          <BookOpen className="w-[18px] h-[18px] group-hover:text-primary transition-base" />
+          <span className="absolute -top-0.5 -right-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-primary text-[8px] text-white animate-pulse">!</span>
         </Link>
 
-        {/* User dropdown CSS puro */}
-        <div className="relative group">
+        {/* Notificações */}
+        <Link href="/notifications" className="btn btn-icon btn-ghost relative">
+          <Bell className="w-[18px] h-[18px]" />
+        </Link>
+
+        {/* Perfil dropdown CSS */}
+        <div className="relative group ml-1">
           <button className="btn btn-ghost btn-icon rounded-full">
             <span className="avatar avatar-sm bg-[hsl(217,100%,56%,.15)] text-[hsl(217,100%,56%)]">{initials}</span>
           </button>
@@ -55,9 +57,9 @@ export function Header() {
               <p className="text-sm font-medium">{session?.user?.name || 'Usuário'}</p>
               <p className="text-xs text-[#94A3B8]">{session?.user?.email}</p>
             </div>
-            <Link href="/profile" className="flex items-center gap-2 px-3 py-2 text-sm text-[#94A3B8] hover:text-white hover:bg-[hsl(222,40%,12%)] rounded-[10px] transition-colors">Perfil</Link>
-            <Link href="/settings" className="flex items-center gap-2 px-3 py-2 text-sm text-[#94A3B8] hover:text-white hover:bg-[hsl(222,40%,12%)] rounded-[10px] transition-colors">Configurações</Link>
-            <button onClick={() => signOut()} className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-400 hover:bg-red-500/10 rounded-[10px] transition-colors mt-1">Sair</button>
+            <Link href="/profile" className="block px-3 py-2 text-sm text-[#94A3B8] hover:text-white hover:bg-[hsl(222,40%,12%)] rounded-[10px] transition-colors">Perfil</Link>
+            <Link href="/settings" className="block px-3 py-2 text-sm text-[#94A3B8] hover:text-white hover:bg-[hsl(222,40%,12%)] rounded-[10px] transition-colors">Configurações</Link>
+            <button onClick={() => signOut()} className="w-full text-left px-3 py-2 text-sm text-red-400 hover:bg-red-500/10 rounded-[10px] transition-colors mt-1">Sair</button>
           </div>
         </div>
       </div>
