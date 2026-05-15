@@ -61,7 +61,7 @@ export default function NotificationsPage() {
     <div className="p-6 space-y-6 max-w-3xl mx-auto">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Notificações</h1>
+          <h1 className="text-lg font-medium">Notificações</h1>
           <p className="text-sm text-muted-foreground mt-1">{unreadCount} não lidas</p>
         </div>
         {unreadCount > 0 && (

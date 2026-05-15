@@ -62,7 +62,7 @@ export default function ClientDetailPage({ params }: { params: { id: string } })
             </div>
             <div className="flex-1">
               <div className="flex items-center gap-3 mb-1">
-                <h1 className="text-2xl font-semibold">{client.name}</h1>
+                <h1 className="text-lg font-medium">{client.name}</h1>
                 <Badge variant={client.plan === 'ENTERPRISE' ? 'default' : client.plan === 'PRO' ? 'info' : 'secondary'}>
                   {client.plan}
                 </Badge>

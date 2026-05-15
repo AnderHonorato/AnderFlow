@@ -19,13 +19,13 @@ export function Dialog({ open, onClose, onOpenChange, children }: DialogProps) {
       document.addEventListener('keydown', handler)
       return () => document.removeEventListener('keydown', handler)
     }
-  }, [open, close])
+  }, [open])
 
   if (!open) return null
 
   return (
     <div className={`dialog-overlay ${open ? 'open' : ''}`} onClick={close}>
-      <div className="dialog-content animate-scale-in" ref={ref} onClick={e => e.stopPropagation()}>
+      <div className="dialog-content animate-fade-in" ref={ref} onClick={e => e.stopPropagation()}>
         {children}
       </div>
     </div>
@@ -33,11 +33,11 @@ export function Dialog({ open, onClose, onOpenChange, children }: DialogProps) {
 }
 
 export function DialogHeader({ children }: { children: React.ReactNode }) {
-  return <div className="mb-4">{children}</div>
+  return <div className="mb-3">{children}</div>
 }
 
 export function DialogTitle({ children }: { children: React.ReactNode }) {
-  return <h2 className="text-lg font-semibold text-[#EAF2FF]">{children}</h2>
+  return <h2 className="text-[15px] font-medium text-[var(--text)]">{children}</h2>
 }
 
 export function DialogContent({ children, className }: { children: React.ReactNode; className?: string }) {
@@ -45,5 +45,5 @@ export function DialogContent({ children, className }: { children: React.ReactNo
 }
 
 export function DialogFooter({ children }: { children: React.ReactNode }) {
-  return <div className="flex justify-end gap-2 mt-6">{children}</div>
+  return <div className="flex justify-end gap-2 mt-5">{children}</div>
 }

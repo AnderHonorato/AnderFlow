@@ -6,7 +6,7 @@ export default function PortalContracts() {
   return (
     <div className="p-6 space-y-6">
       <div>
-        <h2 className="text-2xl font-semibold tracking-tight">Contratos</h2>
+        <h2 className="text-lg font-medium">Contratos</h2>
         <p className="text-sm text-muted-foreground mt-1">Seus contratos e documentos</p>
       </div>
       <Card>

@@ -28,7 +28,6 @@ export function SidebarClient() {
   const { onlineNow, setStats } = useOnlineStore()
   const [collapsed, setCollapsed] = useState(false)
 
-  // Analytics ping
   useEffect(() => {
     const fetchStats = () => fetch('/api/analytics/online').then(r => r.json()).then(setStats)
     fetchStats()
@@ -36,104 +35,90 @@ export function SidebarClient() {
     return () => clearInterval(interval)
   }, [setStats])
 
+  const isActive = (href: string) => pathname === href || pathname.startsWith(href + '/')
+
+  const navItemClass = (active: boolean) =>
+    `flex items-center rounded-md text-[13px] font-normal transition-colors duration-150 border-l-[2px] ${
+      collapsed ? 'justify-center px-2 py-2.5' : 'px-3 py-2'
+    } ${
+      active
+        ? 'border-l-[var(--primary)] text-[var(--text)]'
+        : 'border-l-transparent text-[var(--text-muted)] hover:bg-[var(--surface-hover)] hover:text-[var(--text)]'
+    }`
+
   return (
     <>
       {mobileMenuOpen && (
-        <div className="fixed inset-0 z-40 bg-black/50 lg:hidden" onClick={() => setMobileMenuOpen(false)} />
+        <div className="fixed inset-0 z-40 bg-black/40 lg:hidden" onClick={() => setMobileMenuOpen(false)} />
       )}
 
       <aside className={`
         fixed lg:sticky top-0 left-0 z-40 h-screen flex flex-col
-        bg-[hsl(228,80%,3.5%)] border-r border-[hsl(222,25%,12%)]
+        bg-[var(--sidebar-bg)] border-r border-[var(--border)]
         transform transition-all duration-200 ease-out
         ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
         lg:translate-x-0 lg:flex
-        ${collapsed ? 'w-[68px]' : 'w-[260px]'}
+        ${collapsed ? 'w-[60px]' : 'w-[230px]'}
       `}>
-        {/* Logo */}
-        <div className={`flex h-16 items-center border-b border-[hsl(222,25%,12%)] px-4 ${collapsed ? 'justify-center' : 'justify-between'}`}>
-          <Link href="/dashboard" className="flex items-center gap-2.5" onClick={() => setMobileMenuOpen(false)}>
-            <svg width="28" height="28" viewBox="0 0 28 28" fill="none" className="shrink-0">
-              <rect width="28" height="28" rx="7" fill="#1D6FFF"/>
+        <div className={`flex h-12 items-center border-b border-[var(--border)] px-3 ${collapsed ? 'justify-center' : 'justify-between'}`}>
+          <Link href="/dashboard" className="flex items-center gap-2" onClick={() => setMobileMenuOpen(false)}>
+            <svg width="22" height="22" viewBox="0 0 28 28" fill="none" className="shrink-0">
+              <rect width="28" height="28" rx="6" fill="var(--primary)"/>
               <path d="M7 22l6-15h4l4 10h-4l-3-5-4 10H7z" fill="#fff" opacity="0.9"/>
               <path d="M13 19c2-2 3-3 5-3h3c-1 2-2 3-4 3h-4z" fill="#fff" opacity="0.5"/>
             </svg>
-            {!collapsed && <span className="text-base font-semibold text-[#EAF2FF] tracking-tight">ANDERFLOW</span>}
+            {!collapsed && <span className="text-sm font-medium text-[var(--text)]">ANDERFLOW</span>}
           </Link>
           <button
             onClick={() => setCollapsed(!collapsed)}
-            className="hidden lg:flex items-center justify-center h-6 w-6 rounded-full border border-[hsl(222,25%,12%)] bg-[hsl(222,40%,8%)] text-[#94A3B8] hover:text-white transition-base absolute -right-3"
+            className="hidden lg:flex items-center justify-center h-5 w-5 rounded border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text)] transition-base"
           >
             {collapsed ? <ChevronRight className="h-3 w-3" /> : <ChevronLeft className="h-3 w-3" />}
           </button>
-          <button onClick={() => setMobileMenuOpen(false)} className="lg:hidden text-[#94A3B8]">
-            <ChevronLeft className="h-5 w-5" />
+          <button onClick={() => setMobileMenuOpen(false)} className="lg:hidden text-[var(--text-muted)]">
+            <ChevronLeft className="h-4 w-4" />
           </button>
         </div>
 
-        {/* Nav */}
-        <nav className="flex-1 overflow-y-auto py-3 px-3 space-y-1 scroll-area">
-          {topNav.map(item => {
-            const active = pathname === item.href || pathname.startsWith(item.href + '/')
-            return (
-              <Link
-                key={item.name}
-                href={item.href}
-                onClick={() => setMobileMenuOpen(false)}
-                title={collapsed ? item.name : undefined}
-                className={`
-                  flex items-center gap-3 rounded-[10px] text-sm font-medium
-                  transition-all duration-150
-                  ${collapsed ? 'justify-center px-2 py-3' : 'px-3 py-2.5'}
-                  ${active
-                    ? 'bg-[hsl(217,100%,56%,.12)] text-[hsl(217,100%,56%)]'
-                    : 'text-[#94A3B8] hover:bg-[hsl(222,40%,10%)] hover:text-[#EAF2FF]'
-                  }
-                `}
-              >
-                <svg className="w-[18px] h-[18px] shrink-0" fill="none" viewBox="0 0 24 24" strokeWidth="1.8" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d={item.icon} /></svg>
-                {!collapsed && <span className="truncate">{item.name}</span>}
-              </Link>
-            )
-          })}
+        <nav className="flex-1 overflow-y-auto py-2 px-2 space-y-0.5 scroll-area">
+          {topNav.map(item => (
+            <Link
+              key={item.name}
+              href={item.href}
+              onClick={() => setMobileMenuOpen(false)}
+              title={collapsed ? item.name : undefined}
+              className={navItemClass(isActive(item.href))}
+            >
+              <svg className="w-[16px] h-[16px] shrink-0" fill="none" viewBox="0 0 24 24" strokeWidth="1.6" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d={item.icon} /></svg>
+              {!collapsed && <span className="ml-2.5 truncate">{item.name}</span>}
+            </Link>
+          ))}
         </nav>
 
-        {/* Bottom */}
-        <div className="border-t border-[hsl(222,25%,12%)] py-3 px-3 space-y-2">
+        <div className="border-t border-[var(--border)] py-2 px-2 space-y-0.5">
           {!collapsed && (
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-[10px] bg-[hsl(222,40%,8%)]">
-              <span className="h-2 w-2 rounded-full bg-green-400 animate-pulse shrink-0" />
-              <span className="text-xs text-[#94A3B8]">{onlineNow} online</span>
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-md text-xs text-[var(--text-muted)]">
+              <span className="h-1.5 w-1.5 rounded-full bg-[var(--success)] shrink-0" />
+              <span>{onlineNow} online</span>
             </div>
           )}
           {collapsed && (
             <div className="flex justify-center py-1.5">
-              <span className="h-2 w-2 rounded-full bg-green-400 animate-pulse" />
+              <span className="h-1.5 w-1.5 rounded-full bg-[var(--success)]" />
             </div>
           )}
-          {bottomNav.map(item => {
-            const active = pathname === item.href || pathname.startsWith(item.href + '/')
-            return (
-              <Link
-                key={item.name}
-                href={item.href}
-                onClick={() => setMobileMenuOpen(false)}
-                title={collapsed ? item.name : undefined}
-                className={`
-                  flex items-center gap-3 rounded-[10px] text-sm font-medium
-                  transition-all duration-150
-                  ${collapsed ? 'justify-center px-2 py-3' : 'px-3 py-2'}
-                  ${active
-                    ? 'bg-[hsl(217,100%,56%,.12)] text-[hsl(217,100%,56%)]'
-                    : 'text-[#94A3B8] hover:bg-[hsl(222,40%,10%)] hover:text-[#EAF2FF]'
-                  }
-                `}
-              >
-                <svg className="w-[18px] h-[18px] shrink-0" fill="none" viewBox="0 0 24 24" strokeWidth="1.8" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d={item.icon} /></svg>
-                {!collapsed && <span className="truncate">{item.name}</span>}
-              </Link>
-            )
-          })}
+          {bottomNav.map(item => (
+            <Link
+              key={item.name}
+              href={item.href}
+              onClick={() => setMobileMenuOpen(false)}
+              title={collapsed ? item.name : undefined}
+              className={navItemClass(isActive(item.href))}
+            >
+              <svg className="w-[16px] h-[16px] shrink-0" fill="none" viewBox="0 0 24 24" strokeWidth="1.6" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d={item.icon} /></svg>
+              {!collapsed && <span className="ml-2.5 truncate">{item.name}</span>}
+            </Link>
+          ))}
         </div>
       </aside>
     </>

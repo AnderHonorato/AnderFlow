@@ -40,7 +40,7 @@ export default async function AuditLogsPage() {
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Logs de Auditoria</h1>
+          <h1 className="text-lg font-medium">Logs de Auditoria</h1>
           <p className="text-sm text-muted-foreground mt-1">
             Registro completo de todas as atividades da plataforma
           </p>

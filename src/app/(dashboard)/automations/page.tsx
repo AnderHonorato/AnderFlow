@@ -47,7 +47,7 @@ export default async function AutomationsPage() {
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Automações</h1>
+          <h1 className="text-lg font-medium">Automações</h1>
           <p className="text-sm text-muted-foreground mt-1">
             Workflows automáticos para otimizar processos
           </p>

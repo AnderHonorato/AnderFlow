@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
     }
 
     const message = await prisma.message.create({
-      data: { content: content.trim(), senderId: userId, type: 'text' },
+      data: { content: content.trim(), senderId: userId, type: 'text', channelId: body.channelId || null },
       include: { sender: { select: { id: true, name: true, role: true } } },
     })
 

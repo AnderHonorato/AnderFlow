@@ -1,0 +1,174 @@
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font-sans);background:transparent;color:var(--color-text-primary)}
+.wrap{padding:1rem 0;max-width:680px}
+h1{font-size:18px;font-weight:500;margin-bottom:4px}
+.sub{font-size:13px;color:var(--color-text-secondary);margin-bottom:1.5rem}
+.phase{margin-bottom:1.5rem;border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);overflow:hidden}
+.phase-header{padding:10px 14px;display:flex;align-items:center;gap:8px;cursor:pointer;background:var(--color-background-secondary);user-select:none}
+.badge{font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px}
+.b-red{background:var(--color-background-danger);color:var(--color-text-danger)}
+.b-amber{background:var(--color-background-warning);color:var(--color-text-warning)}
+.b-blue{background:var(--color-background-info);color:var(--color-text-info)}
+.b-green{background:var(--color-background-success);color:var(--color-text-success)}
+.phase-title{font-size:14px;font-weight:500;flex:1}
+.arrow{font-size:12px;color:var(--color-text-secondary);transition:transform 0.2s}
+.phase-body{padding:12px 14px;display:none;border-top:0.5px solid var(--color-border-tertiary)}
+.phase-body.open{display:block}
+.item{display:flex;gap:8px;padding:6px 0;border-bottom:0.5px solid var(--color-border-tertiary);font-size:13px;line-height:1.5;align-items:flex-start}
+.item:last-child{border-bottom:none}
+.cb{width:16px;height:16px;border:1.5px solid var(--color-border-secondary);border-radius:3px;flex-shrink:0;margin-top:2px;cursor:pointer;display:flex;align-items:center;justify-content:center;background:var(--color-background-primary)}
+.cb.done{background:var(--color-background-success);border-color:var(--color-border-success)}
+.cb.done::after{content:'✓';font-size:10px;color:var(--color-text-success)}
+.code{font-family:var(--font-mono);font-size:11px;background:var(--color-background-secondary);padding:1px 5px;border-radius:3px;color:var(--color-text-secondary)}
+.progress-bar{height:4px;background:var(--color-border-tertiary);border-radius:2px;margin-bottom:1.5rem;overflow:hidden}
+.progress-fill{height:100%;background:var(--color-text-info);border-radius:2px;transition:width 0.3s}
+.count{font-size:12px;color:var(--color-text-secondary);text-align:right;margin-top:4px}
+</style>
+<div class="wrap">
+<h2 class="sr-only">Auditoria e checklist de correções ANDERFLOW</h2>
+<h1>ANDERFLOW — Auditoria & Prompt Checklist</h1>
+<p class="sub">Copie e passe fase por fase para a IA. Verifique cada item antes de avançar.</p>
+<div class="progress-bar"><div class="progress-fill" id="prog" style="width:0%"></div></div>
+<div class="count" id="cnt">0 de 42 concluídos</div>
+
+<div class="phase">
+<div class="phase-header" onclick="toggle(this)">
+<span class="badge b-red">FASE 1</span>
+<span class="phase-title">Banco de Dados & API — Erros críticos que quebram tudo</span>
+<span class="arrow">▼</span>
+</div>
+<div class="phase-body open">
+<div class="item"><div class="cb" onclick="check(this)"></div><span>Verificar se <span class="code">prisma/schema.prisma</span> está com <span class="code">prisma generate</span> rodado. Adicionar script <span class="code">"postinstall": "prisma generate"</span> no <span class="code">package.json</span>.</span></div>
+<div class="item"><div class="cb" onclick="check(this)"></div><span>Corrigir <span class="code">/api/messages/route.ts</span>: a rota POST não está passando <span class="code">channelId</span> para o banco. Adicionar <span class="code">channelId: body.channelId || null</span> no create.</span></div>
+<div class="item"><div class="cb" onclick="check(this)"></div><span>Corrigir <span class="code">/api/invoices/route.ts</span>: <span class="code">clientId: 'cm1_example'</span> é hardcoded. Substituir por <span class="code">user.id</span> real do token JWT em todas as rotas que têm isso.</span></div>
+<div class="item"><div class="cb" onclick="check(this)"></div><span>Corrigir <span class="code">/api/tickets/route.ts</span>: <span class="code">creatorId: 'cm1_example'</span> hardcoded. Pegar do token JWT.</span></div>
+<div class="item"><div class="cb" onclick="check(this)"></div><span>Em <span class="code">/api/projects/route.ts</span>: remover fallback dev (<span class="code">first ADMIN</span>) em produção. Usar somente <span class="code">getToken</span>. Adicionar guard: se <span class="code">!userId</span> retorna 401.</span></div>
+<div class="item"><div class="cb" onclick="check(this)"></div><span>Checar todas as rotas que usam <span class="code">getSessionUser</span>: confirmar que <span class="code">NEXTAUTH_SECRET</span> está no <span class="code">.env</span> e que o token é validado corretamente em DEV e PROD.</span></div>
+</div>
+</div>
+
+<div class="phase">
+<div class="phase-header" onclick="toggle(this)">
+<span class="badge b-red">FASE 2</span>
+<span class="phase-title">Funcionalidades quebradas — Chat, Criar Projeto, Faturas</span>
+<span class="arrow">▼</span>
+</div>
+<div class="phase-body">
+<div class="item"><div class="cb" onclick="check(this)"></div><span><b>Chat:</b> Em <span class="code">chat/page.tsx</span> o botão enviar chama <span class="code">currentUserId</span> que busca via API separada e pode estar vazio. Refatorar para usar <span class="code">useSession()</span> do NextAuth diretamente: <span class="code">const {data:session} = useSession()</span> e usar <span class="code">session.user.id</span>.</span></div>
+<div class="item"><div class="cb" onclick="check(this)"></div><span><b>Chat tempo real:</b> Implementar polling simples (<span class="code">setInterval</span> de 3s) no <span class="code">useEffect</span> do chat para buscar novas mensagens enquanto o Socket.IO não está em produção.</span></div>
+<div class="item"><div class="cb" onclick="check(this)"></div><span><b>Criar Projeto:</b> Em <span class="code">projects/new/page.tsx</span> o form passa <span class="code">clientId: 'cm1_example'</span>. Corrigir para usar <span class="code">session.user.id</span>. Adicionar feedback de erro visível se a API retornar erro.</span></div>
+<div class="item"><div class="cb" onclick="check(this)"></div><span><b>Nova Fatura:</b> Em <span class="code">financial/page.tsx</span> o <span class="code">clientId</span> está hardcoded. Buscar lista de clientes via <span class="code">/api/clients</span> e mostrar um <span class="code">&lt;select&gt;</span> no modal de nova fatura.</span></div>
+<div class="item"><div class="cb" onclick="check(this)"></div><span><b>Novo Ticket:</b> Mesmo problema. Substituir <span class="code">creatorId</span> hardcoded por <span class="code">session.user.id</span>.</span></div>
+<div class="item"><div class="cb" onclick="check(this)"></div><span><b>Botão MoreHorizontal:</b> Em projetos, clientes, faturas, tickets — o botão <span class="code">MoreHorizontal</span> não faz nada. Implementar um dropdown simples com ações: Ver, Editar, Arquivar/Excluir usando estado local <span class="code">useState</span>.</span></div>
+<div class="item"><div class="cb" onclick="check(this)"></div><span><b>Notificações tempo real:</b> No <span class="code">header.tsx</span> adicionar polling a cada 30s em <span class="code">/api/notifications?unread=true</span> e mostrar badge vermelho com contador no ícone Bell.</span></div>
+</div>
+</div>
+
+<div class="phase">
+<div class="phase-header" onclick="toggle(this)">
+<span class="badge b-amber">FASE 3</span>
+<span class="phase-title">Design System — Tokens, Escala, Tipografia</span>
+<span class="arrow">▼</span>
+</div>
+<div class="phase-body">
+<div class="item"><div class="cb" onclick="check(this)"></div><span>Criar arquivo <span class="code">globals.css</span> novo com variáveis CSS consolidadas: <span class="code">--space-xs:4px --space-sm:8px --space-md:16px --space-lg:24px</span>. Remover estilos duplicados e contradições entre CSS puro e Tailwind.</span></div>
+<div class="item"><div class="cb" onclick="check(this)"></div><span>Padronizar tipografia: body <span class="code">14px/1.5</span>, label <span class="code">12px</span>, heading <span class="code">h1=20px h2=16px h3=14px font-weight:500</span>. Remover <span class="code">text-2xl font-semibold tracking-tight</span> repetido em toda página — criar componente <span class="code">PageHeader</span>.</span></div>
+<div class="item"><div class="cb" onclick="check(this)"></div><span>Reduzir todos os <span class="code">Card &gt; CardContent p-6</span> para <span class="code">p-3</span> ou <span class="code">p-4</span>. Cards com apenas 2-3 dados não precisam de padding generoso.</span></div>
+<div class="item"><div class="cb" onclick="check(this)"></div><span>Criar componente <span class="code">StatCard</span> compacto: ícone 28px + número 18px + label 11px, altura total 60px. Substituir os 4 cards de métricas em todas as páginas por este componente.</span></div>
+<div class="item"><div class="cb" onclick="check(this)"></div><span>Padronizar botões: <span class="code">h-8 text-xs px-3</span> para ações secundárias, <span class="code">h-9 text-sm px-4</span> para ação primária. Remover <span class="code">h-11</span> de botões que não são CTAs principais.</span></div>
+</div>
+</div>
+
+<div class="phase">
+<div class="phase-header" onclick="toggle(this)">
+<span class="badge b-amber">FASE 4</span>
+<span class="phase-title">Redesign Visual — Layout, Sidebar, Cores</span>
+<span class="arrow">▼</span>
+</div>
+<div class="phase-body">
+<div class="item"><div class="cb" onclick="check(this)"></div><span><b>Sidebar:</b> Aumentar contraste de active state. Trocar <span class="code">bg-[hsl(217,100%,56%,.12)]</span> por <span class="code">bg-white/10</span>. Adicionar indicador lateral esquerdo: <span class="code">border-l-2 border-blue-500</span> no item ativo. Remover sombra glow desnecessária.</span></div>
+<div class="item"><div class="cb" onclick="check(this)"></div><span><b>Header:</b> Reduzir altura de <span class="code">h-16</span> para <span class="code">h-12</span>. Simplificar: só avatar + notificação bell com badge. Remover contadores online do header (mover para sidebar bottom).</span></div>
+<div class="item"><div class="cb" onclick="check(this)"></div><span><b>Tabelas/Listas:</b> Substituir <span class="code">divide-y</span> com <span class="code">p-4</span> por linhas compactas <span class="code">py-2.5 px-3</span>. Adicionar <span class="code">hover:bg-muted/30</span>. Linha de dados deve ter no máximo 44px de altura.</span></div>
+<div class="item"><div class="cb" onclick="check(this)"></div><span><b>Kanban CRM/Projetos:</b> Reduzir card width de <span class="code">w-[280px]</span> para <span class="code">w-[240px]</span>. Remover Avatar de 40px do lead card, usar iniciais em 24px. Mostrar apenas nome + empresa + valor + badge.</span></div>
+<div class="item"><div class="cb" onclick="check(this)"></div><span><b>Dialogs/Modals:</b> Padronizar todos os modals: max-width 400px, sem scroll interno se possível, campos com <span class="code">h-8</span>, espaçamento <span class="code">space-y-2</span>. Adicionar <span class="code">autofocus</span> no primeiro input.</span></div>
+<div class="item"><div class="cb" onclick="check(this)"></div><span><b>Badges:</b> Reduzir todos de <span class="code">text-xs</span> para <span class="code">text-[10px] px-1.5 py-0</span>. Altura máxima 18px.</span></div>
+</div>
+</div>
+
+<div class="phase">
+<div class="phase-header" onclick="toggle(this)">
+<span class="badge b-blue">FASE 5</span>
+<span class="phase-title">Animações & Feedback Visual — Sem Blur</span>
+<span class="arrow">▼</span>
+</div>
+<div class="phase-body">
+<div class="item"><div class="cb" onclick="check(this)"></div><span>Remover TODOS os <span class="code">backdrop-blur</span>, <span class="code">blur()</span>, <span class="code">anderflow-glow</span> do CSS. Substituir por bordas sólidas simples.</span></div>
+<div class="item"><div class="cb" onclick="check(this)"></div><span>Adicionar transição de entrada de página: <span class="code">animate-in fade-in slide-in-from-bottom-2 duration-200</span> no <span class="code">&lt;main&gt;</span> do layout. Garantir que não usa <span class="code">framer-motion</span> para isso.</span></div>
+<div class="item"><div class="cb" onclick="check(this)"></div><span>Loading states: garantir que todos os <span class="code">Skeleton</span> têm proporção correta. Skeleton de row de tabela: <span class="code">h-9 rounded-sm</span>. Skeleton de stat card: <span class="code">h-14 rounded-md</span>.</span></div>
+<div class="item"><div class="cb" onclick="check(this)"></div><span>Toasts: mover <span class="code">Sonner</span> para <span class="code">position="top-right"</span> e adicionar duração padrão de 3s. Testar sucesso verde, erro vermelho, loading spinner.</span></div>
+<div class="item"><div class="cb" onclick="check(this)"></div><span>Botões com ação assíncrona: garantir <span class="code">disabled+Loader2</span> em TODOS os submits. Verificar financial, tickets, crm, clients.</span></div>
+</div>
+</div>
+
+<div class="phase">
+<div class="phase-header" onclick="toggle(this)">
+<span class="badge b-blue">FASE 6</span>
+<span class="phase-title">Permissões & Portal do Cliente</span>
+<span class="arrow">▼</span>
+</div>
+<div class="phase-body">
+<div class="item"><div class="cb" onclick="check(this)"></div><span>Criar hook <span class="code">useRole()</span> que retorna <span class="code">role</span> do <span class="code">useSession()</span>. Exportar <span class="code">isAdmin</span>, <span class="code">isClient</span> como booleans.</span></div>
+<div class="item"><div class="cb" onclick="check(this)"></div><span>Portal e Dashboard admin devem usar o MESMO design system e componentes. Criar <span class="code">components/shared/</span>: <span class="code">StatCard</span>, <span class="code">DataTable</span>, <span class="code">PageHeader</span>, <span class="code">EmptyState</span>.</span></div>
+<div class="item"><div class="cb" onclick="check(this)"></div><span>Portal: sidebar com mesmos ícones e espaçamento do admin. O que muda é somente o <span class="code">navItems</span> array. Remover sidebar custom do portal e reusar <span class="code">SidebarClient</span> com prop <span class="code">items</span>.</span></div>
+<div class="item"><div class="cb" onclick="check(this)"></div><span>Botões de ação admin (Nova Fatura, Novo Ticket, etc.) devem verificar <span class="code">isAdmin</span> e renderizar <span class="code">null</span> se cliente. Não apenas esconder via CSS — não renderizar.</span></div>
+</div>
+</div>
+
+<div class="phase">
+<div class="phase-header" onclick="toggle(this)">
+<span class="badge b-green">FASE 7</span>
+<span class="phase-title">Responsivo Desktop — Prioridade</span>
+<span class="arrow">▼</span>
+</div>
+<div class="phase-body">
+<div class="item"><div class="cb" onclick="check(this)"></div><span>Grid de stat cards: <span class="code">grid-cols-2 md:grid-cols-4</span> com <span class="code">gap-3</span>. Testar em 1280px, 1440px, 1920px.</span></div>
+<div class="item"><div class="cb" onclick="check(this)"></div><span>Tabelas longas: adicionar <span class="code">overflow-x-auto</span> no container pai. Colunas menos importantes (<span class="code">notas, empresa</span>) recebem <span class="code">hidden lg:table-cell</span>.</span></div>
+<div class="item"><div class="cb" onclick="check(this)"></div><span>Kanban: <span class="code">overflow-x-auto pb-4</span> já existe mas verificar que o scroll horizontal funciona sem quebrar layout vertical.</span></div>
+<div class="item"><div class="cb" onclick="check(this)"></div><span>Chat: verificar que <span class="code">h-[calc(100vh-4rem)]</span> funciona corretamente com o novo header de <span class="code">h-12</span>. Ajustar para <span class="code">h-[calc(100vh-3rem)]</span>.</span></div>
+</div>
+</div>
+
+<div class="phase">
+<div class="phase-header" onclick="toggle(this)">
+<span class="badge b-green">FASE 8</span>
+<span class="phase-title">Verificação Final — Checklist antes de marcar como feito</span>
+<span class="arrow">▼</span>
+</div>
+<div class="phase-body">
+<div class="item"><div class="cb" onclick="check(this)"></div><span>Rodar <span class="code">npm run build</span> sem erros TypeScript. Corrigir todos os <span class="code">any</span> críticos em rotas API.</span></div>
+<div class="item"><div class="cb" onclick="check(this)"></div><span>Testar fluxo completo: Login admin → Criar projeto → Criar fatura → Enviar mensagem no chat → Ver notificação.</span></div>
+<div class="item"><div class="cb" onclick="check(this)"></div><span>Testar fluxo cliente: Login cliente → Ver projetos → Enviar mensagem → Ver fatura.</span></div>
+<div class="item"><div class="cb" onclick="check(this)"></div><span>Verificar que nenhum componente tem <span class="code">console.error</span> no browser sobre props ou hooks.</span></div>
+<div class="item"><div class="cb" onclick="check(this)"></div><span>Abrir DevTools → Network → verificar que todas as chamadas API retornam 200 (não 403, 401 ou 500).</span></div>
+<div class="item"><div class="cb" onclick="check(this)"></div><span>Testar em viewport 1280px: sidebar visível, cards alinhados, sem overflow horizontal indesejado.</span></div>
+</div>
+</div>
+
+</div>
+<script>
+function toggle(h){
+  const b=h.nextElementSibling;
+  const a=h.querySelector('.arrow');
+  b.classList.toggle('open');
+  a.style.transform=b.classList.contains('open')?'rotate(0)':'rotate(-90deg)';
+}
+function check(cb){
+  cb.classList.toggle('done');
+  const all=document.querySelectorAll('.cb');
+  const done=document.querySelectorAll('.cb.done').length;
+  document.getElementById('prog').style.width=(done/all.length*100)+'%';
+  document.getElementById('cnt').textContent=done+' de '+all.length+' concluídos';
+}
+</script>

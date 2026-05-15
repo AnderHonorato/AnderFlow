@@ -14,7 +14,7 @@ import { toast } from 'sonner'
 import {
   ArrowLeft, CheckCircle2, Circle, Play, Pause,
   Clock, Send, Loader2, Plus, Image, Paperclip,
-  ChevronDown, ChevronRight
+  ChevronDown, ChevronRight, ThumbsUp, ThumbsDown
 } from 'lucide-react'
 
 // Etapas padrão de qualquer projeto
@@ -105,6 +105,30 @@ export default function ProjectDetailPage({ params }: { params: { id: string } }
     saveSteps(newSteps)
   }
 
+  const handleApprove = async () => {
+    const res = await fetch(`/api/projects/${params.id}/approve`, { method: 'POST' })
+    if (res.ok) {
+      toast.success('Projeto aprovado! Briefing enviado ao cliente.')
+      setProject((prev: any) => ({ ...prev, status: 'TODO' }))
+    } else {
+      toast.error('Erro ao aprovar projeto')
+    }
+  }
+
+  const handleReject = async () => {
+    const res = await fetch(`/api/projects/${params.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'CANCELLED' }),
+    })
+    if (res.ok) {
+      toast.success('Projeto recusado.')
+      window.location.href = '/projects'
+    } else {
+      toast.error('Erro ao recusar projeto')
+    }
+  }
+
   const completedCount = steps.filter(s => s.status === 'completed').length
   const totalSteps = steps.length
   const progress = totalSteps > 0 ? Math.round((completedCount / totalSteps) * 100) : 0
@@ -131,16 +155,26 @@ export default function ProjectDetailPage({ params }: { params: { id: string } }
         <CardContent className="p-6">
           <div className="flex items-start justify-between">
             <div>
-              <h1 className="text-2xl font-semibold tracking-tight">{project.name}</h1>
+              <h1 className="text-lg font-medium">{project.name}</h1>
               <p className="text-sm text-muted-foreground mt-1">{project.description}</p>
               <div className="flex items-center gap-3 mt-3">
-                <Badge variant={project.status === 'COMPLETED' ? 'success' : 'info'}>
-                  {project.status === 'COMPLETED' ? 'Concluído' : 'Em andamento'}
+                <Badge variant={project.status === 'COMPLETED' ? 'success' : project.status === 'DRAFT' ? 'warning' : 'info'}>
+                  {project.status === 'COMPLETED' ? 'Concluído' : project.status === 'DRAFT' ? 'Rascunho (aguardando aprovação)' : 'Em andamento'}
                 </Badge>
                 <span className="text-sm text-muted-foreground">
                   Cliente: {project.client?.name} ({project.client?.company})
                 </span>
               </div>
+              {project.status === 'DRAFT' && (
+                <div className="flex items-center gap-2 mt-3">
+                  <Button size="sm" onClick={handleApprove} className="h-7 text-xs">
+                    <ThumbsUp className="mr-1 h-3 w-3" /> Aprovar
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={handleReject} className="h-7 text-xs">
+                    <ThumbsDown className="mr-1 h-3 w-3" /> Recusar
+                  </Button>
+                </div>
+              )}
             </div>
             <div className="text-right">
               <p className="text-3xl font-bold text-primary">{progress}%</p>
@@ -153,8 +187,8 @@ export default function ProjectDetailPage({ params }: { params: { id: string } }
 
       <div className="grid gap-6 lg:grid-cols-[1fr_300px]">
         <div className="space-y-4">
-          <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Fluxo do Projeto</h3>
-          <div className="relative">
+          <h3 className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">Fluxo do Projeto</h3>
+          <div className="relative pl-1">
             {steps.map((step, i) => {
               const stepDef = DEFAULT_STEPS[step.id - 1]
               const isExpanded = expandedStep === step.id
@@ -163,119 +197,91 @@ export default function ProjectDetailPage({ params }: { params: { id: string } }
               return (
                 <div key={step.id} className="relative">
                   <div className="flex gap-3">
-                    {/* Número da etapa + linha */}
-                    <div className="flex flex-col items-center shrink-0">
-                      <div className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold z-10 transition-colors ${
-                        step.status === 'completed' ? 'bg-success text-success-foreground' :
-                        step.status === 'in_progress' ? 'bg-primary text-primary-foreground anderflow-glow' :
-                        step.status === 'paused' ? 'bg-warning text-warning-foreground' :
-                        'bg-muted text-muted-foreground'
+                    <div className="flex flex-col items-center shrink-0 w-6">
+                      <div className={`relative z-10 flex h-6 w-6 items-center justify-center rounded-full text-2xs font-bold transition-colors ${
+                        step.status === 'completed' ? 'bg-[var(--success)] text-white' :
+                        step.status === 'in_progress' ? 'bg-[var(--primary)] text-white' :
+                        step.status === 'paused' ? 'bg-[var(--warning)] text-white' :
+                        'bg-[var(--surface-hover)] text-[var(--text-muted)] border border-[var(--border)]'
                       }`}>
-                        {stepDef.id}
+                        {step.status === 'completed' ? (
+                          <CheckCircle2 className="h-3.5 w-3.5" />
+                        ) : step.status === 'in_progress' ? (
+                          <div className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" />
+                        ) : (
+                          stepDef.id
+                        )}
                       </div>
                       {!isLast && (
-                        <div className={`w-0.5 flex-1 min-h-[24px] my-1 transition-colors ${
-                          step.status === 'completed' ? 'bg-success/40' :
-                          step.status === 'in_progress' ? 'bg-primary/40' : 'bg-border'
-                        }`} />
+                        <div className="w-px flex-1 min-h-[20px] my-0.5" style={{ backgroundColor: step.status === 'completed' ? 'var(--success)' : step.status === 'in_progress' ? 'var(--primary)' : step.status === 'paused' ? 'var(--warning)' : 'var(--border)' }} />
                       )}
                     </div>
-
-                    {/* Conteúdo da etapa */}
-                    <div className="flex-1 pb-4">
+                    <div className="flex-1 pb-3">
                       <button
                         onClick={() => setExpandedStep(isExpanded ? null : step.id)}
                         className="w-full flex items-center justify-between group"
                       >
-                        <div className="flex items-center gap-2 text-left">
-                          <span className="text-sm font-medium">{stepDef.label}</span>
-                          <span className="text-xs text-muted-foreground">{stepDef.icon}</span>
-                          {getStatusIcon(step.status)}
-                        </div>
-                        <div className="flex items-center gap-1">
+                        <div className="flex items-center gap-2 text-left min-w-0">
+                          <span className="text-sm font-medium text-[var(--text)]">{stepDef.label}</span>
                           {step.timeEstimate && (
-                            <span className="text-2xs text-muted-foreground flex items-center gap-1">
-                              <Clock className="h-3 w-3" /> {step.timeEstimate}
+                            <span className="text-2xs text-[var(--text-muted)] flex items-center gap-0.5 shrink-0">
+                              <Clock className="h-2.5 w-2.5" /> {step.timeEstimate}
                             </span>
                           )}
-                          {isExpanded ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
                         </div>
+                        {isExpanded ? <ChevronDown className="h-3.5 w-3.5 text-[var(--text-muted)]" /> : <ChevronRight className="h-3.5 w-3.5 text-[var(--text-muted)]" />}
                       </button>
 
-                      {/* Expandido */}
                       {isExpanded && (
-                        <div className="mt-3 space-y-3 pl-2 animate-fade-in">
-                          <p className="text-sm text-muted-foreground">{stepDef.description}</p>
+                        <div className="mt-2 space-y-2.5 pl-1 animate-fade-in">
+                          <p className="text-xs text-[var(--text-muted)]">{stepDef.description}</p>
 
-                          {/* Botões de ação (admin) */}
-                          <div className="flex items-center gap-2">
-                            <Button
-                              size="sm"
-                              variant={step.status === 'in_progress' ? 'default' : 'outline'}
-                              onClick={() => updateStepStatus(step.id, 'in_progress')}
-                              className="h-8 text-xs"
-                            >
-                              <Play className="mr-1 h-3 w-3" /> Em andamento
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <Button size="sm" variant={step.status === 'in_progress' ? 'default' : 'outline'}
+                              onClick={() => updateStepStatus(step.id, 'in_progress')} className="h-7 text-2xs px-2">
+                              <Play className="mr-1 h-2.5 w-2.5" /> Iniciar
                             </Button>
-                            <Button
-                              size="sm"
-                              variant={step.status === 'paused' ? 'secondary' : 'outline'}
-                              onClick={() => updateStepStatus(step.id, 'paused')}
-                              className="h-8 text-xs"
-                            >
-                              <Pause className="mr-1 h-3 w-3" /> Pausar
+                            <Button size="sm" variant={step.status === 'paused' ? 'secondary' : 'ghost'}
+                              onClick={() => updateStepStatus(step.id, 'paused')} className="h-7 text-2xs px-2">
+                              <Pause className="mr-1 h-2.5 w-2.5" /> Pausar
                             </Button>
-                            <Button
-                              size="sm"
-                              variant={step.status === 'completed' ? 'success' : 'outline'}
-                              onClick={() => updateStepStatus(step.id, 'completed')}
-                              className="h-8 text-xs"
-                            >
-                              <CheckCircle2 className="mr-1 h-3 w-3" /> Concluir
+                            <Button size="sm" variant={step.status === 'completed' ? 'success' : 'outline'}
+                              onClick={() => updateStepStatus(step.id, 'completed')} className="h-7 text-2xs px-2">
+                              <CheckCircle2 className="mr-1 h-2.5 w-2.5" /> Concluir
                             </Button>
+                            <div className="flex items-center gap-1 ml-1">
+                              <Clock className="h-3 w-3 text-[var(--text-muted)]" />
+                              <Input placeholder="Tempo" value={step.timeEstimate}
+                                onChange={e => updateTimeEstimate(step.id, e.target.value)}
+                                className="h-7 text-2xs w-28" />
+                            </div>
                           </div>
 
-                          {/* Tempo estimado */}
-                          <div className="flex items-center gap-2">
-                            <Clock className="h-3.5 w-3.5 text-muted-foreground" />
-                            <Input
-                              placeholder="Tempo estimado (ex: 3 dias)"
-                              value={step.timeEstimate}
-                              onChange={e => updateTimeEstimate(step.id, e.target.value)}
-                              className="h-8 text-xs w-48"
-                            />
-                          </div>
-
-                          {/* Comentários */}
                           {step.comments.length > 0 && (
-                            <div className="space-y-2 mt-2 bg-muted/30 rounded-lg p-3">
+                            <div className="space-y-1.5 bg-[var(--surface-hover)] rounded p-2.5">
                               {step.comments.map((c, ci) => (
                                 <div key={ci} className="text-xs">
-                                  <span className="font-medium">{c.author}</span>
-                                  <span className="text-muted-foreground ml-1">• {c.time}</span>
-                                  <p className="mt-0.5">{c.text}</p>
+                                  <span className="font-medium text-[var(--text)]">{c.author}</span>
+                                  <span className="text-[var(--text-muted)] ml-1">• {c.time}</span>
+                                  <p className="mt-0.5 text-[var(--text-secondary)]">{c.text}</p>
                                 </div>
                               ))}
                             </div>
                           )}
 
-                          {/* Novo comentário */}
-                          <div className="flex items-center gap-2">
-                            <Input
-                              placeholder="Adicionar comentário..."
-                              value={expandedStep === step.id ? newComment : ''}
+                          <div className="flex items-center gap-1.5">
+                            <Input placeholder="Comentário..." value={expandedStep === step.id ? newComment : ''}
                               onChange={e => setNewComment(e.target.value)}
-                              className="h-8 text-xs flex-1"
-                              onKeyDown={e => { if (e.key === 'Enter') addComment(step.id) }}
-                            />
+                              className="h-7 text-2xs flex-1"
+                              onKeyDown={e => { if (e.key === 'Enter') addComment(step.id) }} />
                             <Button size="icon-sm" onClick={() => addComment(step.id)} disabled={addingComment || !newComment.trim()}>
-                              <Send className="h-3.5 w-3.5" />
+                              <Send className="h-3 w-3" />
                             </Button>
-                            <Button variant="ghost" size="icon-sm">
-                              <Image className="h-3.5 w-3.5 text-muted-foreground" />
+                            <Button variant="ghost" size="icon-sm" title="Anexar imagem">
+                              <Image className="h-3 w-3 text-[var(--text-muted)]" />
                             </Button>
-                            <Button variant="ghost" size="icon-sm">
-                              <Paperclip className="h-3.5 w-3.5 text-muted-foreground" />
+                            <Button variant="ghost" size="icon-sm" title="Anexar arquivo">
+                              <Paperclip className="h-3 w-3 text-[var(--text-muted)]" />
                             </Button>
                           </div>
                         </div>

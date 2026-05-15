@@ -65,7 +65,7 @@ export default function ClientsPage() {
       />
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Clientes</h1>
+          <h1 className="text-lg font-medium">Clientes</h1>
           <p className="text-sm text-muted-foreground mt-1">{clients.length} clientes cadastrados</p>
         </div>
         <Button size="sm" onClick={() => setShowNew(true)}>
@@ -74,10 +74,10 @@ export default function ClientsPage() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-4">
-        <Card><CardContent className="p-4"><p className="text-2xl font-semibold">{clients.length}</p><p className="text-xs text-muted-foreground">Total</p></CardContent></Card>
-        <Card><CardContent className="p-4"><p className="text-2xl font-semibold">{clients.filter(c => c.isActive).length}</p><p className="text-xs text-muted-foreground">Ativos</p></CardContent></Card>
-        <Card><CardContent className="p-4"><p className="text-2xl font-semibold">{clients.filter(c => c.plan === 'PRO').length}</p><p className="text-xs text-muted-foreground">Plano Pro</p></CardContent></Card>
-        <Card><CardContent className="p-4"><p className="text-2xl font-semibold">{clients.reduce((sum, c) => sum + (c._count?.projects || 0), 0)}</p><p className="text-xs text-muted-foreground">Projetos</p></CardContent></Card>
+        <Card><CardContent className="p-4"><p className="text-lg font-medium">{clients.length}</p><p className="text-xs text-muted-foreground">Total</p></CardContent></Card>
+        <Card><CardContent className="p-4"><p className="text-lg font-medium">{clients.filter(c => c.isActive).length}</p><p className="text-xs text-muted-foreground">Ativos</p></CardContent></Card>
+        <Card><CardContent className="p-4"><p className="text-lg font-medium">{clients.filter(c => c.plan === 'PRO').length}</p><p className="text-xs text-muted-foreground">Plano Pro</p></CardContent></Card>
+        <Card><CardContent className="p-4"><p className="text-lg font-medium">{clients.reduce((sum, c) => sum + (c._count?.projects || 0), 0)}</p><p className="text-xs text-muted-foreground">Projetos</p></CardContent></Card>
       </div>
 
       <div className="relative max-w-sm">

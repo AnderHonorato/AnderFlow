@@ -61,7 +61,7 @@ export default function SettingsPage() {
   return (
     <div className="p-6 space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Configurações</h1>
+        <h1 className="text-lg font-medium">Configurações</h1>
         <p className="text-sm text-muted-foreground mt-1">
           Gerencie todas as configurações da plataforma
         </p>
@@ -115,7 +115,7 @@ export default function SettingsPage() {
                             module.enabled ? 'bg-primary' : 'bg-muted'
                           }`}
                         >
-                          <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform shadow-sm ${
+                          <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
                             module.enabled ? 'translate-x-6' : 'translate-x-1'
                           }`} />
                         </button>
@@ -180,7 +180,7 @@ export default function SettingsPage() {
                         <div className={`h-8 w-full rounded mb-2 ${
                           theme === 'light' ? 'bg-white border' :
                           theme === 'dark' ? 'bg-zinc-900' :
-                          'bg-gradient-to-r from-white to-zinc-900'
+                          'bg-[var(--surface)]'
                         }`} />
                         <span className="text-xs font-medium capitalize">{theme === 'system' ? 'Sistema' : theme === 'light' ? 'Claro' : 'Escuro'}</span>
                       </button>

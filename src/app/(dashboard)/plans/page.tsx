@@ -77,7 +77,7 @@ export default function PlansPage() {
 
       <div className="grid gap-6 lg:grid-cols-3 max-w-5xl mx-auto">
         {plans.map((plan) => (
-          <Card key={plan.name} className={`relative ${plan.popular ? 'border-primary shadow-lg scale-[1.02]' : ''}`}>
+          <Card key={plan.name} className={`relative ${plan.popular ? 'ring-1 ring-[var(--primary)] scale-[1.02]' : ''}`}>
             {plan.popular && (
               <div className="absolute -top-3 left-1/2 -translate-x-1/2">
                 <Badge className="bg-primary text-primary-foreground px-3 py-1">

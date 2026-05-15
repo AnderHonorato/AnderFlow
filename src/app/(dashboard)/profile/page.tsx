@@ -19,7 +19,7 @@ export default function ProfilePage() {
   return (
     <div className="p-6 space-y-6 max-w-3xl mx-auto">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Perfil</h1>
+        <h1 className="text-lg font-medium">Perfil</h1>
         <p className="text-sm text-muted-foreground mt-1">
           Gerencie suas informações pessoais e de segurança
         </p>
@@ -34,7 +34,7 @@ export default function ProfilePage() {
             <Avatar className="h-20 w-20">
               <AvatarFallback className="text-xl">AD</AvatarFallback>
             </Avatar>
-            <button className="absolute -bottom-1 -right-1 flex h-7 w-7 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm">
+            <button className="absolute -bottom-1 -right-1 flex h-7 w-7 items-center justify-center rounded-full bg-primary text-primary-foreground">
               <Camera className="h-3.5 w-3.5" />
             </button>
           </div>

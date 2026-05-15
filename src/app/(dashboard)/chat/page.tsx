@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useRef } from 'react'
+import { useSession } from 'next-auth/react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
@@ -12,6 +13,7 @@ import {
 } from 'lucide-react'
 
 export default function ChatPage() {
+  const { data: session } = useSession()
   const scrollRef = useRef<HTMLDivElement>(null)
   const [channels, setChannels] = useState<any[]>([])
   const [messages, setMessages] = useState<any[]>([])
@@ -19,24 +21,6 @@ export default function ChatPage() {
   const [newMessage, setNewMessage] = useState('')
   const [loading, setLoading] = useState(true)
   const [sending, setSending] = useState(false)
-  const [currentUserId, setCurrentUserId] = useState('')
-
-  useEffect(() => {
-    const loadUser = async () => {
-      try {
-        const res = await fetch('/api/auth/session')
-        const session = await res.json()
-        if (session?.user?.id) {
-          setCurrentUserId(session.user.id)
-        } else {
-          const usersRes = await fetch('/api/clients?limit=1')
-          const usersData = await usersRes.json()
-          setCurrentUserId(usersData.data?.[0]?.id || '')
-        }
-      } catch {}
-    }
-    loadUser()
-  }, [])
 
   useEffect(() => {
     fetch('/api/channels')
@@ -54,14 +38,19 @@ export default function ChatPage() {
 
   useEffect(() => {
     if (!selectedChannel) return
-    fetch(`/api/messages?channelId=${selectedChannel}`)
-      .then(r => r.json())
-      .then(json => {
-        setMessages(json.data || [])
-        setTimeout(() => {
-          scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' })
-        }, 100)
-      })
+    const fetchMessages = () => {
+      fetch(`/api/messages?channelId=${selectedChannel}`)
+        .then(r => r.json())
+        .then(json => {
+          setMessages(json.data || [])
+          setTimeout(() => {
+            scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' })
+          }, 100)
+        })
+    }
+    fetchMessages()
+    const interval = setInterval(fetchMessages, 4000)
+    return () => clearInterval(interval)
   }, [selectedChannel])
 
   const handleSend = async () => {
@@ -73,7 +62,6 @@ export default function ChatPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         content: newMessage,
-        senderId: currentUserId,
         channelId: selectedChannel,
       }),
     })
@@ -163,7 +151,7 @@ export default function ChatPage() {
                   <p className="text-sm text-muted-foreground text-center py-12">Nenhuma mensagem ainda</p>
                 )}
                 {messages.map((msg) => {
-                  const isMine = currentUserId ? msg.sender?.id === currentUserId : (msg.sender?.role === 'ADMIN' || msg.sender?.role === 'DEVELOPER')
+                  const isMine = msg.sender?.id === session?.user?.id
                   return (
                     <div key={msg.id} className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}>
                       <div className={`max-w-[70%]`}>

@@ -60,7 +60,7 @@ export default function AIPage() {
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Inteligência Artificial</h1>
+          <h1 className="text-lg font-medium">Inteligência Artificial</h1>
           <p className="text-sm text-muted-foreground mt-1">
             IA integrada para produtividade e automação
           </p>
@@ -71,7 +71,7 @@ export default function AIPage() {
         </Badge>
       </div>
 
-      <Card className="bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
+      <Card className="bg-[var(--primary-subtle)] border-primary/20">
         <CardContent className="p-6">
           <div className="flex items-start gap-4">
             <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">

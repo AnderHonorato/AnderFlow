@@ -24,7 +24,7 @@ export default async function FeedbackPage() {
   return (
     <div className="p-6 space-y-6 max-w-4xl mx-auto">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Feedback & Roadmap</h1>
+        <h1 className="text-lg font-medium">Feedback & Roadmap</h1>
         <p className="text-sm text-muted-foreground mt-1">
           Sugestões dos clientes e status das melhorias
         </p>

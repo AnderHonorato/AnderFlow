@@ -14,6 +14,10 @@ import {
 } from 'lucide-react'
 import { OnboardingTip } from '@/components/ui/onboarding-tip'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 
 const pipelineStages = [
@@ -26,6 +30,7 @@ const pipelineStages = [
 ]
 
 export default function CRMPage() {
+  const router = useRouter()
   const [leads, setLeads] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -69,7 +74,7 @@ export default function CRMPage() {
         description="Gerencie leads no funil: Novo → Contato → Qualificado → Proposta → Negociação → Fechado. Clique 'Novo Lead' para começar."
       />
       <div className="flex items-center justify-between">
-        <div><h1 className="text-2xl font-semibold tracking-tight">CRM</h1><p className="text-sm text-muted-foreground mt-1">Pipeline de vendas</p></div>
+        <div><h1 className="text-lg font-medium">CRM</h1><p className="text-sm text-muted-foreground mt-1">Pipeline de vendas</p></div>
         <Button size="sm" onClick={() => setShowNew(true)}><Plus className="mr-2 h-4 w-4" /> Novo Lead</Button>
       </div>
 
@@ -107,7 +112,18 @@ export default function CRMPage() {
                           <Avatar className="h-8 w-8"><AvatarFallback className="text-2xs">{lead.name.split(' ').map((n: string) => n[0]).join('')}</AvatarFallback></Avatar>
                           <div><p className="text-sm font-medium">{lead.name}</p><p className="text-xs text-muted-foreground flex items-center gap-1"><Building2 className="h-3 w-3" />{lead.company || '-'}</p></div>
                         </div>
-                        <Button variant="ghost" size="icon-sm"><MoreHorizontal className="h-4 w-4" /></Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon-sm"><MoreHorizontal className="h-4 w-4" /></Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-40">
+                            <DropdownMenuItem onClick={() => router.push(`/crm/${lead.id}`)}>Ver detalhes</DropdownMenuItem>
+                            <DropdownMenuItem className="text-destructive" onClick={async () => {
+                              await fetch(`/api/leads/${lead.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: 'LOST' }) })
+                              toast.success('Lead arquivado'); loadLeads()
+                            }}>Arquivar</DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
                       <div className="flex items-center justify-between">
                         <span className="text-sm font-semibold text-success">{lead.value ? `R$ ${(lead.value/1000).toFixed(0)}k` : '-'}</span>

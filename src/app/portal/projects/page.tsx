@@ -28,7 +28,7 @@ export default function PortalProjects() {
   return (
     <div className="p-6 space-y-6">
       <div>
-        <h2 className="text-2xl font-semibold tracking-tight">Meus Projetos</h2>
+        <h2 className="text-lg font-medium">Meus Projetos</h2>
         <p className="text-sm text-muted-foreground mt-1">{projects.length} projetos encontrados</p>
       </div>
       <div className="space-y-3">

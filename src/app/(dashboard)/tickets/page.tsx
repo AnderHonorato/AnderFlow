@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useSession } from 'next-auth/react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -9,12 +10,18 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Skeleton } from '@/components/ui/skeleton'
 import { OnboardingTip } from '@/components/ui/onboarding-tip'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import {
   Plus, Search, TicketIcon, MessageSquare, MoreHorizontal, Loader2,
 } from 'lucide-react'
 
 export default function TicketsPage() {
+  const { data: session } = useSession()
+  const router = useRouter()
   const [tickets, setTickets] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -36,7 +43,7 @@ export default function TicketsPage() {
     const res = await fetch('/api/tickets', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...form, creatorId: 'cm1_example' }),
+      body: JSON.stringify({ ...form, creatorId: session?.user?.id }),
     })
     if (res.ok) { toast.success('Ticket criado'); setShowNew(false); loadTickets(); setForm({ title: '', description: '', priority: 'MEDIUM', category: '' }) }
     else toast.error('Erro ao criar ticket')
@@ -61,7 +68,7 @@ export default function TicketsPage() {
         description="Acompanhe tickets dos clientes. Cada ticket tem prioridade (Baixa/Média/Alta/Urgente) e status. Crie um novo para testar."
       />
       <div className="flex items-center justify-between">
-        <div><h1 className="text-2xl font-semibold tracking-tight">Tickets</h1><p className="text-sm text-muted-foreground mt-1">Central de suporte</p></div>
+        <div><h1 className="text-lg font-medium">Tickets</h1><p className="text-sm text-muted-foreground mt-1">Central de suporte</p></div>
         <Button size="sm" onClick={() => setShowNew(true)}><Plus className="mr-2 h-4 w-4" /> Novo Ticket</Button>
       </div>
 
@@ -88,7 +95,18 @@ export default function TicketsPage() {
                   <Badge variant={t.status === 'OPEN' ? 'info' : t.status === 'IN_PROGRESS' ? 'warning' : t.status === 'RESOLVED' ? 'success' : 'secondary'} className="text-2xs">
                     {t.status === 'OPEN' ? 'Aberto' : t.status === 'IN_PROGRESS' ? 'Em Progresso' : t.status === 'RESOLVED' ? 'Resolvido' : t.status}
                   </Badge>
-                  <Button variant="ghost" size="icon-sm"><MoreHorizontal className="h-4 w-4" /></Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon-sm"><MoreHorizontal className="h-4 w-4" /></Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-40">
+                      <DropdownMenuItem onClick={() => router.push(`/tickets/${t.id}`)}>Ver detalhes</DropdownMenuItem>
+                      <DropdownMenuItem className="text-destructive" onClick={async () => {
+                        await fetch(`/api/tickets/${t.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: 'CLOSED' }) })
+                        toast.success('Ticket arquivado'); loadTickets()
+                      }}>Arquivar</DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
               </div>
             ))}

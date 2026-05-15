@@ -18,6 +18,10 @@ import {
   Calendar,
   ArrowUpRight,
 } from 'lucide-react'
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { toast } from 'sonner'
 
 type ViewMode = 'kanban' | 'list'
 
@@ -29,18 +33,26 @@ const columns = [
   { id: 'COMPLETED', title: 'Concluído', color: 'bg-success' },
 ]
 
-function ProjectCard({ project }: { project: any }) {
+function ProjectCard({ project, onView, onArchive }: { project: any; onView: (id: string) => void; onArchive: (id: string) => void }) {
   return (
-    <Card className="card-hover cursor-pointer" onClick={() => window.location.href = `/projects/${project.id}`}>
+    <Card className="card-hover cursor-pointer" onClick={() => onView(project.id)}>
       <CardContent className="p-4 space-y-3">
         <div className="flex items-start justify-between">
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium truncate">{project.name}</p>
             <p className="text-xs text-muted-foreground mt-0.5">{project.client?.company || project.client?.name}</p>
           </div>
-          <Button variant="ghost" size="icon-sm" className="shrink-0">
-            <MoreHorizontal className="h-4 w-4" />
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon-sm" className="shrink-0" onClick={(e) => e.stopPropagation()}>
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-40">
+              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onView(project.id) }}>Ver detalhes</DropdownMenuItem>
+              <DropdownMenuItem className="text-destructive" onClick={(e) => { e.stopPropagation(); onArchive(project.id) }}>Arquivar</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
         <div className="space-y-1.5">
           <div className="flex items-center justify-between text-xs">
@@ -85,6 +97,16 @@ export default function ProjectsPage() {
     !search || p.name.toLowerCase().includes(search.toLowerCase())
   )
 
+  const handleViewProject = (id: string) => {
+    window.location.href = `/projects/${id}`
+  }
+
+  const handleArchiveProject = async (id: string) => {
+    await fetch(`/api/projects/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ isArchived: true }) })
+    toast.success('Projeto arquivado')
+    setProjects(prev => prev.filter(p => p.id !== id))
+  }
+
   if (loading) {
     return (
       <div className="p-6 space-y-6">
@@ -104,11 +126,11 @@ export default function ProjectsPage() {
       />
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Projetos</h1>
+          <h1 className="text-lg font-medium">Projetos</h1>
           <p className="text-sm text-muted-foreground mt-1">{projects.length} projetos encontrados</p>
         </div>
         <Button size="sm" asChild>
-          <a href="/projects/new">
+          <a href="/portal/briefing">
             <Plus className="mr-2 h-4 w-4" />
             Novo Projeto
           </a>
@@ -134,6 +156,7 @@ export default function ProjectsPage() {
         <div className="flex gap-4 overflow-x-auto pb-4">
           {columns.map((column) => {
             const colProjects = filtered.filter((p) => p.status === column.id)
+            if (colProjects.length === 0) return null
             return (
               <div key={column.id} className="flex-shrink-0 w-[300px]">
                 <div className="flex items-center gap-2 mb-3 px-1">
@@ -143,7 +166,7 @@ export default function ProjectsPage() {
                 </div>
                 <div className="space-y-3">
                   {colProjects.map((project) => (
-                    <ProjectCard key={project.id} project={project} />
+                    <ProjectCard key={project.id} project={project} onView={handleViewProject} onArchive={handleArchiveProject} />
                   ))}
                 </div>
               </div>

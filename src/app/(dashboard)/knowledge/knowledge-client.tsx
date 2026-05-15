@@ -44,7 +44,7 @@ export function KnowledgeClient({ projects: initialProjects }: { projects: any[]
     <div className="p-6 space-y-6 max-w-5xl mx-auto">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Meu Conhecimento</h1>
+          <h1 className="text-lg font-medium">Meu Conhecimento</h1>
           <p className="text-sm text-muted-foreground mt-1">{projects.length} projetos concluídos</p>
         </div>
         <div className="relative w-64">
@@ -57,7 +57,7 @@ export function KnowledgeClient({ projects: initialProjects }: { projects: any[]
         {completedYears.map((year, yi) => (
           <div key={year} className="relative pl-10">
             {yi !== completedYears.length - 1 && <div className="absolute left-[23px] top-14 bottom-0 w-0.5 bg-[hsl(222,25%,18%)]" />}
-            <div className="flex items-center gap-3 mb-6 sticky top-16 bg-[hsl(228,88%,5%)] py-2 z-10">
+            <div className="flex items-center gap-3 mb-6 sticky top-16 bg-[var(--bg)] py-2 z-10">
               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-white text-sm font-bold shrink-0">{year}</div>
               <div className="h-0.5 flex-1 bg-[hsl(222,25%,14%)]" />
               <span className="text-xs text-muted-foreground">{filtered.filter(p => new Date(p.completedAt || p.updatedAt || p.createdAt).getFullYear() === year).length} projetos</span>
@@ -72,7 +72,7 @@ export function KnowledgeClient({ projects: initialProjects }: { projects: any[]
 
                 return (
                   <div key={project.id} className="relative pb-8">
-                    <div className="absolute left-[-2px] top-5 w-2.5 h-2.5 rounded-full bg-success border-2 border-[hsl(228,88%,5%)]" />
+                    <div className="absolute left-[-2px] top-5 w-2.5 h-2.5 rounded-full bg-success border-2 border-[var(--border)]" />
                     <div className="absolute left-3 top-[22px] w-7 h-0.5 bg-[hsl(222,25%,18%)]" />
                     {pi !== arr.length - 1 && <div className="absolute left-[23px] top-10 bottom-0 w-0.5 bg-[hsl(222,25%,14%)]" />}
 

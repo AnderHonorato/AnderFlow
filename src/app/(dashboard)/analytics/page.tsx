@@ -70,7 +70,7 @@ export default async function AnalyticsPage() {
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Analytics</h1>
+          <h1 className="text-lg font-medium">Analytics</h1>
           <p className="text-sm text-muted-foreground mt-1">
             Métricas de performance e crescimento
           </p>
@@ -98,7 +98,7 @@ export default async function AnalyticsPage() {
                   {kpi.change}
                 </div>
               </div>
-              <p className="text-2xl font-semibold">{kpi.value}</p>
+              <p className="text-lg font-medium">{kpi.value}</p>
               <p className="text-xs text-muted-foreground mt-1">{kpi.period}</p>
             </CardContent>
           </Card>

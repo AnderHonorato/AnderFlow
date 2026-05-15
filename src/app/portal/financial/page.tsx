@@ -25,7 +25,7 @@ export default function PortalFinancial() {
   return (
     <div className="p-6 space-y-6">
       <div>
-        <h2 className="text-2xl font-semibold tracking-tight">Financeiro</h2>
+        <h2 className="text-lg font-medium">Financeiro</h2>
         <p className="text-sm text-muted-foreground mt-1">Suas faturas e pagamentos</p>
       </div>
 

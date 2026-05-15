@@ -8,9 +8,7 @@ async function getUserId(req: NextRequest): Promise<string | null> {
     const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET })
     if (token?.id) return token.id as string
   } catch {}
-  // Fallback: pega o primeiro admin do banco (modo dev)
-  const admin = await prisma.user.findFirst({ where: { role: 'ADMIN' } })
-  return admin?.id || null
+  return null
 }
 
 export async function GET(request: NextRequest) {

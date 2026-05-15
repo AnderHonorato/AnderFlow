@@ -43,7 +43,7 @@ export default function OnboardingPage() {
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Onboarding</h1>
+          <h1 className="text-lg font-medium">Onboarding</h1>
           <p className="text-sm text-muted-foreground mt-1">
             Configure sua plataforma em poucos passos
           </p>
@@ -54,7 +54,7 @@ export default function OnboardingPage() {
         </Badge>
       </div>
 
-      <Card className="bg-gradient-to-br from-primary/5 to-transparent border-primary/20">
+      <Card className="bg-[var(--primary-subtle)] border-primary/20">
         <CardContent className="p-6">
           <div className="flex items-center justify-between mb-4">
             <div>
@@ -63,7 +63,7 @@ export default function OnboardingPage() {
                 Complete todas as etapas para aproveitar ao máximo a plataforma
               </p>
             </div>
-            <span className="text-2xl font-semibold text-primary">{Math.round(progress)}%</span>
+            <span className="text-lg font-medium text-primary">{Math.round(progress)}%</span>
           </div>
           <Progress value={progress} className="h-2.5" />
         </CardContent>
