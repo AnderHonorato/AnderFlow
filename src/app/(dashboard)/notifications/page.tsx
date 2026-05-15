@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useSession } from 'next-auth/react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -22,6 +23,7 @@ function getIcon(type: string) {
 }
 
 export default function NotificationsPage() {
+  const { data: session } = useSession()
   const [notifications, setNotifications] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -38,7 +40,7 @@ export default function NotificationsPage() {
     await fetch('/api/notifications', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId: 'seed_admin', markAll: true }),
+      body: JSON.stringify({ userId: session?.user?.id, markAll: true }),
     })
     toast.success('Todas marcadas como lidas')
     loadNotifications()

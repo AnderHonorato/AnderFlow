@@ -83,7 +83,7 @@ export default function BriefingFillPage() {
     if (res.ok) {
       setSubmitted(true)
 
-      const admins = await fetch('/api/clients?role=ADMIN').then(r => r.json()).catch(() => ({ data: [] }))
+      const admins = await fetch('/api/admins').then(r => r.json()).catch(() => ({ data: [] }))
       for (const admin of (admins.data || [])) {
         await fetch('/api/notifications', {
           method: 'POST',

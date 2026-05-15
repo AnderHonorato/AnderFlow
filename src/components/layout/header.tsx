@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { signOut, useSession } from 'next-auth/react'
 import { Bell, BookOpen, LogOut, User, Settings, X } from 'lucide-react'
 
@@ -11,35 +12,50 @@ interface NotificationBanner {
   message: string
   type: string
   createdAt: number
+  metadata?: any
 }
 
 export function Header() {
   const { data: session } = useSession()
+  const router = useRouter()
   const initials = (session?.user?.name || 'AD').split(' ').slice(0, 2).map((n: string) => n[0]).join('').toUpperCase()
   const [unreadCount, setUnreadCount] = useState(0)
   const [profileOpen, setProfileOpen] = useState(false)
   const [banners, setBanners] = useState<NotificationBanner[]>([])
   const [currentBanner, setCurrentBanner] = useState(0)
-  const seenIds = useRef<Set<string>>(new Set())
+  const [seenIds, setSeenIds] = useState<Set<string>>(() => {
+    try {
+      const stored = sessionStorage.getItem('anderflow_seen_notifications')
+      return new Set(stored ? JSON.parse(stored) : [])
+    } catch {
+      return new Set()
+    }
+  })
   const bannerTimers = useRef<Map<string, NodeJS.Timeout>>(new Map())
 
   useEffect(() => {
     const fetchNotifications = () => {
-      const userId = session?.user?.id
-      if (!userId) return
-      fetch(`/api/notifications?unread=true&userId=${userId}`)
+      if (!session?.user?.id) return
+      fetch('/api/notifications?unread=true')
         .then(r => r.json())
         .then(json => {
           const items = json.data || []
           setUnreadCount(items.length)
 
-          const newItems = items.filter((n: any) => !seenIds.current.has(n.id))
+          const newItems = items.filter((n: any) => !seenIds.has(n.id))
           if (newItems.length > 0) {
-            newItems.forEach((n: any) => seenIds.current.add(n.id))
+            const nextIds = new Set(seenIds)
+            newItems.forEach((n: any) => nextIds.add(n.id))
+            setSeenIds(nextIds)
+            try { sessionStorage.setItem('anderflow_seen_notifications', JSON.stringify(Array.from(nextIds))) } catch {}
             setBanners(prev => {
               const existingIds = new Set(prev.map(b => b.id))
               const toAdd = newItems.filter((n: any) => !existingIds.has(n.id))
-                .map((n: any) => ({ id: n.id, title: n.title, message: n.message, type: n.type, createdAt: Date.now() }))
+                .map((n: any) => {
+                  let meta: any = null
+                  try { if (n.metadata) meta = typeof n.metadata === 'string' ? JSON.parse(n.metadata) : n.metadata } catch {}
+                  return { id: n.id, title: n.title, message: n.message, type: n.type, createdAt: Date.now(), metadata: meta }
+                })
               return [...prev, ...toAdd]
             })
           }
@@ -154,7 +170,14 @@ export function Header() {
       {banners.length > 0 && (
         <div className="fixed top-0 left-0 right-0 z-50 flex justify-center pointer-events-none">
           <div
-            className="pointer-events-auto bg-[var(--primary)] text-white rounded-b-md px-4 py-2.5 max-w-lg w-[calc(100%-16px)] flex items-start gap-2.5 animate-slide-up shadow-lg"
+            onClick={() => {
+              const meta = banners[currentBanner]?.metadata
+              if (meta?.projectId && meta?.action === 'fill_briefing') {
+                dismissBanner(banners[currentBanner]?.id)
+                router.push(`/portal/briefing-fill/${meta.projectId}`)
+              }
+            }}
+            className="pointer-events-auto bg-[var(--primary)] text-white rounded-b-md px-4 py-2.5 max-w-lg w-[calc(100%-16px)] flex items-start gap-2.5 animate-slide-up cursor-pointer"
           >
             <div className="flex-1 min-w-0">
               <p className="text-xs font-semibold truncate">
@@ -172,7 +195,7 @@ export function Header() {
               )}
             </div>
             <button
-              onClick={() => dismissBanner(banners[currentBanner]?.id)}
+              onClick={(e) => { e.stopPropagation(); dismissBanner(banners[currentBanner]?.id) }}
               className="shrink-0 flex items-center justify-center h-4 w-4 rounded hover:bg-white/20 text-white/80 hover:text-white transition-colors"
             >
               <X className="h-3 w-3" />
