@@ -9,7 +9,7 @@ import { WelcomeOverlay } from '@/components/ui/welcome-overlay'
 export function DashboardShell({ children }: { children: React.ReactNode }) {
   return (
     <SessionProvider>
-      <div className="flex h-screen overflow-hidden bg-[var(--bg)]">
+      <div className="flex h-screen overflow-hidden bg-[var(--bg)]" suppressHydrationWarning>
         <Sidebar />
         <div className="flex flex-1 flex-col min-w-0 overflow-y-auto scroll-area">
           <Header />

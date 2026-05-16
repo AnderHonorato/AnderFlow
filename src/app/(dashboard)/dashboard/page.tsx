@@ -55,11 +55,11 @@ export default function DashboardPage() {
   ]
 
   const recentProjects = (data?.recentProjects || []).map((p: any) => ({
+    id: p.id,
     name: p.name,
     client: p.client,
     progress: p.progress,
     status: p.status,
-    id: p.id,
   }))
 
   const activeProject = recentProjects.find((p: any) => p.status !== 'COMPLETED' && p.status !== 'CANCELLED')
@@ -122,12 +122,12 @@ export default function DashboardPage() {
                   <p className="text-[12px] text-[var(--text-3)] text-center py-6">Nenhum projeto ainda.</p>
                 )}
                 {recentProjects.map((project: any) => (
-                  <div key={project.name} className="flex items-center gap-3 rounded-lg px-2 py-2 transition-colors hover:bg-[var(--surface-hover)]">
+                  <div key={project.id} className="flex items-center gap-3 rounded-lg px-2 py-2 transition-colors hover:bg-[var(--surface-hover)]">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <p className="text-[13px] font-[500] truncate">{project.name}</p>
                         <Badge status={project.status}>
-                          {project.status === 'COMPLETED' ? 'Concluido' : project.status === 'REVIEW' ? 'Revisao' : project.status === 'DRAFT' ? 'Rascunho' : 'Em andamento'}
+                          {project.status === 'COMPLETED' ? 'Concluido' : project.status === 'REVIEW' ? 'Revisao' : project.status === 'PENDING' ? 'Solicitacao' : project.status === 'DRAFT' ? 'Rascunho' : 'Em andamento'}
                         </Badge>
                       </div>
                       <p className="text-[12px] text-[var(--text-3)] mt-0.5">{project.client}</p>

@@ -5,8 +5,9 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { useUIStore } from '@/stores/app-store'
-import { IconNotification, IconClose, IconMenu, IconArrowRight } from '@/components/icons'
+import { IconNotification, IconClose, IconMenu, IconArrowRight, IconProject } from '@/components/icons'
 import { cn } from '@/lib/utils'
+import { toast } from 'sonner'
 
 interface NotificationItem {
   id: string
@@ -24,13 +25,30 @@ export function Header() {
   const [unreadItems, setUnreadItems] = useState<NotificationItem[]>([])
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const [carouselIdx, setCarouselIdx] = useState(0)
+  const [activeProject, setActiveProject] = useState<any>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
+  const prevIdsRef = useRef<Set<string>>(new Set())
   const [seenIds, setSeenIds] = useState<Set<string>>(() => {
     try {
       const stored = sessionStorage.getItem('anderflow_seen_notifications')
       return new Set(stored ? JSON.parse(stored) : [])
     } catch { return new Set() }
   })
+
+  const role = session?.user?.role as string || 'CLIENT'
+  const isClient = role === 'CLIENT'
+
+  useEffect(() => {
+    if (isClient) {
+      fetch('/api/projects?status=IN_PROGRESS')
+        .then(r => r.json())
+        .then(json => {
+          const first = (json.data || [])[0]
+          if (first) setActiveProject(first)
+        })
+        .catch(() => {})
+    }
+  }, [role, isClient])
 
   useEffect(() => {
     const fetchNotifications = () => {
@@ -44,6 +62,19 @@ export function Header() {
             try { if (n.metadata) meta = typeof n.metadata === 'string' ? JSON.parse(n.metadata) : n.metadata } catch {}
             return { id: n.id, title: n.title, message: n.message, type: n.type, createdAt: n.createdAt, metadata: meta }
           })
+
+          const currentIds = new Set(items.map((n: any) => n.id))
+          prevIdsRef.current.forEach((id: string) => {
+            if (!currentIds.has(id) || items.length > prevIdsRef.current.size) {
+              const newItem = parsed.find(p => !prevIdsRef.current.has(p.id))
+              if (newItem) toast.info(newItem.title)
+            }
+          })
+          prevIdsRef.current = currentIds
+
+          if (parsed.length !== unreadItems.length) {
+            setCarouselIdx(0)
+          }
           setUnreadItems(parsed)
 
           const newIds = items.map(n => n.id)
@@ -60,7 +91,7 @@ export function Header() {
     fetchNotifications()
     const interval = setInterval(fetchNotifications, 30000)
     return () => clearInterval(interval)
-  }, [])
+  }, [session?.user?.id])
 
   useEffect(() => {
     if (unreadItems.length === 0) return
@@ -92,7 +123,7 @@ export function Header() {
 
   const getNotifLink = (n: NotificationItem) => {
     if (n.metadata?.projectId) return `/projects/${n.metadata.projectId}`
-    if (n.type === 'MESSAGE') return '/chat'
+    if (n.type === 'MESSAGE') return '/clients'
     if (n.type === 'CONTRACT') return '/contracts'
     return '/notifications'
   }
@@ -117,7 +148,44 @@ export function Header() {
           <IconMenu className="w-[16px] h-[16px]" />
         </button>
 
-        {currentNotification && (
+        {isClient && activeProject && (
+          <div
+            className="hidden md:flex items-center gap-2.5 min-w-0 flex-1 cursor-pointer animate-fade-in"
+            onClick={() => router.push(`/projects/${activeProject.id}`)}
+          >
+            <div className="flex items-center gap-2">
+              <div className="flex h-6 w-6 items-center justify-center rounded bg-[var(--accent-subtle)] shrink-0">
+                <IconProject className="w-3 h-3 text-[var(--accent)]" />
+              </div>
+              <span className="text-[12px] text-[var(--text)] truncate font-[500]">
+                {activeProject.name}
+              </span>
+            </div>
+            <span className="text-[12px] text-[var(--accent)] font-[500] shrink-0">
+              {activeProject.progress || 0}%
+            </span>
+            <div className="h-1.5 w-20 rounded-full bg-[var(--surface-3)] overflow-hidden shrink-0 relative">
+              <div
+                className="h-full rounded-full bg-[var(--accent)] transition-all duration-700"
+                style={{ width: `${activeProject.progress || 0}%` }}
+              />
+              <div
+                className="absolute inset-0 w-full h-full opacity-30"
+                style={{
+                  background: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.2) 50%, transparent 100%)',
+                  animation: 'shimmer 2s ease-in-out infinite',
+                  transform: 'translateX(-100%)',
+                }}
+              />
+            </div>
+            <span className="flex items-center gap-1 text-[10px] text-[var(--success)] shrink-0">
+              <span className="h-1.5 w-1.5 rounded-full bg-[var(--success)] animate-pulse" />
+              Em andamento
+            </span>
+          </div>
+        )}
+
+        {!isClient && currentNotification && (
           <div className="hidden md:flex items-center gap-2 min-w-0 flex-1 animate-fade-in"
             onClick={() => router.push(getNotifLink(currentNotification))}
           >
@@ -149,7 +217,9 @@ export function Header() {
         </button>
 
         {dropdownOpen && (
-          <div className="absolute right-0 top-full mt-1 w-[380px] max-w-[calc(100vw-16px)] bg-[var(--surface)] border border-[var(--border)] rounded-xl shadow-lg z-50 overflow-hidden animate-fade-in">
+          <div className="absolute right-0 top-full mt-2 w-[380px] max-w-[calc(100vw-16px)] bg-[var(--surface)] border border-[var(--border)] rounded-xl shadow-lg z-50 overflow-hidden animate-fade-in"
+            style={{ position: 'fixed', top: '48px', right: '1rem' }}
+          >
             <div className="flex items-center justify-between px-4 py-2.5 border-b border-[var(--border)]">
               <span className="text-[13px] font-[500] text-[var(--text)]">Notificacoes</span>
               <Link

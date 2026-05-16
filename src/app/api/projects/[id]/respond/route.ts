@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { getToken } from 'next-auth/jwt'
+import { getSessionUser } from '@/lib/auth-utils'
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET })
-    if (!token?.id) {
+    const user = await getSessionUser(request)
+    if (!user?.id) {
       return NextResponse.json({ error: 'Nao autenticado' }, { status: 401 })
     }
 
@@ -16,7 +16,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const project = await prisma.project.findUnique({ where: { id }, include: { client: true } })
     if (!project) return NextResponse.json({ error: 'Projeto nao encontrado' }, { status: 404 })
 
-    if (project.clientId !== token.id) {
+    if (project.clientId !== user.id) {
       return NextResponse.json({ error: 'Apenas o cliente do projeto pode responder' }, { status: 403 })
     }
 
@@ -28,7 +28,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
       await prisma.notification.create({
         data: {
-          userId: token.id as string,
+          userId: user.id,
           type: 'PROJECT_UPDATE',
           title: 'Proposta aceita!',
           message: `Voce aceitou a proposta do projeto "${project.name}". Agora assine o contrato para iniciarmos.`,
@@ -54,9 +54,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         data: {
           title: `Contrato - ${project.name}`,
           content: `Contrato de prestacao de servicos para o projeto "${project.name}". Valor: R$ ${project.proposalValue}.`,
-          clientId: token.id as string,
+          clientId: user.id,
           projectId: id,
-          status: 'DRAFT',
+          status: 'PENDING_SIGNATURE',
           value: project.proposalValue || 0,
         },
       })
@@ -97,7 +97,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
           type: 'CANCELLED',
           action: `Cancelado pelo cliente em ${now.toLocaleDateString('pt-BR')}`,
           details: 'Cliente recusou a proposta',
-          userId: token.id as string,
+          userId: user.id,
           projectId: id,
         },
       })

@@ -20,6 +20,7 @@ import {
 type ViewMode = 'kanban' | 'list'
 
 const columns = [
+  { id: 'PENDING', title: 'Solicitacoes', color: 'var(--warning)' },
   { id: 'DRAFT', title: 'Rascunho', color: 'var(--text-3)' },
   { id: 'TODO', title: 'A Fazer', color: 'var(--accent)' },
   { id: 'IN_PROGRESS', title: 'Em Progresso', color: 'var(--info)' },

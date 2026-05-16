@@ -10,24 +10,42 @@ import {
   IconDashboard, IconProject, IconClient, IconCRM, IconChat,
   IconFinancial, IconAnalytics, IconKnowledge, IconNotification,
   IconSettings, IconChevronLeft, IconChevronRight, IconMenu,
-  IconLogout, IconProfile,
+  IconLogout, IconProfile, IconTicket, IconFile,
 } from '@/components/icons'
 
-const adminNavItems = [
-  { name: 'Dashboard', href: '/dashboard', icon: IconDashboard },
-  { name: 'Projetos', href: '/projects', icon: IconProject },
-  { name: 'Clientes', href: '/clients', icon: IconClient },
-  { name: 'CRM', href: '/crm', icon: IconCRM },
-  { name: 'Chat', href: '/chat', icon: IconChat },
-  { name: 'Financeiro', href: '/financial', icon: IconFinancial },
-  { name: 'Analytics', href: '/analytics', icon: IconAnalytics },
-  { name: 'Conhecimento', href: '/knowledge', icon: IconKnowledge },
+const adminNavSections = [
+  {
+    label: 'Principal',
+    items: [
+      { name: 'Dashboard', href: '/dashboard', icon: IconDashboard },
+      { name: 'Projetos', href: '/projects', icon: IconProject },
+      { name: 'Clientes', href: '/clients', icon: IconClient },
+    ]
+  },
+  {
+    label: 'Vendas',
+    items: [
+      { name: 'CRM', href: '/crm', icon: IconCRM },
+      { name: 'Financeiro', href: '/financial', icon: IconFinancial },
+      { name: 'Contratos', href: '/contracts', icon: IconFile },
+    ]
+  },
+  {
+    label: 'Analise',
+    items: [
+      { name: 'Analytics', href: '/analytics', icon: IconAnalytics },
+      { name: 'Tickets', href: '/tickets', icon: IconTicket },
+      { name: 'Conhecimento', href: '/knowledge', icon: IconKnowledge },
+    ]
+  },
 ]
+
+const adminNavItems = adminNavSections.flatMap(s => s.items)
 
 const clientNavItems = [
   { name: 'Inicio', href: '/dashboard', icon: IconDashboard },
   { name: 'Meus Projetos', href: '/projects', icon: IconProject },
-  { name: 'Chat', href: '/chat', icon: IconChat },
+  { name: 'Chat', href: '/clients', icon: IconChat },
   { name: 'Financeiro', href: '/financial', icon: IconFinancial },
 ]
 
@@ -94,7 +112,7 @@ export function SidebarClient() {
         mobileMenuOpen ? 'translate-x-0' : '-translate-x-full',
         'lg:translate-x-0 lg:flex',
         collapsed ? 'w-[60px]' : 'w-[220px]'
-      )}>
+      )} suppressHydrationWarning>
         <div className={cn(
           'flex h-12 items-center border-b border-[var(--border)] px-3',
           collapsed ? 'justify-center' : 'justify-between'
@@ -119,7 +137,33 @@ export function SidebarClient() {
         </div>
 
         <nav className="flex-1 overflow-y-auto py-2 px-2 space-y-0.5 scroll-area">
-          {topNav.map(item => {
+          {isAdmin ? adminNavSections.map((section, si) => (
+            <div key={si} className="mb-1">
+              {!collapsed && (
+                <div className="px-3 py-1.5 text-[10px] font-[500] text-[var(--text-3)] uppercase tracking-wider">
+                  {section.label}
+                </div>
+              )}
+              {section.items.map(item => {
+                const active = isActive(item.href)
+                return (
+                  <Link
+                    key={item.name}
+                    href={item.href}
+                    onClick={() => setMobileMenuOpen(false)}
+                    title={collapsed ? item.name : undefined}
+                    className={navItemClass(active)}
+                  >
+                    {active && (
+                      <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-4 bg-[var(--accent)] rounded-r" />
+                    )}
+                    <item.icon className="w-[16px] h-[16px] shrink-0" />
+                    {!collapsed && <span className="truncate">{item.name}</span>}
+                  </Link>
+                )
+              })}
+            </div>
+          )) : (topNav as typeof clientNavItems).map(item => {
             const active = isActive(item.href)
             return (
               <Link

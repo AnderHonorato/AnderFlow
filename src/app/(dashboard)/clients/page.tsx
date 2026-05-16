@@ -1,38 +1,74 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Card, CardContent } from '@/components/ui/card'
+import { useSession } from 'next-auth/react'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
-import { Progress } from '@/components/ui/progress'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
+import { ScrollArea } from '@/components/ui/scroll-area'
 import { toast } from 'sonner'
-import { OnboardingTip } from '@/components/ui/onboarding-tip'
+import { AdvancedChat } from '@/components/chat/advanced-chat'
 import {
-  Plus, Search, Mail, Building2, ArrowUpRight, Loader2,
-} from 'lucide-react'
+  IconPlus, IconSearch, IconClient, IconProject, IconFinancial,
+  IconLoader, IconArrowLeft,
+} from '@/components/icons'
 
 export default function ClientsPage() {
+  const { data: session } = useSession()
   const [clients, setClients] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
+  const [selectedClientId, setSelectedClientId] = useState<string | null>(null)
   const [showNew, setShowNew] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [channel, setChannel] = useState<any>(null)
   const [form, setForm] = useState({ name: '', email: '', password: '', company: '', phone: '' })
 
-  const loadClients = () => {
+  useEffect(() => {
     fetch('/api/clients')
       .then(r => r.json())
-      .then(json => { setClients(json.data || []); setLoading(false) })
+      .then(async json => {
+        setClients(json.data || [])
+        setLoading(false)
+        if (json.data?.length > 0) {
+          setSelectedClientId(json.data[0].id)
+        }
+      })
       .catch(() => setLoading(false))
-  }
+  }, [])
 
-  useEffect(() => { loadClients() }, [])
+  useEffect(() => {
+    if (!selectedClientId) { setChannel(null); return }
+    fetch(`/api/channels?clientId=${selectedClientId}`)
+      .then(r => r.json())
+      .then(async json => {
+        const channels = json.data || []
+        if (channels.length > 0) {
+          setChannel(channels[0])
+        } else {
+          const selectedClient = clients.find(c => c.id === selectedClientId)
+          const createRes = await fetch('/api/channels', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              name: `${selectedClient?.name || 'Cliente'} — ${selectedClient?.company || selectedClient?.email || ''}`,
+              type: 'direct',
+              clientId: selectedClientId,
+            }),
+          })
+          const createJson = await createRes.json()
+          if (createJson.data) setChannel(createJson.data)
+        }
+      })
+      .catch(() => {})
+  }, [selectedClientId, clients])
 
-  const handleCreate = async () => {
+  const handleCreateClient = async () => {
+    if (!form.name.trim() || !form.email.trim() || !form.password.trim()) return
     setSaving(true)
     const res = await fetch('/api/clients', {
       method: 'POST',
@@ -40,10 +76,13 @@ export default function ClientsPage() {
       body: JSON.stringify(form),
     })
     if (res.ok) {
-      toast.success('Cliente criado')
+      const json = await res.json()
+      toast.success('Cliente criado com sucesso!')
       setShowNew(false)
       setForm({ name: '', email: '', password: '', company: '', phone: '' })
-      loadClients()
+      const updated = [...clients, json.data]
+      setClients(updated)
+      setSelectedClientId(json.data.id)
     } else {
       toast.error('Erro ao criar cliente')
     }
@@ -51,82 +90,145 @@ export default function ClientsPage() {
   }
 
   const filtered = clients.filter(c =>
-    !search || c.name.toLowerCase().includes(search.toLowerCase()) || (c.company || '').toLowerCase().includes(search.toLowerCase())
+    !search || c.name.toLowerCase().includes(search.toLowerCase()) ||
+    (c.company && c.company.toLowerCase().includes(search.toLowerCase()))
   )
 
-  if (loading) return <div className="p-6 space-y-6"><Skeleton className="h-8 w-48" /><div className="grid gap-4 grid-cols-4">{[1,2,3,4].map(i => <Skeleton key={i} className="h-20" />)}</div><Skeleton className="h-96" /></div>
+  const selectedClient = clients.find(c => c.id === selectedClientId)
+
+  if (loading) {
+    return (
+      <div className="flex h-[calc(100vh-4rem)]">
+        <div className="w-[320px] border-r p-4 space-y-3">
+          <Skeleton className="h-8 w-32" /><Skeleton className="h-9 w-full" />
+          {[1,2,3,4,5].map(i => <Skeleton key={i} className="h-14 w-full" />)}
+        </div>
+        <div className="flex-1 flex items-center justify-center">
+          <Skeleton className="h-12 w-12 rounded-full" />
+        </div>
+      </div>
+    )
+  }
 
   return (
-    <div className="p-6 space-y-6">
-      <OnboardingTip
-        id="clients_tip"
-        title="Gestão de Clientes"
-        description="Cadastre seus clientes, veja projetos vinculados e acompanhe o plano de cada um. Use 'Novo Cliente' para adicionar."
-      />
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-lg font-medium">Clientes</h1>
-          <p className="text-sm text-muted-foreground mt-1">{clients.length} clientes cadastrados</p>
+    <div className="flex h-[calc(100vh-4rem)]">
+      <div className="w-[320px] border-r flex flex-col shrink-0">
+        <div className="p-4 border-b space-y-3">
+          <div className="flex items-center justify-between">
+            <h2 className="text-[15px] font-[500]">Clientes</h2>
+            <Button size="sm" onClick={() => setShowNew(true)} className="h-7 text-[11px]">
+              <IconPlus className="w-[12px] h-[12px]" /> Novo
+            </Button>
+          </div>
+          <div className="relative">
+            <IconSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-[14px] h-[14px] text-[var(--text-3)]" />
+            <Input
+              placeholder="Buscar cliente..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              className="pl-9 h-8 text-[12px]"
+            />
+          </div>
         </div>
-        <Button size="sm" onClick={() => setShowNew(true)}>
-          <Plus className="mr-2 h-4 w-4" /> Novo Cliente
-        </Button>
-      </div>
-
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card><CardContent className="p-4"><p className="text-lg font-medium">{clients.length}</p><p className="text-xs text-muted-foreground">Total</p></CardContent></Card>
-        <Card><CardContent className="p-4"><p className="text-lg font-medium">{clients.filter(c => c.isActive).length}</p><p className="text-xs text-muted-foreground">Ativos</p></CardContent></Card>
-        <Card><CardContent className="p-4"><p className="text-lg font-medium">{clients.filter(c => c.plan === 'PRO').length}</p><p className="text-xs text-muted-foreground">Plano Pro</p></CardContent></Card>
-        <Card><CardContent className="p-4"><p className="text-lg font-medium">{clients.reduce((sum, c) => sum + (c._count?.projects || 0), 0)}</p><p className="text-xs text-muted-foreground">Projetos</p></CardContent></Card>
-      </div>
-
-      <div className="relative max-w-sm">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-        <Input placeholder="Buscar clientes..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
-      </div>
-
-      <Card>
-        <CardContent className="p-0">
-          <div className="divide-y">
-            {filtered.map(c => (
-              <div key={c.id} className="flex items-center gap-4 p-4 hover:bg-muted/50 transition-colors cursor-pointer" onClick={() => window.location.href = `/clients/${c.id}`}>
-                <Avatar className="h-10 w-10"><AvatarFallback>{c.name.slice(0,2).toUpperCase()}</AvatarFallback></Avatar>
+        <ScrollArea className="flex-1">
+          <div className="p-2 space-y-1">
+            {filtered.length === 0 && (
+              <p className="text-[12px] text-[var(--text-3)] text-center py-8">Nenhum cliente encontrado</p>
+            )}
+            {filtered.map(client => (
+              <button
+                key={client.id}
+                onClick={() => setSelectedClientId(client.id)}
+                className={`w-full flex items-center gap-3 p-2.5 rounded-lg transition-colors text-left ${
+                  selectedClientId === client.id
+                    ? 'bg-[var(--accent-subtle)] border border-[var(--accent)]/10'
+                    : 'hover:bg-[var(--surface-hover)]'
+                }`}
+              >
+                <div className="relative shrink-0">
+                  <Avatar className="h-9 w-9">
+                    <AvatarFallback className="text-[10px]">{client.name.slice(0, 2).toUpperCase()}</AvatarFallback>
+                  </Avatar>
+                  {client.isOnline && (
+                    <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-[var(--success)] border-2 border-[var(--surface)]" />
+                  )}
+                </div>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <p className="text-sm font-medium">{c.name}</p>
-                    <Badge variant={c.plan === 'ENTERPRISE' ? 'default' : c.plan === 'PRO' ? 'info' : 'secondary'} className="text-2xs">{c.plan}</Badge>
-                    {c.isOnline && <span className="h-2 w-2 rounded-full bg-success" />}
-                  </div>
-                  <div className="flex items-center gap-3 mt-0.5">
-                    <span className="text-xs text-muted-foreground flex items-center gap-1"><Building2 className="h-3 w-3" />{c.company || 'Sem empresa'}</span>
-                    <span className="text-xs text-muted-foreground flex items-center gap-1"><Mail className="h-3 w-3" />{c.email}</span>
-                  </div>
+                  <p className="text-[13px] font-[500] truncate">{client.name}</p>
+                  <p className="text-[11px] text-[var(--text-3)] truncate">
+                    {client.company || client.email}
+                  </p>
                 </div>
-                <div className="flex items-center gap-4 text-sm">
-                  <div className="text-center"><span className="font-medium">{c._count?.projects || 0}</span><p className="text-2xs text-muted-foreground">Projetos</p></div>
-                  <Button variant="ghost" size="icon-sm"><ArrowUpRight className="h-4 w-4" /></Button>
-                </div>
-              </div>
+                {client.plan && client.plan !== 'BASIC' && (
+                  <Badge variant="warning" className="shrink-0">{client.plan}</Badge>
+                )}
+              </button>
             ))}
           </div>
-        </CardContent>
-      </Card>
+        </ScrollArea>
+      </div>
+
+      <div className="flex-1 flex flex-col min-w-0">
+        {selectedClient ? (
+          <div className="flex flex-col h-full">
+            <div className="flex items-center gap-3 px-6 py-3 border-b shrink-0">
+              <Avatar className="h-8 w-8">
+                <AvatarFallback className="text-[9px]">{selectedClient.name.slice(0, 2).toUpperCase()}</AvatarFallback>
+              </Avatar>
+              <div className="flex-1">
+                <p className="text-[13px] font-[500]">{selectedClient.name}</p>
+                <p className="text-[11px] text-[var(--text-3)]">
+                  {selectedClient.company}{selectedClient.company ? ' · ' : ''}{selectedClient.email}
+                </p>
+              </div>
+            </div>
+            <div className="flex-1 flex min-h-0">
+              <div className="flex-1">
+                <AdvancedChat channelId={channel?.id || null} />
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="flex-1 flex items-center justify-center text-[13px] text-[var(--text-3)]">
+            Selecione um cliente para ver o perfil e chat
+          </div>
+        )}
+      </div>
 
       <Dialog open={showNew} onOpenChange={setShowNew}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Novo Cliente</DialogTitle></DialogHeader>
-          <div className="space-y-3">
-            <Input placeholder="Nome *" value={form.name} onChange={e => setForm({...form, name: e.target.value})} />
-            <Input placeholder="Email *" type="email" value={form.email} onChange={e => setForm({...form, email: e.target.value})} />
-            <Input placeholder="Senha *" type="password" value={form.password} onChange={e => setForm({...form, password: e.target.value})} />
-            <Input placeholder="Empresa" value={form.company} onChange={e => setForm({...form, company: e.target.value})} />
-            <Input placeholder="Telefone" value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} />
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Novo Cliente</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <label>Nome</label>
+              <Input placeholder="Nome do cliente" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} autoFocus />
+            </div>
+            <div className="space-y-2">
+              <label>Email</label>
+              <Input type="email" placeholder="email@exemplo.com" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} />
+            </div>
+            <div className="space-y-2">
+              <label>Senha</label>
+              <Input type="password" placeholder="Senha inicial" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <label>Empresa</label>
+                <Input placeholder="Nome da empresa" value={form.company} onChange={e => setForm({ ...form, company: e.target.value })} />
+              </div>
+              <div className="space-y-2">
+                <label>Telefone</label>
+                <Input placeholder="(00) 00000-0000" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} />
+              </div>
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowNew(false)}>Cancelar</Button>
-            <Button onClick={handleCreate} disabled={saving || !form.name || !form.email || !form.password}>
-              {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Criar Cliente
+            <Button onClick={handleCreateClient} disabled={saving || !form.name.trim() || !form.email.trim() || !form.password.trim()}>
+              {saving && <IconLoader className="w-[14px] h-[14px] animate-spin" />}
+              Criar cliente
             </Button>
           </DialogFooter>
         </DialogContent>

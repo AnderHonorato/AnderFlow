@@ -4,9 +4,15 @@ import { getSessionUser, isAdmin, unauthorizedResponse } from '@/lib/auth-utils'
 
 export async function GET(request: NextRequest) {
   const user = await getSessionUser(request)
-  if (!user || !isAdmin(user)) return unauthorizedResponse()
+  if (!user) return NextResponse.json({ error: 'Nao autenticado' }, { status: 401 })
   try {
+    const { searchParams } = new URL(request.url)
+    const clientId = searchParams.get('clientId')
+    const where: any = {}
+    if (clientId) where.clientId = clientId
+
     const channels = await prisma.channel.findMany({
+      where,
       orderBy: { createdAt: 'desc' },
     })
     return NextResponse.json({ data: channels })
@@ -18,11 +24,12 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { name, description, type, isPrivate } = body
+    const { name, description, type, isPrivate, clientId } = body
 
-    const channel = await prisma.channel.create({
-      data: { name, description, type: type || 'project', isPrivate: isPrivate || false },
-    })
+    const data: any = { name, description, type: type || 'project', isPrivate: isPrivate || false }
+    if (clientId) data.clientId = clientId
+
+    const channel = await prisma.channel.create({ data })
 
     return NextResponse.json({ data: channel }, { status: 201 })
   } catch (error) {

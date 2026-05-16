@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { getToken } from 'next-auth/jwt'
+import { getSessionUser } from '@/lib/auth-utils'
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET })
-    if (!token?.id) {
+    const user = await getSessionUser(request)
+    if (!user?.id) {
       return NextResponse.json({ error: 'Nao autenticado' }, { status: 401 })
     }
 
@@ -13,7 +13,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const contract = await prisma.contract.findUnique({ where: { id }, include: { project: true } })
     if (!contract) return NextResponse.json({ error: 'Contrato nao encontrado' }, { status: 404 })
 
-    if (contract.clientId !== token.id) {
+    if (contract.clientId !== user.id) {
       return NextResponse.json({ error: 'Apenas o cliente pode assinar' }, { status: 403 })
     }
 

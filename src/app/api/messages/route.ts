@@ -42,8 +42,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Nao autenticado' }, { status: 401 })
     }
 
+    const data: any = {
+      content: content.trim(),
+      senderId: userId,
+      type: body.type || 'text',
+      channelId: body.channelId || null,
+      projectId: body.projectId || null,
+    }
+    if (body.metadata) data.metadata = body.metadata
+
     const message = await prisma.message.create({
-      data: { content: content.trim(), senderId: userId, type: 'text', channelId: body.channelId || null, projectId: body.projectId || null },
+      data,
       include: { sender: { select: { id: true, name: true, role: true } } },
     })
 

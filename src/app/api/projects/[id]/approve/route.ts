@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { getToken } from 'next-auth/jwt'
+import { getSessionUser, isAdmin } from '@/lib/auth-utils'
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET })
-    if (!token?.id || token.role !== 'ADMIN') {
+    const user = await getSessionUser(request)
+    if (!user || !isAdmin(user)) {
       return NextResponse.json({ error: 'Nao autorizado' }, { status: 403 })
     }
 
@@ -43,7 +43,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         type: 'APPROVAL',
         action: 'Proposta enviada ao cliente',
         details: `Valor: R$ ${proposalValue}. Mensagem: ${proposalMessage.slice(0, 200)}`,
-        userId: token.id as string,
+        userId: user.id,
         projectId: id,
       },
     })

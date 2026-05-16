@@ -7,6 +7,7 @@ import { SessionProvider } from '@/providers/session-provider'
 import { cn } from '@/lib/utils'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { Header } from '@/components/layout/header'
 import {
   LayoutDashboard, FolderKanban, MessageSquare,
   CreditCard, FileText, LogOut,
@@ -65,12 +66,10 @@ function PortalSidebarContent({ children }: { children: React.ReactNode }) {
           </button>
         </div>
       </aside>
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <header className="flex h-12 items-center border-b border-[var(--border)] bg-[var(--header-bg)] px-4">
-          <h1 className="text-[15px] font-medium text-[var(--text)]">Portal do Cliente</h1>
-        </header>
-        <main className="flex-1 overflow-y-auto scroll-area">{children}</main>
-      </div>
+      <div className="flex-1 flex flex-col min-w-0 overflow-y-auto scroll-area">
+          <Header />
+          <main className="flex-1">{children}</main>
+        </div>
     </div>
   )
 }

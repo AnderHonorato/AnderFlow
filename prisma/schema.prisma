@@ -55,6 +55,7 @@ model User {
   teamMembers     TeamMember[]
   timeEntries     TimeEntry[]
   projectUpdates  ProjectUpdate[]
+  clientChannels  Channel[]       @relation("ClientChannel")
 }
 
 model Account {
@@ -326,9 +327,11 @@ model Channel {
   description String?
   type        String   @default("project")
   isPrivate   Boolean  @default(false)
+  clientId    String?
   createdAt   DateTime @default(now())
 
   messages Message[]
+  client   User?    @relation("ClientChannel", fields: [clientId], references: [id])
 }
 
 model Comment {

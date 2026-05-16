@@ -22,6 +22,11 @@ export default withAuth(
 
     if (!token) return NextResponse.next()
 
+    // Redirect /chat to /clients
+    if (path === '/chat' || path.startsWith('/chat/')) {
+      return NextResponse.redirect(new URL('/clients', req.url))
+    }
+
     // CLIENT: bloquear rotas administrativas
     if (role === 'CLIENT') {
       const isAdminRoute = adminOnlyRoutes.some(r => path === r || path.startsWith(r + '/'))

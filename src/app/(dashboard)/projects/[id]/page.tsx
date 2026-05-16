@@ -40,7 +40,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
   const [steps, setSteps] = useState<StepState[]>([])
   const [expandedStep, setExpandedStep] = useState<number | null>(null)
   const [newComment, setNewComment] = useState('')
-  const [history, setHistory] = useState<{ time: string; action: string }[]>([])
+  const [history, setHistory] = useState<{ time: string; action: string; author?: string }[]>([])
   const [approveOpen, setApproveOpen] = useState(false)
   const [proposalMsg, setProposalMsg] = useState('')
   const [proposalValue, setProposalValue] = useState('')
@@ -51,6 +51,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
   const [signLoading, setSignLoading] = useState(false)
   const [stepTimes, setStepTimes] = useState<Record<number, number>>({})
   const [delayMargin, setDelayMargin] = useState(20)
+  const [briefingOpen, setBriefingOpen] = useState(false)
 
   const totalDays = Object.values(stepTimes).reduce((sum, d) => sum + d, 0)
   const totalWithMargin = Math.ceil(totalDays * (1 + delayMargin / 100))
@@ -58,6 +59,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
   const isAdmin = session?.user?.role === 'ADMIN'
   const isClient = session?.user?.id === project?.clientId
   const isDraft = project?.status === 'DRAFT'
+  const isPending = project?.status === 'PENDING'
   const isReview = project?.status === 'REVIEW'
   const isCancelled = project?.status === 'CANCELLED'
 
@@ -75,6 +77,10 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
               id: s.id, status: 'waiting' as NodeStatus, timeEstimate: '', comments: [],
             })))
           }
+          try {
+            const savedHistory = localStorage.getItem(`project_history_${id}`)
+            if (savedHistory) setHistory(JSON.parse(savedHistory))
+          } catch {}
         }
         setLoading(false)
       })
@@ -87,10 +93,29 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
   }
 
   const updateStepStatus = (stepId: number, status: NodeStatus) => {
+    const currentStep = steps.find(s => s.id === stepId)
+    if (!currentStep) return
+
+    if (currentStep.status === 'completed') {
+      toast.error('Etapas concluidas nao podem ser alteradas')
+      return
+    }
+
+    if (status === 'in_progress') {
+      const hasActive = steps.some(s => s.id !== stepId && s.status === 'in_progress')
+      if (hasActive) {
+        toast.error('Apenas uma etapa pode estar em andamento por vez')
+        return
+      }
+    }
+
     const newSteps = steps.map(s => s.id === stepId ? { ...s, status } : s)
     const step = DEFAULT_STEPS.find(s => s.id === stepId)
     const labels: Record<NodeStatus, string> = { waiting: 'Aguardando', in_progress: 'Em andamento', paused: 'Pausado', completed: 'Concluido' }
-    setHistory(prev => [{ time: new Date().toLocaleTimeString('pt-BR'), action: `"${step?.label}" → ${labels[status]}` }, ...prev])
+    const newEntry = { time: new Date().toLocaleString('pt-BR'), action: `"${step?.label}" → ${labels[status]}`, author: session?.user?.name || 'Admin' }
+    const newHistory = [newEntry, ...history]
+    setHistory(newHistory)
+    try { localStorage.setItem(`project_history_${id}`, JSON.stringify(newHistory)) } catch {}
     saveSteps(newSteps)
     toast.success(`Etapa "${step?.label}" atualizada`)
   }
@@ -100,7 +125,10 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
       if (s.id !== stepId) return s
       return { ...s, comments: [...s.comments, { text, author: 'Voce', time: new Date().toLocaleTimeString('pt-BR'), type: 'text' as const }] }
     })
-    setHistory(prev => [{ time: new Date().toLocaleTimeString('pt-BR'), action: `Comentario adicionado em "${DEFAULT_STEPS.find(s => s.id === stepId)?.label}"` }, ...prev])
+    const newEntry = { time: new Date().toLocaleString('pt-BR'), action: `Comentario em "${DEFAULT_STEPS.find(s => s.id === stepId)?.label}"`, author: session?.user?.name || 'Admin' }
+    const newHistory = [newEntry, ...history]
+    setHistory(newHistory)
+    try { localStorage.setItem(`project_history_${id}`, JSON.stringify(newHistory)) } catch {}
     saveSteps(newSteps)
     setNewComment('')
   }
@@ -211,9 +239,14 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
               <h1 className="text-[17px] font-[500] tracking-[-0.015em]">{project.name}</h1>
               <p className="text-[12px] text-[var(--text-3)] mt-1">{project.description}</p>
               <div className="flex items-center gap-3 mt-3">
-                <Badge status={isCancelled ? 'DRAFT' : isDraft ? 'DRAFT' : isReview ? 'REVIEW' : project.status === 'COMPLETED' ? 'COMPLETED' : 'IN_PROGRESS'}>
-                  {isCancelled ? 'Cancelado' : isDraft ? 'Rascunho' : isReview ? 'Aguardando cliente' : project.status === 'COMPLETED' ? 'Concluido' : 'Em andamento'}
+                <Badge status={isCancelled ? 'CANCELLED' : (isPending ? 'PENDING' : (isDraft ? 'DRAFT' : (isReview ? 'REVIEW' : (project.status === 'COMPLETED' ? 'COMPLETED' : 'IN_PROGRESS'))))}>
+                  {isCancelled ? 'Cancelado' : (isPending ? 'Solicitacao' : (isDraft ? 'Rascunho' : (isReview ? 'Aguardando cliente' : (project.status === 'COMPLETED' ? 'Concluido' : 'Em andamento'))))}
                 </Badge>
+                {isPending && (() => {
+                  const createdDate = project.createdAt ? new Date(project.createdAt) : null
+                  const isNew = createdDate && (Date.now() - createdDate.getTime()) < 48 * 60 * 60 * 1000
+                  return isNew ? <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-[500] bg-[var(--warning-subtle)] text-[var(--warning)] badge-new">NOVO</span> : null
+                })()}
                 <span className="text-[12px] text-[var(--text-3)]">
                   Cliente: {project.client?.name} ({project.client?.company})
                 </span>
@@ -235,7 +268,14 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                 </div>
               )}
 
-              {isAdmin && isDraft && (
+              {project.briefing && (() => {
+                try {
+                  JSON.parse(project.briefing)
+                  return <Button variant="outline" size="sm" onClick={() => setBriefingOpen(true)} className="h-7 text-[11px]">Ver Briefing</Button>
+                } catch { return null }
+              })()}
+
+              {isAdmin && (isDraft || isPending) && (
                 <div className="flex items-center gap-2 mt-3">
                   <Button size="sm" onClick={() => setApproveOpen(true)} className="h-7 text-[11px]">
                     <IconThumbsUp className="w-3 h-3" /> Aprovar com proposta
@@ -286,6 +326,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
               onAddComment={addComment}
               newComment={newComment}
               onNewCommentChange={setNewComment}
+              session={session}
             />
           </div>
           <div>
@@ -299,10 +340,13 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                     {history.length === 0 && (
                       <p className="text-[12px] text-[var(--text-3)] text-center py-4">Nenhuma alteracao registrada</p>
                     )}
-                    {history.map((h, i) => (
-                      <div key={i} className="flex items-start gap-2 text-[11px]">
-                        <span className="text-[var(--text-3)] shrink-0 w-12">{h.time}</span>
-                        <span className="text-[var(--text)]">{h.action}</span>
+                    {history.map((h: any, i: number) => (
+                      <div key={i} className="flex items-start gap-2 text-[11px] border-b border-[var(--border)] pb-2 last:border-0">
+                        <span className="text-[var(--text-3)] shrink-0">{h.time}</span>
+                        <div className="min-w-0">
+                          <span className="text-[var(--text)]">{h.action}</span>
+                          {h.author && <span className="text-[var(--text-3)] ml-1">— {h.author}</span>}
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -446,6 +490,77 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
               {signLoading && <IconLoader className="w-[14px] h-[14px] animate-spin" />}
               <IconCheck className="w-[14px] h-[14px]" /> Confirmar assinatura
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={briefingOpen} onOpenChange={setBriefingOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Briefing do Projeto</DialogTitle>
+          </DialogHeader>
+          <div className="max-h-[60vh] overflow-y-auto space-y-4">
+            {(() => {
+              try {
+                const briefingData = typeof project.briefing === 'string' ? JSON.parse(project.briefing) : project.briefing
+                const answers = briefingData.answers || briefingData
+                const template = briefingData.template
+                if (template?.stages) {
+                  return template.stages.map((stage: any, si: number) => (
+                    <div key={si} className="border border-[var(--border)] rounded-lg p-3">
+                      <h4 className="text-[13px] font-[500] text-[var(--text)] mb-2">{stage.label}</h4>
+                      <div className="space-y-2">
+                        {stage.sections?.map((section: any, ssi: number) => (
+                          <div key={ssi}>
+                            <p className="text-[11px] font-[500] text-[var(--text-3)] uppercase">{section.label}</p>
+                            {section.questions?.map((q: any, qi: number) => {
+                              const key = `${stage.id}_${section.id}_${q.id}`
+                              const value = answers[key]
+                              const label = q.options?.[value] || value
+                              return (
+                                <div key={qi} className="flex items-start gap-2 mt-1">
+                                  <span className="text-[12px] text-[var(--text-2)]">{q.label}:</span>
+                                  <span className="text-[12px] text-[var(--text)]">
+                                    {Array.isArray(value)
+                                      ? value.map((v: string) => q.options?.[v] || v).join(', ')
+                                      : (label || '-')}
+                                  </span>
+                                </div>
+                              )
+                            })}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))
+                }
+                return <div className="space-y-2">
+                  {Object.entries(answers).map(([key, value]: [string, any]) => (
+                    <div key={key} className="flex items-start gap-2">
+                      <span className="text-[12px] text-[var(--text-3)] shrink-0">{key}:</span>
+                      <span className="text-[12px] text-[var(--text)]">{typeof value === 'string' ? value : JSON.stringify(value)}</span>
+                    </div>
+                  ))}
+                </div>
+              } catch {
+                return <p className="text-[12px] text-[var(--text-3)]">Nao foi possivel carregar o briefing</p>
+              }
+            })()}
+            {project.briefing && (() => {
+              try {
+                const data = JSON.parse(project.briefing)
+                if (data.summary) {
+                  return <div className="p-3 rounded-lg bg-[var(--surface-2)] border border-[var(--border)] mt-4">
+                    <p className="text-[11px] font-[500] text-[var(--text-3)] uppercase mb-1">Resumo</p>
+                    <p className="text-[12px] text-[var(--text)]">{data.summary}</p>
+                  </div>
+                }
+              } catch { return null }
+            })()}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBriefingOpen(false)}>Fechar</Button>
+            <Button onClick={() => window.print()} size="sm">Baixar PDF</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
