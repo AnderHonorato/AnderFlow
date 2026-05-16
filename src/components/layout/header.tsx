@@ -4,7 +4,11 @@ import { useEffect, useState, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { signOut, useSession } from 'next-auth/react'
-import { Bell, BookOpen, LogOut, User, Settings, X } from 'lucide-react'
+import {
+  IconNotification, IconKnowledge, IconProfile, IconSettings,
+  IconLogout, IconClose,
+} from '@/components/icons'
+import { cn } from '@/lib/utils'
 
 interface NotificationBanner {
   id: string
@@ -48,6 +52,11 @@ export function Header() {
             newItems.forEach((n: any) => nextIds.add(n.id))
             setSeenIds(nextIds)
             try { sessionStorage.setItem('anderflow_seen_notifications', JSON.stringify(Array.from(nextIds))) } catch {}
+            fetch('/api/notifications', {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ ids: newItems.map((n: any) => n.id) }),
+            }).catch(() => {})
             setBanners(prev => {
               const existingIds = new Set(prev.map(b => b.id))
               const toAdd = newItems.filter((n: any) => !existingIds.has(n.id))
@@ -111,9 +120,9 @@ export function Header() {
 
   return (
     <>
-      <header className="sticky top-0 z-30 h-12 border-b border-[var(--border)] bg-[var(--header-bg)] flex items-center justify-between px-3 lg:px-4">
-        <div className="flex items-center gap-2 text-xs text-[var(--text-muted)]">
-          <Link href="/dashboard" className="text-[var(--text)] font-medium hover:opacity-70 transition-opacity">
+      <header className="sticky top-0 z-30 h-[48px] border-b border-[var(--border)] bg-[var(--bg)] flex items-center justify-between px-3 lg:px-4">
+        <div className="flex items-center gap-2 text-[12px] text-[var(--text-3)]">
+          <Link href="/dashboard" className="text-[var(--text)] font-[500] hover:opacity-70 transition-opacity text-[13px]">
             ANDERFLOW
           </Link>
         </div>
@@ -121,19 +130,19 @@ export function Header() {
         <div className="flex items-center gap-1">
           <Link
             href="/knowledge"
-            className="flex items-center justify-center h-7 w-7 rounded-md hover:bg-[var(--surface-hover)] text-[var(--text-muted)] hover:text-[var(--text)] transition-colors"
+            className="flex items-center justify-center h-7 w-7 rounded-md hover:bg-[var(--surface-hover)] text-[var(--text-2)] hover:text-[var(--text)] transition-colors"
             title="Conhecimento"
           >
-            <BookOpen className="w-[16px] h-[16px]" />
+            <IconKnowledge className="w-[16px] h-[16px]" />
           </Link>
 
           <Link
             href="/notifications"
-            className="flex items-center justify-center h-7 w-7 rounded-md hover:bg-[var(--surface-hover)] text-[var(--text-muted)] hover:text-[var(--text)] transition-colors relative"
+            className="flex items-center justify-center h-7 w-7 rounded-md hover:bg-[var(--surface-hover)] text-[var(--text-2)] hover:text-[var(--text)] transition-colors relative"
           >
-            <Bell className="w-[16px] h-[16px]" />
+            <IconNotification className="w-[16px] h-[16px]" />
             {unreadCount > 0 && (
-              <span className="absolute top-0.5 right-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-[var(--destructive)] text-[8px] font-bold text-white">
+              <span className="absolute top-0.5 right-0.5 flex h-[16px] min-w-[16px] items-center justify-center rounded-full bg-[var(--accent)] text-[10px] font-[500] text-white px-1">
                 {unreadCount > 9 ? '9+' : unreadCount}
               </span>
             )}
@@ -142,24 +151,24 @@ export function Header() {
           <div className="relative ml-0.5">
             <button
               onClick={(e) => { e.stopPropagation(); setProfileOpen(!profileOpen) }}
-              className="flex items-center justify-center h-7 w-7 rounded-full bg-[var(--primary-subtle)] text-[var(--primary)] text-2xs font-medium hover:opacity-80 transition-opacity"
+              className="flex items-center justify-center h-[28px] w-[28px] rounded-full bg-[var(--surface-3)] text-[var(--text-2)] text-[11px] font-[500] hover:bg-[var(--surface-hover)] transition-colors"
             >
               {initials}
             </button>
             {profileOpen && (
-              <div className="absolute right-0 top-full mt-1 w-44 bg-[var(--surface)] border border-[var(--border)] rounded-md py-1 z-50" onClick={e => e.stopPropagation()}>
+              <div className="absolute right-0 top-full mt-1 w-44 bg-[var(--surface)] border border-[var(--border)] rounded-lg py-1 z-50" onClick={e => e.stopPropagation()}>
                 <div className="px-3 py-2 border-b border-[var(--border)]">
-                  <p className="text-xs font-medium text-[var(--text)]">{session?.user?.name || 'Usuário'}</p>
-                  <p className="text-2xs text-[var(--text-muted)]">{session?.user?.email}</p>
+                  <p className="text-[13px] font-[500] text-[var(--text)]">{session?.user?.name || 'Usuario'}</p>
+                  <p className="text-[11px] text-[var(--text-3)] mt-0.5">{session?.user?.email}</p>
                 </div>
-                <Link href="/profile" className="flex items-center gap-2 px-3 py-1.5 text-xs text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] hover:text-[var(--text)] transition-colors" onClick={() => setProfileOpen(false)}>
-                  <User className="w-3 h-3" /> Perfil
+                <Link href="/profile" className="flex items-center gap-2 px-3 py-1.5 text-[13px] text-[var(--text-2)] hover:bg-[var(--surface-hover)] hover:text-[var(--text)] transition-colors" onClick={() => setProfileOpen(false)}>
+                  <IconProfile className="w-[14px] h-[14px]" /> Perfil
                 </Link>
-                <Link href="/settings" className="flex items-center gap-2 px-3 py-1.5 text-xs text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] hover:text-[var(--text)] transition-colors" onClick={() => setProfileOpen(false)}>
-                  <Settings className="w-3 h-3" /> Configurações
+                <Link href="/settings" className="flex items-center gap-2 px-3 py-1.5 text-[13px] text-[var(--text-2)] hover:bg-[var(--surface-hover)] hover:text-[var(--text)] transition-colors" onClick={() => setProfileOpen(false)}>
+                  <IconSettings className="w-[14px] h-[14px]" /> Configuracoes
                 </Link>
-                <button onClick={() => signOut()} className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-[var(--destructive)] hover:bg-[var(--destructive-subtle)] transition-colors">
-                  <LogOut className="w-3 h-3" /> Sair
+                <button onClick={() => signOut()} className="w-full flex items-center gap-2 px-3 py-1.5 text-[13px] text-[var(--destructive)] hover:bg-[var(--destructive-subtle)] transition-colors">
+                  <IconLogout className="w-[14px] h-[14px]" /> Sair
                 </button>
               </div>
             )}
@@ -168,7 +177,7 @@ export function Header() {
       </header>
 
       {banners.length > 0 && (
-        <div className="fixed top-0 left-0 right-0 z-50 flex justify-center pointer-events-none">
+        <div className="fixed top-0 left-0 right-0 z-50 flex justify-center pointer-events-none pt-1">
           <div
             onClick={() => {
               const meta = banners[currentBanner]?.metadata
@@ -177,28 +186,34 @@ export function Header() {
                 router.push(`/portal/briefing-fill/${meta.projectId}`)
               }
             }}
-            className="pointer-events-auto bg-[var(--primary)] text-white rounded-b-md px-4 py-2.5 max-w-lg w-[calc(100%-16px)] flex items-start gap-2.5 animate-slide-up cursor-pointer"
+            className={cn(
+              'pointer-events-auto max-w-[400px] w-[calc(100%-16px)]',
+              'bg-[var(--surface-2)] border border-[var(--border-2)] border-l-[2px] border-l-[var(--accent)]',
+              'rounded-lg px-4 py-3',
+              'flex items-start gap-3',
+              'animate-slide-up cursor-pointer'
+            )}
           >
             <div className="flex-1 min-w-0">
-              <p className="text-xs font-semibold truncate">
+              <p className="text-[13px] font-[500] text-[var(--text)] truncate">
                 {banners[currentBanner]?.title}
               </p>
-              <p className="text-2xs text-white/75 mt-0.5 line-clamp-1">
+              <p className="text-[12px] text-[var(--text-2)] mt-0.5 line-clamp-1">
                 {banners[currentBanner]?.message}
               </p>
               {banners.length > 1 && (
-                <div className="flex gap-1 mt-1.5">
+                <div className="flex gap-1 mt-2">
                   {banners.map((_, i) => (
-                    <span key={i} className={`h-1 rounded-full transition-all ${i === currentBanner ? 'w-3 bg-white' : 'w-1 bg-white/40'}`} />
+                    <span key={i} className={`h-1 rounded-full transition-all ${i === currentBanner ? 'w-3 bg-[var(--accent)]' : 'w-1 bg-[var(--border-2)]'}`} />
                   ))}
                 </div>
               )}
             </div>
             <button
               onClick={(e) => { e.stopPropagation(); dismissBanner(banners[currentBanner]?.id) }}
-              className="shrink-0 flex items-center justify-center h-4 w-4 rounded hover:bg-white/20 text-white/80 hover:text-white transition-colors"
+              className="shrink-0 flex items-center justify-center h-5 w-5 rounded text-[var(--text-3)] hover:text-[var(--text)] hover:bg-[var(--surface-hover)] transition-colors"
             >
-              <X className="h-3 w-3" />
+              <IconClose className="h-3 w-3" />
             </button>
           </div>
         </div>

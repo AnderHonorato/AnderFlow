@@ -66,16 +66,18 @@ export async function POST(request: NextRequest) {
       include: { client: { select: { id: true, name: true } } },
     })
 
-    // Notificar admin sobre novo projeto
-    await prisma.notification.create({
-      data: {
-        userId: clientId,
-        type: 'PROJECT_UPDATE',
-        title: 'Projeto criado',
-        message: `Projeto "${name}" criado com sucesso`,
-        isRead: false,
-      },
-    })
+    // Notificar admin sobre novo projeto (apenas se o cliente nao for o admin atual)
+    if (clientId !== userId) {
+      await prisma.notification.create({
+        data: {
+          userId: clientId,
+          type: 'PROJECT_UPDATE',
+          title: 'Projeto criado',
+          message: `Projeto "${name}" criado com sucesso`,
+          isRead: false,
+        },
+      })
+    }
 
     return NextResponse.json({ data: project }, { status: 201 })
   } catch (error: any) {

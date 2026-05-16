@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, use } from 'react'
 import Link from 'next/link'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -9,7 +9,8 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Separator } from '@/components/ui/separator'
 import { ArrowLeft, Mail, Phone, Building2, Calendar, Clock, FolderKanban, DollarSign, MessageSquare, TicketIcon } from 'lucide-react'
 
-export default function ClientDetailPage({ params }: { params: { id: string } }) {
+export default function ClientDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params)
   const [client, setClient] = useState<any>(null)
   const [projects, setProjects] = useState<any[]>([])
   const [invoices, setInvoices] = useState<any[]>([])
@@ -25,11 +26,11 @@ export default function ClientDetailPage({ params }: { params: { id: string } })
       fetch('/api/messages').then(r => r.json()),
       fetch('/api/tickets').then(r => r.json()),
     ]).then(([clientsData, projectsData, invoicesData, messagesData, ticketsData]) => {
-      const found = (clientsData.data || []).find((c: any) => c.id === params.id)
-      const clientProjects = (projectsData.data || []).filter((p: any) => p.clientId === params.id)
-      const clientInvoices = (invoicesData.data || []).filter((i: any) => i.clientId === params.id)
-      const clientMsgs = (messagesData.data || []).filter((m: any) => m.senderId === params.id)
-      const clientTickets = (ticketsData.data || []).filter((t: any) => t.creatorId === params.id)
+      const found = (clientsData.data || []).find((c: any) => c.id === id)
+      const clientProjects = (projectsData.data || []).filter((p: any) => p.clientId === id)
+      const clientInvoices = (invoicesData.data || []).filter((i: any) => i.clientId === id)
+      const clientMsgs = (messagesData.data || []).filter((m: any) => m.senderId === id)
+      const clientTickets = (ticketsData.data || []).filter((t: any) => t.creatorId === id)
 
       setClient(found)
       setProjects(clientProjects)
@@ -38,7 +39,7 @@ export default function ClientDetailPage({ params }: { params: { id: string } })
       setTickets(clientTickets)
       setLoading(false)
     }).catch(() => setLoading(false))
-  }, [params.id])
+  }, [id])
 
   if (loading) return <div className="p-6 space-y-4"><Skeleton className="h-8 w-64" /><Skeleton className="h-48" /><Skeleton className="h-64" /></div>
   if (!client) return <div className="p-6"><Link href="/clients" className="text-primary text-sm hover:underline"><ArrowLeft className="inline h-4 w-4 mr-1" />Voltar</Link><p className="text-muted-foreground mt-4">Cliente não encontrado</p></div>

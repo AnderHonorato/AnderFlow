@@ -10,15 +10,15 @@ interface StatCardProps {
 export function StatCard({ icon, value, label, className }: StatCardProps) {
   return (
     <div className={cn(
-      'stat-card h-[52px] px-3 py-2.5 rounded-lg bg-[var(--surface)] flex items-center gap-2.5 transition-colors duration-150 hover:bg-[var(--surface-hover)]',
+      'flex items-center gap-3 px-4 py-3 rounded-xl bg-[var(--surface)] border border-[var(--border)] hover:border-[var(--border-2)] transition-all duration-150',
       className
     )}>
-      <div className="w-6 h-6 flex items-center justify-center opacity-75">
-        {icon}
+      <div className="w-8 h-8 rounded-lg bg-[var(--surface-3)] flex items-center justify-center flex-shrink-0">
+        <span className="w-4 h-4 text-[var(--text-2)]">{icon}</span>
       </div>
-      <div className="flex flex-col justify-center">
-        <span className="text-base font-medium leading-none text-[var(--text)]">{value}</span>
-        <span className="mt-1 text-2xs leading-none text-[var(--text-muted)]">{label}</span>
+      <div>
+        <div className="text-[17px] font-[500] text-[var(--text)] leading-none">{value}</div>
+        <div className="text-[11px] text-[var(--text-3)] mt-1">{label}</div>
       </div>
     </div>
   )

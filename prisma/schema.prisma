@@ -156,6 +156,7 @@ model TeamMember {
 
 model Project {
   id              String   @id @default(cuid())
+  number          String?  @unique
   name            String
   slug            String
   description     String?

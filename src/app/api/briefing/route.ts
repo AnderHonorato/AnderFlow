@@ -53,13 +53,18 @@ export async function POST(request: NextRequest) {
     }
 
     if (action === 'submit') {
-      // Gerar resumo
       const summary = generateSummary(categoryId || 'OTHER', answers || {})
 
-      // Criar projeto automaticamente
-      const projectNumber = `PRJ-${Date.now().toString(36).toUpperCase()}`
+      // Generate formatted project number: PRJ-YYYY-NNNN
+      const year = new Date().getFullYear()
+      const count = await prisma.project.count({
+        where: { createdAt: { gte: new Date(`${year}-01-01`) } },
+      })
+      const projectNumber = `PRJ-${year}-${String(count + 1).padStart(4, '0')}`
+
       const project = await prisma.project.create({
         data: {
+          number: projectNumber,
           name: answers?.project_name || 'Novo Projeto',
           slug: (answers?.project_name || 'projeto').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') + '-' + Date.now(),
           description: answers?.description || summary,
@@ -75,7 +80,21 @@ export async function POST(request: NextRequest) {
         include: { client: { select: { id: true, name: true } } },
       })
 
-      // Atualizar draft como submetido
+      // Create default milestones (timeline)
+      const defaultMilestones = [
+        { name: 'Briefing', description: 'Coleta de requisitos e entendimento do projeto', order: 0, dueDate: addDays(new Date(), 7) },
+        { name: 'Planejamento', description: 'Definição de escopo, cronograma e recursos', order: 1, dueDate: addDays(new Date(), 14) },
+        { name: 'Design', description: 'Criação de wireframes, UI/UX e protótipos', order: 2, dueDate: addDays(new Date(), 28) },
+        { name: 'Desenvolvimento', description: 'Codificação e implementação', order: 3, dueDate: addDays(new Date(), 56) },
+        { name: 'Testes', description: 'Testes de qualidade e ajustes finos', order: 4, dueDate: addDays(new Date(), 70) },
+        { name: 'Deploy', description: 'Publicação e configuração do ambiente', order: 5, dueDate: addDays(new Date(), 77) },
+        { name: 'Entrega', description: 'Apresentação final e documentação', order: 6, dueDate: addDays(new Date(), 84) },
+      ]
+      await prisma.milestone.createMany({
+        data: defaultMilestones.map(m => ({ ...m, projectId: project.id })),
+      })
+
+      // Update draft as submitted
       if (draftId) {
         await prisma.briefingDraft.update({
           where: { id: draftId },
@@ -83,26 +102,27 @@ export async function POST(request: NextRequest) {
         })
       }
 
-      // Notificar admin
+      // Notify admin (skip the creator if they are also admin)
       const admins = await prisma.user.findMany({ where: { role: 'ADMIN' }, select: { id: true } })
       for (const admin of admins) {
+        if (admin.id === userId) continue
         await prisma.notification.create({
           data: {
             userId: admin.id,
             type: 'PROJECT_UPDATE',
-            title: 'Novo projeto recebido!',
+            title: `Novo projeto: ${projectNumber}`,
             message: `${answers?.project_name || 'Novo projeto'} — ${summary.slice(0, 100)}`,
             isRead: false,
           },
         })
       }
 
-      // Notificar cliente
+      // Notify client
       await prisma.notification.create({
         data: {
           userId,
           type: 'PROJECT_UPDATE',
-          title: 'Projeto enviado com sucesso!',
+          title: `Projeto ${projectNumber} enviado!`,
           message: `Seu projeto "${answers?.project_name || 'Novo Projeto'}" foi recebido. A equipe irá analisar e entrar em contato em breve.`,
           isRead: false,
         },
@@ -134,4 +154,10 @@ function parseDeadline(str: string): Date | null {
   const date = new Date()
   date.setDate(date.getDate() + days)
   return date
+}
+
+function addDays(date: Date, days: number): Date {
+  const d = new Date(date)
+  d.setDate(d.getDate() + days)
+  return d
 }

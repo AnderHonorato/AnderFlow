@@ -6,72 +6,49 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        bg: 'var(--bg)',
-        surface: 'var(--surface)',
-        'surface-hover': 'var(--surface-hover)',
+        background: 'var(--bg)',
+        foreground: 'var(--text)',
+        card: {
+          DEFAULT: 'var(--surface)',
+          foreground: 'var(--text)',
+        },
+        muted: {
+          DEFAULT: 'var(--surface-2)',
+          foreground: 'var(--text-3)',
+        },
+        accent: {
+          DEFAULT: 'var(--accent)',
+          foreground: 'var(--surface-2)',
+        },
         primary: {
-          DEFAULT: 'var(--primary)',
-          hover: 'var(--primary-hover)',
-          subtle: 'var(--primary-subtle)',
+          DEFAULT: 'var(--accent)',
+          foreground: '#ffffff',
+        },
+        secondary: {
+          DEFAULT: 'var(--surface-3)',
+          foreground: 'var(--text-2)',
         },
         destructive: {
           DEFAULT: 'var(--destructive)',
-          subtle: 'var(--destructive-subtle)',
+          foreground: '#ffffff',
         },
-        success: {
-          DEFAULT: 'var(--success)',
-          subtle: 'var(--success-subtle)',
-        },
-        warning: {
-          DEFAULT: 'var(--warning)',
-          subtle: 'var(--warning-subtle)',
-        },
-        info: {
-          DEFAULT: 'var(--info)',
-          subtle: 'var(--info-subtle)',
-        },
-        sidebar: 'var(--sidebar-bg)',
-        header: 'var(--header-bg)',
-        'input-bg': 'var(--input-bg)',
-        'input-hover': 'var(--input-bg-hover)',
-        'input-border': 'var(--input-border)',
-        input: 'var(--input)',
-        muted: 'var(--muted)',
-        'muted-foreground': 'var(--muted-foreground)',
-        background: 'var(--background)',
-        foreground: 'var(--foreground)',
-        accent: {
-          DEFAULT: 'var(--accent)',
-          foreground: 'var(--accent-foreground)',
-        },
-        'primary-foreground': 'var(--primary-foreground)',
-        secondary: {
-          DEFAULT: 'var(--secondary)',
-          foreground: 'var(--secondary-foreground)',
-        },
-        'destructive-foreground': 'var(--destructive-foreground)',
-        ring: 'var(--ring)',
-      },
-      textColor: {
-        DEFAULT: 'var(--text)',
-        muted: 'var(--text-muted)',
-      },
-      borderColor: {
-        DEFAULT: 'var(--border)',
+        border: 'var(--border)',
+        input: 'var(--border-2)',
+        ring: 'var(--accent)',
       },
       borderRadius: {
         sm: '6px',
         md: '8px',
-        lg: '10px',
+        lg: '12px',
+        xl: '16px',
       },
       fontSize: {
         '2xs': ['10px', { lineHeight: '1.2' }],
         xs: ['11px', { lineHeight: '1.4' }],
-        sm: ['13px', { lineHeight: '1.5' }],
+        sm: ['12px', { lineHeight: '1.5' }],
         base: ['13px', { lineHeight: '1.5' }],
-        lg: ['15px', { lineHeight: '1.4' }],
-        xl: ['18px', { lineHeight: '1.3' }],
-        '2xl': ['20px', { lineHeight: '1.3' }],
+        lg: ['14px', { lineHeight: '1.4' }],
+        xl: ['17px', { lineHeight: '1.3' }],
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],

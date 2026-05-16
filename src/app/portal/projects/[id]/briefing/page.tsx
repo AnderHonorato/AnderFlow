@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { Skeleton } from '@/components/ui/skeleton'
 import { toast } from 'sonner'
-import { Check, Loader2, ArrowLeft, Send } from 'lucide-react'
+import { IconCheck, IconLoader, IconArrowLeft, IconSend } from '@/components/icons'
 
 interface Question {
   key: string
@@ -89,16 +89,21 @@ export default function BriefingFillPage() {
     if (res.ok) {
       setSubmitted(true)
 
-      await fetch('/api/notifications', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: project?.client?.id || session?.user?.id,
-          type: 'BRIEFING_COMPLETED',
-          title: 'Briefing preenchido',
-          message: `O cliente ${session?.user?.name || ''} preencheu o briefing do projeto "${project?.name}".`,
-        }),
-      })
+      const adminsRes = await fetch('/api/admins')
+      const adminsData = await adminsRes.json()
+      const admins = adminsData.data || []
+      for (const admin of admins) {
+        await fetch('/api/notifications', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: admin.id,
+            type: 'BRIEFING_COMPLETED',
+            title: 'Briefing preenchido',
+            message: `O cliente ${session?.user?.name || ''} preencheu o briefing do projeto "${project?.name}".`,
+          }),
+        })
+      }
 
       toast.success('Briefing enviado com sucesso!')
     } else {
@@ -155,7 +160,7 @@ export default function BriefingFillPage() {
                       : 'bg-[var(--surface-hover)] text-[var(--text-secondary)] hover:bg-[var(--surface-hover)]/70'
                   }`}
                 >
-                  {selected && <Check className="h-2.5 w-2.5 inline mr-0.5" />}
+                  {selected && <IconCheck className="h-2.5 w-2.5 inline mr-0.5" />}
                   {opt}
                 </button>
               )
@@ -195,7 +200,7 @@ export default function BriefingFillPage() {
         <Card>
           <CardContent className="p-8 text-center space-y-4">
             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--success-subtle)] mx-auto">
-              <Check className="h-6 w-6 text-[var(--success)]" />
+              <IconCheck className="h-6 w-6 text-[var(--success)]" />
             </div>
             <div>
               <h2 className="text-base font-medium text-[var(--text)]">Briefing enviado!</h2>
@@ -211,7 +216,7 @@ export default function BriefingFillPage() {
   return (
     <div className="p-4 space-y-5 max-w-2xl mx-auto">
       <button onClick={() => router.push('/portal')} className="inline-flex items-center gap-2 text-sm text-[var(--text-muted)] hover:text-[var(--text)]">
-        <ArrowLeft className="h-4 w-4" /> Voltar ao portal
+        <IconArrowLeft className="h-4 w-4" /> Voltar ao portal
       </button>
 
       <div>
@@ -248,8 +253,8 @@ export default function BriefingFillPage() {
 
       <div className="flex justify-end">
         <Button onClick={handleSubmit} disabled={saving}>
-          {saving && <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />}
-          <Send className="mr-1.5 h-3.5 w-3.5" />
+          {saving && <IconLoader className="w-[14px] h-[14px] animate-spin" />}
+          <IconSend className="w-[14px] h-[14px]" />
           Enviar briefing
         </Button>
       </div>

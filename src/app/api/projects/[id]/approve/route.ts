@@ -4,10 +4,11 @@ import { BRIEFING_SECTIONS } from '@/lib/briefing-template'
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params
   try {
-    const project = await prisma.project.findUnique({ where: { id: params.id } })
+    const project = await prisma.project.findUnique({ where: { id } })
     if (!project) {
       return NextResponse.json({ error: 'Projeto não encontrado' }, { status: 404 })
     }
@@ -17,7 +18,7 @@ export async function POST(
     }
 
     const updated = await prisma.project.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         status: 'TODO',
         briefing: JSON.stringify(BRIEFING_SECTIONS),
@@ -32,7 +33,7 @@ export async function POST(
         title: 'Projeto aprovado — Preencha o briefing',
         message: `Seu projeto "${project.name}" foi aprovado! Clique aqui para preencher o briefing e começarmos.`,
         isRead: false,
-        metadata: JSON.stringify({ projectId: params.id, action: 'fill_briefing' }),
+        metadata: JSON.stringify({ projectId: id, action: 'fill_briefing' }),
       },
     })
 
