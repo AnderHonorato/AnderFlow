@@ -73,9 +73,8 @@ export default function PortalContracts() {
     )
   }
 
-  const filtered = contracts.filter(c => session?.user?.id === c.clientId)
-  // Fallback: if the API doesn't filter by user, filter client-side
-  const myContracts = filtered.length > 0 ? filtered : contracts.filter((c: any) => c.clientId === session?.user?.id)
+  // API /api/contracts ja filtra por clientId para nao-admins
+  const myContracts = contracts
 
   return (
     <div className="p-6 space-y-6">

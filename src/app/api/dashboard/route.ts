@@ -4,10 +4,17 @@ import { getSessionUser, isAdmin, unauthorizedResponse } from '@/lib/auth-utils'
 
 export async function GET(request: NextRequest) {
   const user = await getSessionUser(request)
-  if (!user || !isAdmin(user)) return unauthorizedResponse()
+  if (!user) return unauthorizedResponse()
+
+  const clientFilter = isAdmin(user) ? {} : { clientId: user.id }
+
   try {
-    const activeProjects = await prisma.project.count({ where: { isArchived: false, status: { not: 'COMPLETED' } } })
-    const completedProjects = await prisma.project.count({ where: { status: 'COMPLETED' } })
+    const activeProjects = await prisma.project.count({
+      where: { isArchived: false, status: { not: 'COMPLETED' }, ...clientFilter },
+    })
+    const completedProjects = await prisma.project.count({
+      where: { status: 'COMPLETED', ...clientFilter },
+    })
     const totalClients = await prisma.user.count({ where: { role: 'CLIENT' } })
     const activeClients = await prisma.user.count({ where: { role: 'CLIENT', isActive: true } })
 
@@ -32,7 +39,7 @@ export async function GET(request: NextRequest) {
     })
 
     const recentProjects = await prisma.project.findMany({
-      where: { isArchived: false },
+      where: { isArchived: false, ...clientFilter },
       include: {
         client: { select: { id: true, name: true, company: true } },
         _count: { select: { tasks: true } },
@@ -42,7 +49,7 @@ export async function GET(request: NextRequest) {
     })
 
     const unreadNotifications = await prisma.notification.count({
-      where: { isRead: false },
+      where: isAdmin(user) ? { isRead: false } : { isRead: false, userId: user.id },
     })
 
     const conversionRate = totalClients > 0

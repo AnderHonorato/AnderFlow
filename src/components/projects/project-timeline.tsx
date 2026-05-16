@@ -38,24 +38,25 @@ function getProgressColor(percent: number) {
   return 'var(--destructive)'
 }
 
-function NodeIcon({ status }: { status: NodeStatus }) {
-  const base = "w-8 h-8 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all duration-300"
+function NodeIcon({ status, nodeId }: { status: NodeStatus; nodeId: number }) {
+  const base = "w-8 h-8 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all duration-300 animate-scale-in"
+  const key = `${nodeId}-${status}`
   if (status === 'completed') return (
-    <div className={cn(base, "bg-[var(--success)] border-[var(--success)]")}>
+    <div key={key} className={cn(base, "bg-[var(--success)] border-[var(--success)]")}>
       <svg width="14" height="14" viewBox="0 0 10 10" fill="none" stroke="white" strokeWidth="1.5" strokeLinecap="round"><path d="M2 5l2 2 4-4"/></svg>
     </div>
   )
   if (status === 'in_progress') return (
-    <div className={cn(base, "bg-[var(--accent-subtle-2)] border-[var(--accent)]")}>
+    <div key={key} className={cn(base, "bg-[var(--accent-subtle-2)] border-[var(--accent)]")}>
       <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" className="text-[var(--accent)]"><path d="M4 2l10 6-10 6V2z"/></svg>
     </div>
   )
   if (status === 'paused') return (
-    <div className={cn(base, "bg-[var(--warning-subtle)] border-[var(--warning)]")}>
+    <div key={key} className={cn(base, "bg-[var(--warning-subtle)] border-[var(--warning)]")}>
       <svg width="12" height="12" viewBox="0 0 8 8" fill="var(--warning)"><rect x="1" y="1" width="2" height="6" rx="0.5"/><rect x="5" y="1" width="2" height="6" rx="0.5"/></svg>
     </div>
   )
-  return <div className={cn(base, "bg-transparent border-[var(--border-2)]")} />
+  return <div key={key} className={cn(base, "bg-transparent border-[var(--border-2)]")} />
 }
 
 function StatusLabel({ status }: { status: NodeStatus }) {
@@ -137,9 +138,9 @@ export function ProjectTimeline({
             </div>
           </div>
 
-          <div className="rounded-lg bg-[var(--surface)] border border-[var(--border)] p-4">
+          <div className="rounded-lg bg-[var(--surface)] border border-[var(--border)] p-4 transition-all duration-[400ms] ease-[cubic-bezier(0.2,0,0,1)] animate-fade-up">
             <div className="flex items-start gap-3">
-              <NodeIcon status={active.status} />
+              <NodeIcon status={active.status} nodeId={active.id} />
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">
                   <span className="text-[15px] font-[500] text-[var(--text)]">{active.label}</span>
@@ -259,58 +260,46 @@ export function ProjectTimeline({
       {pending.length > 0 && (
         <div className="p-3 rounded-lg bg-[var(--surface-2)] border border-[var(--border)]">
           <span className="text-[10px] font-[500] text-[var(--text-3)] uppercase tracking-wider mb-2 block">
-            Proximas Etapas
+            {active ? 'Proximas Etapas' : 'Etapas Pendentes'}
           </span>
-          <div className="flex items-center gap-2 flex-wrap">
-            {pending.map(n => (
-              <span
-                key={n.id}
-                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] border border-[var(--border-2)]"
-              >
-                <span className="h-1.5 w-1.5 rounded-full border border-[var(--border-2)]" />
-                <span className="text-[var(--text-2)]">{n.label}</span>
-              </span>
-            ))}
-          </div>
+          {!active && onStatusChange ? (
+            <div className="space-y-2">
+              {pending.map(n => (
+                <div
+                  key={n.id}
+                  id={`step-${n.id}`}
+                  className="flex items-center gap-3 p-3 rounded-lg bg-[var(--surface)] border border-[var(--border)] animate-card-pop"
+                >
+                  <NodeIcon status={n.status} nodeId={n.id} />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[13px] font-[500] text-[var(--text)]">{n.label}</span>
+                      <StatusLabel status={n.status} />
+                    </div>
+                    <p className="text-[12px] text-[var(--text-3)] mt-0.5">{n.description}</p>
+                  </div>
+                  <Button size="sm" onClick={() => onStatusChange(n.id, 'in_progress')} className="h-7 text-[11px] bg-[var(--accent)]">
+                    <svg width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><path d="M4 2l10 6-10 6V2z"/></svg>
+                    Iniciar
+                  </Button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 flex-wrap">
+              {pending.map(n => (
+                <span
+                  key={n.id}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] border border-[var(--border-2)]"
+                >
+                  <span className="h-1.5 w-1.5 rounded-full border border-[var(--border-2)]" />
+                  <span className="text-[var(--text-2)]">{n.label}</span>
+                </span>
+              ))}
+            </div>
+          )}
         </div>
       )}
-
-      <Dialog open={!!extendOpen} onOpenChange={(v) => { if (!v) setExtendOpen(null) }}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Estender Prazo</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-2">
-            <p className="text-[12px] text-[var(--text-2)]">
-              Informe a nova data de conclusao para esta etapa:
-            </p>
-            <div className="space-y-2">
-              <label>Nova data</label>
-              <Input
-                type="date"
-                value={newDeadline}
-                onChange={e => setNewDeadline(e.target.value)}
-                min={new Date().toISOString().split('T')[0]}
-              />
-            </div>
-            <div className="space-y-2">
-              <label>Motivo do atraso (sera enviado ao cliente)</label>
-              <textarea
-                className="w-full h-20 rounded-lg bg-[var(--surface-2)] border border-[var(--border)] px-3 py-2 text-[13px] text-[var(--text)] placeholder:text-[var(--text-3)] focus:outline-none focus:border-[var(--accent)] resize-none"
-                placeholder="Descreva o motivo do atraso..."
-                value={extendReason}
-                onChange={e => setExtendReason(e.target.value)}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setExtendOpen(null)}>Cancelar</Button>
-            <Button onClick={() => { if (extendOpen) handleExtendDeadline(parseInt(extendOpen)) }}>
-              Confirmar novo prazo
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   )
 }

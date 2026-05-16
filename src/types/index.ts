@@ -1,5 +1,5 @@
 export type Role = 'ADMIN' | 'MANAGER' | 'DEVELOPER' | 'CLIENT'
-export type ProjectStatus = 'DRAFT' | 'PENDING' | 'IN_PROGRESS' | 'REVIEW' | 'APPROVED' | 'COMPLETED' | 'CANCELLED' | 'ON_HOLD'
+export type ProjectStatus = 'DRAFT' | 'PENDING' | 'TODO' | 'IN_PROGRESS' | 'REVIEW' | 'APPROVED' | 'COMPLETED' | 'CANCELLED' | 'ON_HOLD'
 export type TaskStatus = 'TODO' | 'IN_PROGRESS' | 'IN_REVIEW' | 'DONE' | 'CANCELLED'
 export type Priority = 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT' | 'CRITICAL'
 export type PaymentStatus = 'PENDING' | 'PROCESSING' | 'PAID' | 'FAILED' | 'REFUNDED' | 'CANCELLED' | 'OVERDUE'
@@ -38,6 +38,11 @@ export interface Project {
   client: User
   tasks: Task[]
   tags: string[]
+}
+
+export interface ProjectWithClient extends Omit<Project, 'client'> {
+  client: Pick<User, 'id' | 'name' | 'company' | 'email'>
+  _count?: { tasks: number }
 }
 
 export interface Task {

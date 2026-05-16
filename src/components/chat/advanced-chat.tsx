@@ -56,7 +56,10 @@ export function AdvancedChat({ channelId, compact = false }: AdvancedChatProps) 
   const [uploadPreviews, setUploadPreviews] = useState<{ name: string; size: number; type: string; url: string }[]>([])
 
   useEffect(() => {
-    if (!channelId) return
+    if (!channelId) {
+      setMessages([])
+      return
+    }
 
     const fetchMessages = () => {
       fetch(`/api/messages?channelId=${channelId}`)
@@ -68,6 +71,7 @@ export function AdvancedChat({ channelId, compact = false }: AdvancedChatProps) 
           }, 100)
         })
     }
+    setMessages([])
     fetchMessages()
     const interval = setInterval(fetchMessages, 4000)
     return () => clearInterval(interval)
@@ -91,18 +95,38 @@ export function AdvancedChat({ channelId, compact = false }: AdvancedChatProps) 
       }
 
       for (const preview of uploadPreviews) {
-        const res = await fetch('/api/messages', {
+        let finalUrl = preview.url
+        const isBlob = preview.url.startsWith('blob:')
+
+        if (isBlob) {
+          try {
+            const blobResponse = await fetch(preview.url)
+            const blob = await blobResponse.blob()
+            const file = new File([blob], preview.name, { type: preview.type })
+            const formData = new FormData()
+            formData.append('file', file)
+            const uploadRes = await fetch('/api/upload', { method: 'POST', body: formData })
+            if (uploadRes.ok) {
+              const uploadJson = await uploadRes.json()
+              finalUrl = uploadJson.url
+            }
+          } catch (e) {
+            console.error('Upload failed:', e)
+          }
+        }
+
+        const msgRes = await fetch('/api/messages', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             content: preview.name,
             channelId,
             type: preview.type.startsWith('image/') ? 'image' : 'file',
-            metadata: JSON.stringify(preview),
+            metadata: JSON.stringify({ name: preview.name, size: preview.size, type: preview.type, url: finalUrl }),
           }),
         })
-        if (res.ok) {
-          const json = await res.json()
+        if (msgRes.ok) {
+          const json = await msgRes.json()
           setMessages(prev => [...prev, json.data])
         }
       }
@@ -164,8 +188,8 @@ export function AdvancedChat({ channelId, compact = false }: AdvancedChatProps) 
           {messages.length === 0 && (
             <p className="text-[12px] text-[var(--text-3)] text-center py-8">Nenhuma mensagem ainda</p>
           )}
-          {messages.map((msg) => {
-            const mine = isMine(msg.senderId)
+          {messages.filter(Boolean).map((msg) => {
+            const mine = isMine(msg.senderId || msg.sender?.id || '')
             const meta = msg.metadata ? (() => { try { return JSON.parse(msg.metadata) } catch { return null } })() : null
 
             return (

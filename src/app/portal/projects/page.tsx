@@ -17,7 +17,7 @@ export default function PortalProjects() {
   const router = useRouter()
 
   useEffect(() => {
-    fetch('/api/projects')
+    fetch('/api/projects', { credentials: 'include' })
       .then(r => r.json())
       .then(json => { setProjects(json.data || []); setLoading(false) })
       .catch(() => setLoading(false))

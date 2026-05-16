@@ -34,15 +34,29 @@ const DialogContent = React.forwardRef<
     <DialogPrimitive.Content
       ref={ref}
       className={cn(
-        'fixed left-[50%] top-[50%] z-50 w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border border-[var(--border)] bg-[var(--surface)] p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] rounded-xl max-h-[85vh] overflow-y-auto',
+        'fixed left-[50%] top-[50%] z-50 w-full max-w-lg',
+        'border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[0_16px_64px_rgba(0,0,0,0.5)]',
+        'rounded-2xl max-h-[85vh] overflow-y-auto',
+        'data-[state=open]:animate-in data-[state=open]:fade-in-0',
+        'data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95',
+        'data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[52%]',
+        'data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[52%]',
+        'translate-x-[-50%] translate-y-[-50%]',
+        '[&[data-state=open]]:duration-[300ms] [&[data-state=open]]:[animation-timing-function:cubic-bezier(0.34,1.56,0.64,1)]',
+        '[&[data-state=closed]]:duration-[200ms] [&[data-state=closed]]:[animation-timing-function:cubic-bezier(0.3,0,1,1)]',
         className
       )}
       aria-describedby={props['aria-describedby'] ?? undefined}
       {...props}
     >
       {children}
-      <DialogPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
-        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M3 3l10 10M13 3L3 13"/></svg>
+      <DialogPrimitive.Close className="absolute right-4 top-4 rounded-lg h-7 w-7 flex items-center justify-center
+        opacity-60 hover:opacity-100 hover:bg-[var(--surface-hover)]
+        transition-all duration-[150ms] ease-[cubic-bezier(0.2,0,0,1)]
+        focus:outline-none focus:ring-2 focus:ring-[var(--accent)]">
+        <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+          <path d="M3 3l10 10M13 3L3 13"/>
+        </svg>
         <span className="sr-only">Fechar</span>
       </DialogPrimitive.Close>
     </DialogPrimitive.Content>

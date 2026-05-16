@@ -23,7 +23,7 @@ export default function PortalDashboard() {
   const [form, setForm] = useState({ name: '', description: '' })
 
   const loadProjects = () => {
-    fetch('/api/projects')
+    fetch('/api/projects', { credentials: 'include' })
       .then(r => r.json())
       .then(json => { setProjects(json.data || []); setLoading(false) })
       .catch(() => setLoading(false))
@@ -37,10 +37,14 @@ export default function PortalDashboard() {
     const res = await fetch('/api/projects', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify({ name: form.name, description: form.description, type: 'CUSTOM', priority: 'MEDIUM' }),
     })
     if (res.ok) {
-      toast.success('Projeto solicitado!')
+      toast.success('Projeto solicitado!', {
+        description: 'Sua solicitacao foi enviada. Aguarde nossa analise.',
+        duration: 5000,
+      })
       setShowNew(false)
       setForm({ name: '', description: '' })
       loadProjects()

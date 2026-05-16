@@ -320,7 +320,18 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
             <ProjectTimeline
               nodes={timelineNodes}
               expandedNode={expandedStep}
-              onToggle={(nid) => setExpandedStep(expandedStep === nid ? null : nid)}
+              onToggle={(nid) => {
+                const next = expandedStep === nid ? null : nid
+                setExpandedStep(next)
+                if (next !== null) {
+                  setTimeout(() => {
+                    document.getElementById(`step-${nid}`)?.scrollIntoView({
+                      behavior: 'smooth',
+                      block: 'nearest',
+                    })
+                  }, 50)
+                }
+              }}
               onStatusChange={isAdmin ? updateStepStatus : undefined}
               onTimeChange={isAdmin ? updateTimeEstimate : undefined}
               onAddComment={addComment}

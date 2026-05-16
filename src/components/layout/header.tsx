@@ -26,8 +26,10 @@ export function Header() {
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const [carouselIdx, setCarouselIdx] = useState(0)
   const [activeProject, setActiveProject] = useState<any>(null)
+  const [badgeKey, setBadgeKey] = useState(0)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const prevIdsRef = useRef<Set<string>>(new Set())
+  const prevCountRef = useRef(0)
   const [seenIds, setSeenIds] = useState<Set<string>>(() => {
     try {
       const stored = sessionStorage.getItem('anderflow_seen_notifications')
@@ -63,17 +65,24 @@ export function Header() {
             return { id: n.id, title: n.title, message: n.message, type: n.type, createdAt: n.createdAt, metadata: meta }
           })
 
-          const currentIds = new Set(items.map((n: any) => n.id))
-          prevIdsRef.current.forEach((id: string) => {
-            if (!currentIds.has(id) || items.length > prevIdsRef.current.size) {
-              const newItem = parsed.find(p => !prevIdsRef.current.has(p.id))
-              if (newItem) toast.info(newItem.title)
-            }
-          })
+          const currentIds = new Set(parsed.map(p => p.id))
+          const prevCount = prevIdsRef.current.size
+
+          if (prevCount > 0) {
+            const newItems = parsed.filter(p => !prevIdsRef.current.has(p.id))
+            newItems.forEach(item => {
+              toast.info(item.title, { description: item.message.slice(0, 80) })
+            })
+          }
+
           prevIdsRef.current = currentIds
 
           if (parsed.length !== unreadItems.length) {
             setCarouselIdx(0)
+          }
+          if (parsed.length !== prevCountRef.current) {
+            setBadgeKey(k => k + 1)
+            prevCountRef.current = parsed.length
           }
           setUnreadItems(parsed)
 
@@ -89,7 +98,7 @@ export function Header() {
         .catch(() => {})
     }
     fetchNotifications()
-    const interval = setInterval(fetchNotifications, 30000)
+    const interval = setInterval(fetchNotifications, 10000)
     return () => clearInterval(interval)
   }, [session?.user?.id])
 
@@ -210,7 +219,10 @@ export function Header() {
         >
           <IconNotification className="w-[16px] h-[16px]" />
           {unreadItems.length > 0 && (
-            <span className="absolute top-0.5 right-0 flex h-[15px] min-w-[15px] items-center justify-center rounded-full bg-[var(--accent)] text-[10px] font-[500] text-white px-1">
+            <span
+              key={badgeKey}
+              className="absolute top-0.5 right-0 flex h-[15px] min-w-[15px] items-center justify-center rounded-full bg-[var(--accent)] text-[10px] font-[500] text-white px-1 badge-count-update"
+            >
               {unreadItems.length > 9 ? '9+' : unreadItems.length}
             </span>
           )}

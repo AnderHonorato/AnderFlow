@@ -92,7 +92,9 @@ export function SidebarClient() {
 
   const navItemClass = (active: boolean) =>
     cn(
-      'flex items-center gap-2.5 h-[34px] px-3 rounded-lg text-[13px] transition-all duration-150 relative',
+      'flex items-center gap-2.5 h-[34px] px-3 rounded-lg text-[13px]',
+      'transition-all duration-[200ms] cubic-bezier(0.2,0,0,1)',
+      'relative select-none',
       collapsed && 'justify-center px-2',
       active
         ? 'text-[var(--accent)] bg-[var(--accent-subtle)]'
@@ -108,11 +110,11 @@ export function SidebarClient() {
       <aside className={cn(
         'fixed lg:sticky top-0 left-0 z-40 h-screen flex flex-col',
         'bg-[var(--bg-secondary)] border-r border-[var(--border)]',
-        'transform transition-all duration-200 ease-out',
+        'transform transition-all duration-[300ms] ease-[cubic-bezier(0.2,0,0,1)]',
         mobileMenuOpen ? 'translate-x-0' : '-translate-x-full',
         'lg:translate-x-0 lg:flex',
         collapsed ? 'w-[60px]' : 'w-[220px]'
-      )} suppressHydrationWarning>
+      )} suppressHydrationWarning style={{ transition: 'width var(--motion-medium) var(--ease-standard)' }}>
         <div className={cn(
           'flex h-12 items-center border-b border-[var(--border)] px-3',
           collapsed ? 'justify-center' : 'justify-between'
@@ -155,7 +157,7 @@ export function SidebarClient() {
                     className={navItemClass(active)}
                   >
                     {active && (
-                      <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-4 bg-[var(--accent)] rounded-r" />
+                      <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 rounded-r bg-[var(--accent)] animate-scale-in origin-center" style={{ height: '16px' }} />
                     )}
                     <item.icon className="w-[16px] h-[16px] shrink-0" />
                     {!collapsed && <span className="truncate">{item.name}</span>}
@@ -174,7 +176,7 @@ export function SidebarClient() {
                 className={navItemClass(active)}
               >
                 {active && (
-                  <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-4 bg-[var(--accent)] rounded-r" />
+                  <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 rounded-r bg-[var(--accent)] animate-scale-in origin-center" style={{ height: '16px' }} />
                 )}
                 <item.icon className="w-[16px] h-[16px] shrink-0" />
                 {!collapsed && <span className="truncate">{item.name}</span>}
@@ -205,7 +207,7 @@ export function SidebarClient() {
                 className={navItemClass(active)}
               >
                 {active && (
-                  <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-4 bg-[var(--accent)] rounded-r" />
+                  <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 rounded-r bg-[var(--accent)] animate-scale-in origin-center" style={{ height: '16px' }} />
                 )}
                 <item.icon className="w-[16px] h-[16px] shrink-0" />
                 {!collapsed && <span className="truncate">{item.name}</span>}

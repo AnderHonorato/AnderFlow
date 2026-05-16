@@ -42,6 +42,13 @@ const statusConfig: Record<string, { color: string; label: string }> = {
   'CONTACTED': { color: 'var(--warning)', label: 'Contatado' },
   'LOST': { color: 'var(--text-3)', label: 'Perdido' },
   'PENDING_SIGNATURE': { color: 'var(--warning)', label: 'Aguardando assinatura' },
+  'SIGNED': { color: 'var(--success)', label: 'Assinado' },
+  'ACTIVE': { color: 'var(--success)', label: 'Ativo' },
+  'EXPIRED': { color: 'var(--text-3)', label: 'Expirado' },
+  'WAITING_CLIENT': { color: 'var(--warning)', label: 'Aguard. cliente' },
+  'WAITING_TEAM': { color: 'var(--accent)', label: 'Aguard. equipe' },
+  'WON': { color: 'var(--success)', label: 'Fechado' },
+  'NEGOTIATION': { color: 'var(--accent)', label: 'Negociacao' },
 }
 
 export interface BadgeProps
@@ -50,14 +57,15 @@ export interface BadgeProps
   status?: string
 }
 
-function Badge({ className, variant, status, ...props }: BadgeProps) {
+function Badge({ className, variant, status, children, ...props }: BadgeProps) {
   const config = status ? statusConfig[status] : null
+  const displayContent = children ?? config?.label
   return (
     <div className={cn(badgeVariants({ variant }), className)} {...props}>
       {config && (
         <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: config.color }} />
       )}
-      {props.children}
+      {displayContent}
     </div>
   )
 }

@@ -6,7 +6,7 @@ function Skeleton({
 }: React.HTMLAttributes<HTMLDivElement>) {
   return (
     <div
-      className={cn('rounded-sm bg-[var(--surface-hover)] animate-pulse', className)}
+      className={cn('rounded-lg skeleton-shimmer', className)}
       {...props}
     />
   )

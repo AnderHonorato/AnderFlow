@@ -11,8 +11,13 @@ export async function GET(request: NextRequest) {
     if (status) where.status = status
 
     // CLIENT: filtra apenas seus projetos
+    // Se user é null (SSR / sessao expirada), retorna sem filtro de clientId
+    // Admin ve tudo; cliente nao-autenticado ve array vazio abaixo
     if (user && !isAdmin(user)) {
       where.clientId = user.id
+    }
+    if (!user) {
+      return NextResponse.json({ data: [] })
     }
 
     const projects = await prisma.project.findMany({
@@ -45,6 +50,7 @@ export async function POST(request: NextRequest) {
     }
 
     const clientId = isAdmin(user) ? (body.clientId || user.id) : user.id
+    const status = isAdmin(user) ? (body.status || undefined) : 'PENDING'
 
     const slug = name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') + '-' + Date.now()
 
@@ -55,6 +61,7 @@ export async function POST(request: NextRequest) {
         description: description || '',
         type: type || 'CUSTOM',
         clientId,
+        status,
         priority: 'MEDIUM',
         tags: JSON.stringify([]),
       },
