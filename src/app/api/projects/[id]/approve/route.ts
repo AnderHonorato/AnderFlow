@@ -1,27 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { BRIEFING_SECTIONS } from '@/lib/briefing-template'
+import { getToken } from 'next-auth/jwt'
 
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const { id } = await params
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const project = await prisma.project.findUnique({ where: { id } })
-    if (!project) {
-      return NextResponse.json({ error: 'Projeto não encontrado' }, { status: 404 })
+    const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET })
+    if (!token?.id || token.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'Nao autorizado' }, { status: 403 })
     }
 
-    if (project.status !== 'DRAFT') {
-      return NextResponse.json({ error: 'Projeto já foi aprovado' }, { status: 400 })
+    const { id } = await params
+    const body = await request.json()
+    const { proposalMessage, proposalValue } = body
+
+    if (!proposalMessage || !proposalValue) {
+      return NextResponse.json({ error: 'Mensagem e valor da proposta obrigatorios' }, { status: 400 })
     }
 
-    const updated = await prisma.project.update({
+    const project = await prisma.project.update({
       where: { id },
       data: {
-        status: 'TODO',
-        briefing: JSON.stringify(BRIEFING_SECTIONS),
+        status: 'REVIEW',
+        proposalMessage,
+        proposalValue: parseFloat(proposalValue),
       },
       include: { client: { select: { id: true, name: true } } },
     })
@@ -29,16 +30,26 @@ export async function POST(
     await prisma.notification.create({
       data: {
         userId: project.clientId,
-        type: 'PROJECT_UPDATE',
-        title: 'Projeto aprovado — Preencha o briefing',
-        message: `Seu projeto "${project.name}" foi aprovado! Clique aqui para preencher o briefing e começarmos.`,
+        type: 'APPROVAL',
+        title: 'Proposta enviada para seu projeto',
+        message: `O administrador enviou uma proposta de R$ ${proposalValue} para o projeto "${project.name}". Acesse para aceitar ou recusar.`,
+        metadata: JSON.stringify({ projectId: project.id }),
         isRead: false,
-        metadata: JSON.stringify({ projectId: id, action: 'fill_briefing' }),
       },
     })
 
-    return NextResponse.json({ data: updated })
-  } catch (error) {
-    return NextResponse.json({ error: 'Erro ao aprovar projeto' }, { status: 500 })
+    await prisma.activity.create({
+      data: {
+        type: 'APPROVAL',
+        action: 'Proposta enviada ao cliente',
+        details: `Valor: R$ ${proposalValue}. Mensagem: ${proposalMessage.slice(0, 200)}`,
+        userId: token.id as string,
+        projectId: id,
+      },
+    })
+
+    return NextResponse.json({ data: project, message: 'Proposta enviada ao cliente' })
+  } catch (error: any) {
+    return NextResponse.json({ error: error?.message || 'Erro ao aprovar' }, { status: 500 })
   }
 }

@@ -3,14 +3,8 @@ import { prisma } from '@/lib/prisma'
 import { getToken } from 'next-auth/jwt'
 
 async function getUserId(request: NextRequest): Promise<string | null> {
-  try {
-    const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET })
-    return (token?.id as string) || null
-  } catch {
-    // Fallback: tenta primeiro cliente do banco para dev
-    const firstClient = await prisma.user.findFirst({ where: { role: 'CLIENT' }, select: { id: true } })
-    return firstClient?.id || null
-  }
+  const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET })
+  return (token?.id as string) || null
 }
 
 export async function GET(request: NextRequest) {
@@ -18,7 +12,11 @@ export async function GET(request: NextRequest) {
     const userId = await getUserId(request)
     if (!userId) return NextResponse.json({ data: [] })
 
+    const { searchParams } = new URL(request.url)
+    const channelId = searchParams.get('channelId')
+
     const messages = await prisma.message.findMany({
+      where: channelId ? { channelId } : { id: 'never' },
       include: { sender: { select: { id: true, name: true, role: true } } },
       orderBy: { createdAt: 'asc' },
       take: 100,
@@ -41,11 +39,11 @@ export async function POST(request: NextRequest) {
 
     const userId = await getUserId(request)
     if (!userId) {
-      return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
+      return NextResponse.json({ error: 'Nao autenticado' }, { status: 401 })
     }
 
     const message = await prisma.message.create({
-      data: { content: content.trim(), senderId: userId, type: 'text', channelId: body.channelId || null },
+      data: { content: content.trim(), senderId: userId, type: 'text', channelId: body.channelId || null, projectId: body.projectId || null },
       include: { sender: { select: { id: true, name: true, role: true } } },
     })
 

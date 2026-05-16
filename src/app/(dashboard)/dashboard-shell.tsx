@@ -11,10 +11,10 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     <SessionProvider>
       <div className="flex h-screen overflow-hidden bg-[var(--bg)]">
         <Sidebar />
-        <div className="flex flex-1 flex-col overflow-hidden min-w-0">
+        <div className="flex flex-1 flex-col min-w-0 overflow-y-auto scroll-area">
           <Header />
           <PageTip />
-          <main className="flex-1 overflow-y-auto scroll-area">{children}</main>
+          <main className="flex-1">{children}</main>
         </div>
       </div>
       <WelcomeOverlay />

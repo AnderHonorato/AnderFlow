@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useRef, useCallback } from 'react'
+import { useEffect, useState, useRef, useCallback, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { Card, CardContent } from '@/components/ui/card'
@@ -25,6 +25,14 @@ interface UploadedFile {
 }
 
 export default function BriefingWizardPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><svg className="animate-spin h-6 w-6 text-[var(--text-3)]" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M8 2a6 6 0 016 6"/></svg></div>}>
+      <BriefingWizardContent />
+    </Suspense>
+  )
+}
+
+function BriefingWizardContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { data: session } = useSession()

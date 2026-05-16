@@ -28,6 +28,19 @@ const statusConfig: Record<string, { color: string; label: string }> = {
   'DRAFT': { color: 'var(--text-3)', label: 'Rascunho' },
   'REVIEW': { color: 'var(--warning)', label: 'Revisao' },
   'TODO': { color: 'var(--accent)', label: 'A fazer' },
+  'PAID': { color: 'var(--success)', label: 'Pago' },
+  'SENT': { color: 'var(--warning)', label: 'Pendente' },
+  'OVERDUE': { color: 'var(--destructive)', label: 'Vencido' },
+  'OPEN': { color: 'var(--info)', label: 'Aberto' },
+  'CLOSED': { color: 'var(--text-3)', label: 'Fechado' },
+  'RESOLVED': { color: 'var(--success)', label: 'Resolvido' },
+  'PENDING': { color: 'var(--warning)', label: 'Pendente' },
+  'CANCELLED': { color: 'var(--destructive)', label: 'Cancelado' },
+  'NEW': { color: 'var(--info)', label: 'Novo' },
+  'QUALIFIED': { color: 'var(--success)', label: 'Qualificado' },
+  'PROPOSAL': { color: 'var(--accent)', label: 'Proposta' },
+  'CONTACTED': { color: 'var(--warning)', label: 'Contatado' },
+  'LOST': { color: 'var(--text-3)', label: 'Perdido' },
 }
 
 export interface BadgeProps

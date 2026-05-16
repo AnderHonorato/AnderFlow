@@ -2,55 +2,62 @@
 
 import { useEffect, useState } from 'react'
 import { useSession } from 'next-auth/react'
+import { useRouter } from 'next/navigation'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Button } from '@/components/ui/button'
+import { IconArrowRight } from '@/components/icons'
 
 export default function PortalProjects() {
   const { data: session } = useSession()
   const [projects, setProjects] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const router = useRouter()
 
   useEffect(() => {
     fetch('/api/projects')
       .then(r => r.json())
-      .then(json => {
-        const all = json.data || []
-        setProjects(all.filter((p: any) => p.client?.email === session?.user?.email))
-        setLoading(false)
-      })
+      .then(json => { setProjects(json.data || []); setLoading(false) })
       .catch(() => setLoading(false))
-  }, [session])
+  }, [])
 
-  if (loading) return <div className="p-6 space-y-4">{[1,2,3].map(i => <Skeleton key={i} className="h-24" />)}</div>
+  if (loading) return <div className="p-6 space-y-4">{[1,2,3].map(i => <Skeleton key={i} className="h-24 rounded-xl" />)}</div>
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-6 space-y-5">
       <div>
-        <h2 className="text-lg font-medium">Meus Projetos</h2>
-        <p className="text-sm text-muted-foreground mt-1">{projects.length} projetos encontrados</p>
+        <h2 className="text-[17px] font-[500] tracking-[-0.015em]">Meus Projetos</h2>
+        <p className="text-[12px] text-[var(--text-3)] mt-1">{projects.length} projetos encontrados</p>
       </div>
       <div className="space-y-3">
+        {projects.length === 0 && (
+          <p className="text-[13px] text-[var(--text-3)] text-center py-12">Nenhum projeto encontrado</p>
+        )}
         {projects.map(p => (
           <Card key={p.id}>
             <CardContent className="p-4 flex items-center gap-4">
               <div className="flex-1">
                 <div className="flex items-center gap-2">
-                  <p className="text-sm font-medium">{p.name}</p>
-                  <Badge variant={p.status === 'COMPLETED' ? 'success' : 'info'} className="text-2xs">
-                    {p.status === 'COMPLETED' ? 'Concluído' : p.status === 'REVIEW' ? 'Revisão' : 'Em andamento'}
+                  <p className="text-[13px] font-[500]">{p.name}</p>
+                  <Badge status={p.status === 'COMPLETED' ? 'COMPLETED' : p.status === 'REVIEW' ? 'REVIEW' : p.status === 'DRAFT' ? 'DRAFT' : p.status === 'TODO' ? 'TODO' : 'IN_PROGRESS'}>
+                    {p.status === 'COMPLETED' ? 'Concluido' : p.status === 'REVIEW' ? 'Revisao' : p.status === 'DRAFT' ? 'Rascunho' : p.status === 'TODO' ? 'A fazer' : 'Em andamento'}
                   </Badge>
-                  <Badge variant="secondary" className="text-2xs">{p.priority}</Badge>
+                  {p.status === 'TODO' && (
+                    <Button size="sm" className="h-6 text-[10px]" onClick={() => router.push(`/projects/${p.id}`)}>
+                      Ver projeto <IconArrowRight className="w-[10px] h-[10px]" />
+                    </Button>
+                  )}
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">{p.description}</p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Prazo: {p.deadline ? new Date(p.deadline).toLocaleDateString('pt-BR') : 'Não definido'}
+                <p className="text-[12px] text-[var(--text-3)] mt-1">{p.description}</p>
+                <p className="text-[11px] text-[var(--text-3)] mt-1">
+                  Prazo: {p.deadline ? new Date(p.deadline).toLocaleDateString('pt-BR') : 'Nao definido'}
                 </p>
               </div>
               <div className="flex items-center gap-3">
-                <Progress value={p.progress} className="w-32 h-2" />
-                <span className="text-sm font-medium">{p.progress}%</span>
+                <Progress value={p.progress || 0} className="w-32 h-[2px]" />
+                <span className="text-[13px] font-[500]">{p.progress || 0}%</span>
               </div>
             </CardContent>
           </Card>

@@ -1,22 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-
-// Pega o usuário do token JWT ou fallback para dev
-async function getUserId(req: NextRequest): Promise<string | null> {
-  try {
-    const { getToken } = await import('next-auth/jwt')
-    const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET })
-    if (token?.id) return token.id as string
-  } catch {}
-  return null
-}
+import { getSessionUser, isAdmin } from '@/lib/auth-utils'
 
 export async function GET(request: NextRequest) {
   try {
+    const user = await getSessionUser(request)
     const { searchParams } = new URL(request.url)
     const where: any = { isArchived: false }
     const status = searchParams.get('status')
     if (status) where.status = status
+
+    // CLIENT: filtra apenas seus projetos
+    if (user && !isAdmin(user)) {
+      where.clientId = user.id
+    }
 
     const projects = await prisma.project.findMany({
       where,
@@ -35,21 +32,19 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    const user = await getSessionUser(request)
+    if (!user) {
+      return NextResponse.json({ error: 'Nao autenticado' }, { status: 401 })
+    }
+
     const body = await request.json().catch(() => ({}))
     const { name, description, type } = body
 
     if (!name?.trim()) {
-      return NextResponse.json({ error: 'Nome do projeto obrigatório' }, { status: 400 })
+      return NextResponse.json({ error: 'Nome do projeto obrigatorio' }, { status: 400 })
     }
 
-    const userId = await getUserId(request)
-    if (!userId) {
-      return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
-    }
-
-    // Pega o primeiro cliente se o usuário for admin, senão usa o próprio ID
-    const user = await prisma.user.findUnique({ where: { id: userId } })
-    const clientId = user?.role === 'CLIENT' ? userId : (body.clientId || userId)
+    const clientId = isAdmin(user) ? (body.clientId || user.id) : user.id
 
     const slug = name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') + '-' + Date.now()
 
@@ -66,14 +61,29 @@ export async function POST(request: NextRequest) {
       include: { client: { select: { id: true, name: true } } },
     })
 
-    // Notificar admin sobre novo projeto (apenas se o cliente nao for o admin atual)
-    if (clientId !== userId) {
+    // Notificar o cliente que o projeto foi criado
+    await prisma.notification.create({
+      data: {
+        userId: clientId,
+        type: 'PROJECT_UPDATE',
+        title: 'Projeto criado com sucesso',
+        message: `Seu projeto "${name}" foi recebido e esta aguardando analise da equipe.`,
+        metadata: JSON.stringify({ projectId: project.id }),
+        isRead: false,
+      },
+    })
+
+    // Notificar todos os admins sobre novo projeto
+    const admins = await prisma.user.findMany({ where: { role: 'ADMIN' }, select: { id: true } })
+    for (const admin of admins) {
+      if (admin.id === user.id) continue
       await prisma.notification.create({
         data: {
-          userId: clientId,
+          userId: admin.id,
           type: 'PROJECT_UPDATE',
-          title: 'Projeto criado',
-          message: `Projeto "${name}" criado com sucesso`,
+          title: `Novo projeto: ${project.name}`,
+          message: `"${name}" foi solicitado por ${project.client?.name || 'um cliente'}.`,
+          metadata: JSON.stringify({ projectId: project.id }),
           isRead: false,
         },
       })

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useSession } from 'next-auth/react'
+import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -10,10 +11,11 @@ import { Progress } from '@/components/ui/progress'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { toast } from 'sonner'
-import { FolderKanban, Clock, CheckCircle2, Plus, ArrowUpRight, Loader2 } from 'lucide-react'
+import { IconProject, IconCheck, IconAnalytics, IconPlus, IconLoader } from '@/components/icons'
 
 export default function PortalDashboard() {
   const { data: session } = useSession()
+  const router = useRouter()
   const [projects, setProjects] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [showNew, setShowNew] = useState(false)
@@ -38,7 +40,7 @@ export default function PortalDashboard() {
       body: JSON.stringify({ name: form.name, description: form.description, type: 'CUSTOM', priority: 'MEDIUM' }),
     })
     if (res.ok) {
-      toast.success('Projeto solicitado com sucesso!')
+      toast.success('Projeto solicitado!')
       setShowNew(false)
       setForm({ name: '', description: '' })
       loadProjects()
@@ -58,67 +60,73 @@ export default function PortalDashboard() {
     )
   }
 
-  const active = projects.filter((p: any) => p.status !== 'COMPLETED').length
+  const active = projects.filter((p: any) => p.status !== 'COMPLETED' && p.status !== 'CANCELLED').length
   const completed = projects.filter((p: any) => p.status === 'COMPLETED').length
   const avgProgress = projects.length > 0
-    ? Math.round(projects.reduce((s: number, p: any) => s + p.progress, 0) / projects.length)
+    ? Math.round(projects.reduce((s: number, p: any) => s + (p.progress || 0), 0) / projects.length)
     : 0
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-6 space-y-5 animate-page-enter">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-medium">
+          <h2 className="text-[17px] font-[500] tracking-[-0.015em]">
             Bem-vindo, {session?.user?.name || 'Cliente'}
           </h2>
-          <p className="text-sm text-muted-foreground mt-1">Acompanhe seus projetos</p>
+          <p className="text-[12px] text-[var(--text-3)] mt-1">Acompanhe seus projetos</p>
         </div>
         <Button size="sm" onClick={() => setShowNew(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          Solicitar Projeto
+          <IconPlus className="w-[14px] h-[14px]" /> Solicitar Projeto
         </Button>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
         <Card><CardContent className="p-4 flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10"><FolderKanban className="h-5 w-5 text-primary" /></div>
-          <div><p className="text-xl font-semibold">{active}</p><p className="text-xs text-muted-foreground">Ativos</p></div>
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--accent-subtle)]"><IconProject className="w-[16px] h-[16px] text-[var(--accent)]" /></div>
+          <div><p className="text-[17px] font-[500]">{active}</p><p className="text-[11px] text-[var(--text-3)]">Ativos</p></div>
         </CardContent></Card>
         <Card><CardContent className="p-4 flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-success/10"><CheckCircle2 className="h-5 w-5 text-success" /></div>
-          <div><p className="text-xl font-semibold">{completed}</p><p className="text-xs text-muted-foreground">Concluídos</p></div>
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--success-subtle)]"><IconCheck className="w-[16px] h-[16px] text-[var(--success)]" /></div>
+          <div><p className="text-[17px] font-[500]">{completed}</p><p className="text-[11px] text-[var(--text-3)]">Concluidos</p></div>
         </CardContent></Card>
         <Card><CardContent className="p-4 flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-warning/10"><Clock className="h-5 w-5 text-warning" /></div>
-          <div><p className="text-xl font-semibold">{projects.length}</p><p className="text-xs text-muted-foreground">Total</p></div>
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--warning-subtle)]"><IconAnalytics className="w-[16px] h-[16px] text-[var(--warning)]" /></div>
+          <div><p className="text-[17px] font-[500]">{projects.length}</p><p className="text-[11px] text-[var(--text-3)]">Total</p></div>
         </CardContent></Card>
         <Card><CardContent className="p-4 flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-info/10"><ArrowUpRight className="h-5 w-5 text-info" /></div>
-          <div><p className="text-xl font-semibold">{projects.length ? `${avgProgress}%` : '-'}</p><p className="text-xs text-muted-foreground">Média progresso</p></div>
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--info-subtle)]"><IconAnalytics className="w-[16px] h-[16px] text-[var(--info)]" /></div>
+          <div><p className="text-[17px] font-[500]">{projects.length ? `${avgProgress}%` : '-'}</p><p className="text-[11px] text-[var(--text-3)]">Media progresso</p></div>
         </CardContent></Card>
       </div>
 
       <Card>
-        <CardHeader className="pb-4"><CardTitle className="text-base font-medium">Meus Projetos</CardTitle></CardHeader>
-        <CardContent className="space-y-4">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-[12px] font-[500] text-[var(--text-3)] uppercase tracking-wider">Meus Projetos</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
           {projects.length === 0 && (
-            <p className="text-sm text-muted-foreground text-center py-8">Nenhum projeto. Clique em Solicitar Projeto!</p>
+            <p className="text-[13px] text-[var(--text-3)] text-center py-8">Nenhum projeto. Clique em Solicitar Projeto!</p>
           )}
           {projects.map((p: any) => (
-            <div key={p.id} className="flex items-center gap-4 p-3 rounded-lg hover:bg-muted/50 transition-colors">
+            <div key={p.id} className="flex items-center gap-4 p-3 rounded-lg hover:bg-[var(--surface-hover)] transition-colors">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <p className="text-sm font-medium truncate">{p.name}</p>
-                  <Badge variant={p.status === 'COMPLETED' ? 'success' : p.status === 'REVIEW' ? 'warning' : 'info'} className="text-2xs">
-                    {p.status === 'COMPLETED' ? 'Concluído' : p.status === 'REVIEW' ? 'Revisão' : 'Em andamento'}
+                  <p className="text-[13px] font-[500] truncate">{p.name}</p>
+                  <Badge status={p.status === 'COMPLETED' ? 'COMPLETED' : p.status === 'REVIEW' ? 'REVIEW' : p.status === 'DRAFT' ? 'DRAFT' : p.status === 'TODO' ? 'TODO' : 'IN_PROGRESS'}>
+                    {p.status === 'COMPLETED' ? 'Concluido' : p.status === 'REVIEW' ? 'Revisao' : p.status === 'DRAFT' ? 'Rascunho' : p.status === 'TODO' ? 'A fazer' : 'Em andamento'}
                   </Badge>
+                  {p.status === 'TODO' && (
+                    <Button size="sm" className="h-6 text-[10px]" onClick={() => router.push(`/projects/${p.id}`)}>
+                      Ver <IconProject className="w-[10px] h-[10px]" />
+                    </Button>
+                  )}
                 </div>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  Prazo: {p.deadline ? new Date(p.deadline).toLocaleDateString('pt-BR') : 'Não definido'}
+                <p className="text-[11px] text-[var(--text-3)] mt-0.5">
+                  Prazo: {p.deadline ? new Date(p.deadline).toLocaleDateString('pt-BR') : 'Nao definido'}
                 </p>
               </div>
-              <Progress value={p.progress} className="w-24 h-1.5" />
-              <span className="text-xs font-medium w-8">{p.progress}%</span>
+              <Progress value={p.progress || 0} className="w-24 h-[2px]" />
+              <span className="text-[12px] font-[500] w-8">{p.progress || 0}%</span>
             </div>
           ))}
         </CardContent>
@@ -131,27 +139,18 @@ export default function PortalDashboard() {
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-2">
-              <label className="text-sm font-medium">Nome do projeto</label>
-              <Input
-                placeholder="Ex: E-commerce Premium"
-                value={form.name}
-                onChange={e => setForm({ ...form, name: e.target.value })}
-                autoFocus
-              />
+              <label>Nome do projeto</label>
+              <Input placeholder="Ex: E-commerce Premium" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} autoFocus />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">Descrição (opcional)</label>
-              <Input
-                placeholder="Descreva o que você precisa..."
-                value={form.description}
-                onChange={e => setForm({ ...form, description: e.target.value })}
-              />
+              <label>Descricao (opcional)</label>
+              <Input placeholder="Descreva o que voce precisa..." value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} />
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowNew(false)}>Cancelar</Button>
             <Button onClick={handleCreate} disabled={saving || !form.name.trim()}>
-              {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {saving && <IconLoader className="w-[14px] h-[14px] animate-spin" />}
               Solicitar Projeto
             </Button>
           </DialogFooter>

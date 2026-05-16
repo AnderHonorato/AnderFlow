@@ -1,134 +1,155 @@
 'use client'
 
 import { useState } from 'react'
+import { useSession } from 'next-auth/react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Separator } from '@/components/ui/separator'
 import { Badge } from '@/components/ui/badge'
-import { Camera, Save, Shield, Key, Smartphone } from 'lucide-react'
+import { toast } from 'sonner'
+import { IconTrash, IconLoader, IconLogout, IconCheck } from '@/components/icons'
 
 export default function ProfilePage() {
-  const [name, setName] = useState('Anderson')
-  const [email, setEmail] = useState('admin@andero.com.br')
-  const [company, setCompany] = useState('ANDERFLOW Sistemas')
-  const [phone, setPhone] = useState('(11) 99999-0000')
-  const [bio, setBio] = useState('Fundador e desenvolvedor full-stack.')
+  const { data: session } = useSession()
+  const [name, setName] = useState(session?.user?.name || '')
+  const [company, setCompany] = useState('')
+  const [phone, setPhone] = useState('')
+  const [deleteOpen, setDeleteOpen] = useState(false)
+  const [deleteConfirm, setDeleteConfirm] = useState('')
+  const [deleteLoading, setDeleteLoading] = useState(false)
+  const [deleteResult, setDeleteResult] = useState<string | null>(null)
+
+  const handleDelete = async () => {
+    if (deleteConfirm !== 'confirmo') {
+      toast.error('Digite "confirmo" para prosseguir')
+      return
+    }
+    setDeleteLoading(true)
+    const res = await fetch('/api/account', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'request_delete', confirmation: deleteConfirm }),
+    })
+    const json = await res.json()
+    if (res.ok) {
+      setDeleteResult(json.message)
+    } else {
+      toast.error(json.error || 'Erro ao solicitar exclusao')
+    }
+    setDeleteLoading(false)
+  }
 
   return (
-    <div className="p-6 space-y-6 max-w-3xl mx-auto">
+    <div className="p-6 space-y-5 max-w-3xl mx-auto animate-page-enter">
       <div>
-        <h1 className="text-lg font-medium">Perfil</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Gerencie suas informações pessoais e de segurança
-        </p>
+        <h1 className="text-[17px] font-[500] tracking-[-0.015em]">Perfil</h1>
+        <p className="text-[12px] text-[var(--text-3)] mt-1">Gerencie suas informacoes pessoais e de seguranca</p>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Foto de Perfil</CardTitle>
-        </CardHeader>
-        <CardContent className="flex items-center gap-4">
-          <div className="relative">
-            <Avatar className="h-20 w-20">
-              <AvatarFallback className="text-xl">AD</AvatarFallback>
-            </Avatar>
-            <button className="absolute -bottom-1 -right-1 flex h-7 w-7 items-center justify-center rounded-full bg-primary text-primary-foreground">
-              <Camera className="h-3.5 w-3.5" />
-            </button>
-          </div>
-          <div>
-            <p className="text-sm font-medium">Foto do perfil</p>
-            <p className="text-xs text-muted-foreground mt-0.5">PNG, JPG até 2MB</p>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Informações Pessoais</CardTitle>
+          <CardTitle>Informacoes Pessoais</CardTitle>
           <CardDescription>Atualize seus dados de perfil</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
-              <label className="text-sm font-medium">Nome</label>
+              <label>Nome</label>
               <Input value={name} onChange={(e) => setName(e.target.value)} />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">Email</label>
-              <Input value={email} onChange={(e) => setEmail(e.target.value)} disabled />
+              <label>Email</label>
+              <Input value={session?.user?.email || ''} disabled />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">Empresa</label>
+              <label>Empresa</label>
               <Input value={company} onChange={(e) => setCompany(e.target.value)} />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">Telefone</label>
+              <label>Telefone</label>
               <Input value={phone} onChange={(e) => setPhone(e.target.value)} />
             </div>
           </div>
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Bio</label>
-            <Input value={bio} onChange={(e) => setBio(e.target.value)} />
-          </div>
           <Separator />
           <div className="flex justify-end">
-            <Button>
-              <Save className="mr-2 h-4 w-4" />
-              Salvar Alterações
-            </Button>
+            <Button><IconCheck className="w-[14px] h-[14px]" /> Salvar Alteracoes</Button>
           </div>
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Segurança</CardTitle>
-          <CardDescription>Configurações de autenticação e acesso</CardDescription>
+          <CardTitle>Seguranca</CardTitle>
+          <CardDescription>Configuracoes de autenticacao e acesso</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between py-2">
-            <div className="flex items-center gap-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-muted">
-                <Key className="h-[18px] w-[18px] text-muted-foreground" />
-              </div>
-              <div>
-                <p className="text-sm font-medium">Alterar Senha</p>
-                <p className="text-xs text-muted-foreground">Atualize sua senha de acesso</p>
-              </div>
+            <div>
+              <p className="text-[13px] font-[500]">Alterar Senha</p>
+              <p className="text-[12px] text-[var(--text-3)] mt-0.5">Atualize sua senha de acesso</p>
             </div>
             <Button variant="outline" size="sm">Alterar</Button>
           </div>
           <Separator />
           <div className="flex items-center justify-between py-2">
-            <div className="flex items-center gap-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-muted">
-                <Shield className="h-[18px] w-[18px] text-muted-foreground" />
-              </div>
-              <div>
-                <p className="text-sm font-medium">Autenticação 2FA</p>
-                <p className="text-xs text-muted-foreground">Adicione uma camada extra de segurança</p>
-              </div>
+            <div>
+              <p className="text-[13px] font-[500]">Funcao</p>
+              <p className="text-[12px] text-[var(--text-3)] mt-0.5">{session?.user?.role === 'ADMIN' ? 'Administrador' : 'Cliente'}</p>
             </div>
-            <Badge variant="secondary" className="text-2xs">Desativado</Badge>
-          </div>
-          <Separator />
-          <div className="flex items-center justify-between py-2">
-            <div className="flex items-center gap-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-muted">
-                <Smartphone className="h-[18px] w-[18px] text-muted-foreground" />
-              </div>
-              <div>
-                <p className="text-sm font-medium">Sessões Ativas</p>
-                <p className="text-xs text-muted-foreground">Windows - São Paulo, SP &middot; Ativo agora</p>
-              </div>
-            </div>
-            <Button variant="outline" size="sm">Gerenciar</Button>
+            <Badge variant={session?.user?.role === 'ADMIN' ? 'warning' : 'info'}>{session?.user?.role}</Badge>
           </div>
         </CardContent>
       </Card>
+
+      <Card className="border-[var(--destructive-subtle)]">
+        <CardHeader>
+          <CardTitle className="text-[var(--destructive)]">Excluir Conta</CardTitle>
+          <CardDescription>A exclusao e programada para 7 dias e pode ser revertida por um administrador</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {deleteResult ? (
+            <div className="p-4 rounded-lg bg-[var(--surface-2)] border border-[var(--border)]">
+              <p className="text-[13px] text-[var(--text)]">{deleteResult}</p>
+            </div>
+          ) : (
+            <Button variant="destructive" onClick={() => setDeleteOpen(true)}>
+              <IconTrash className="w-[14px] h-[14px]" /> Solicitar exclusao da conta
+            </Button>
+          )}
+        </CardContent>
+      </Card>
+
+      <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Excluir Conta</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <p className="text-[13px] text-[var(--text-2)]">
+              Sua conta sera desativada imediatamente e excluida permanentemente em 7 dias.
+              Um administrador pode reverter essa acao ate la. Esta acao nao pode ser desfeita por voce.
+            </p>
+            <div className="space-y-2">
+              <label>Digite "confirmo" para prosseguir</label>
+              <Input
+                placeholder="confirmo"
+                value={deleteConfirm}
+                onChange={e => setDeleteConfirm(e.target.value)}
+                autoFocus
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setDeleteOpen(false); setDeleteConfirm('') }}>Cancelar</Button>
+            <Button variant="destructive" onClick={handleDelete} disabled={deleteLoading || deleteConfirm !== 'confirmo'}>
+              {deleteLoading && <IconLoader className="w-[14px] h-[14px] animate-spin" />}
+              Confirmar exclusao
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

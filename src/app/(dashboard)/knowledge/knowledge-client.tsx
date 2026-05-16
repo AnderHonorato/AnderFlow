@@ -4,8 +4,9 @@ import { useState } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
-import { Calendar, Link2, CheckCircle2, Save, Edit3, X, Search } from 'lucide-react'
+import { IconCheck, IconEdit, IconSearch, IconFile, IconClose, IconLoader } from '@/components/icons'
 
 export function KnowledgeClient({ projects: initialProjects }: { projects: any[] }) {
   const [projects] = useState(initialProjects)
@@ -26,7 +27,7 @@ export function KnowledgeClient({ projects: initialProjects }: { projects: any[]
     const p = projects.find(pr => pr.id === projectId)
     if (p) { p.completedSummary = summary; p.completedLink = link; p.headerImage = image }
     setEditingId(null)
-    toast.success('Informações salvas!')
+    toast.success('Informacoes salvas!')
   }
 
   const filtered = projects.filter(p =>
@@ -41,86 +42,84 @@ export function KnowledgeClient({ projects: initialProjects }: { projects: any[]
   const completedYears = Array.from(yearsSet).sort((a, b) => b - a)
 
   return (
-    <div className="p-6 space-y-6 max-w-5xl mx-auto">
+    <div className="p-6 space-y-5 max-w-5xl mx-auto animate-page-enter">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-lg font-medium">Meu Conhecimento</h1>
-          <p className="text-sm text-muted-foreground mt-1">{projects.length} projetos concluídos</p>
+          <h1 className="text-[17px] font-[500] tracking-[-0.015em]">Meu Conhecimento</h1>
+          <p className="text-[12px] text-[var(--text-3)] mt-1">{projects.length} projetos concluidos</p>
         </div>
         <div className="relative w-64">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <IconSearch className="absolute left-3 top-1/2 w-[14px] h-[14px] -translate-y-1/2 text-[var(--text-3)]" />
           <Input placeholder="Buscar conhecimento..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
         </div>
       </div>
 
-      <div className="relative">
+      <div>
         {completedYears.map((year, yi) => (
           <div key={year} className="relative pl-10">
-            {yi !== completedYears.length - 1 && <div className="absolute left-[23px] top-14 bottom-0 w-0.5 bg-[hsl(222,25%,18%)]" />}
-            <div className="flex items-center gap-3 mb-6 sticky top-16 bg-[var(--bg)] py-2 z-10">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-white text-sm font-bold shrink-0">{year}</div>
-              <div className="h-0.5 flex-1 bg-[hsl(222,25%,14%)]" />
-              <span className="text-xs text-muted-foreground">{filtered.filter(p => new Date(p.completedAt || p.updatedAt || p.createdAt).getFullYear() === year).length} projetos</span>
+            <div className="flex items-center gap-3 mb-4 sticky top-[48px] bg-[var(--bg)] py-2 z-10">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--accent)] text-white text-[13px] font-[500] shrink-0">{year}</div>
+              <div className="h-px flex-1 bg-[var(--border)]" />
+              <span className="text-[11px] text-[var(--text-3)]">{filtered.filter(p => new Date(p.completedAt || p.updatedAt || p.createdAt).getFullYear() === year).length} projetos</span>
             </div>
 
             {filtered.filter(p => new Date(p.completedAt || p.updatedAt || p.createdAt).getFullYear() === year)
               .sort((a, b) => new Date(b.completedAt || b.updatedAt || b.createdAt).getTime() - new Date(a.completedAt || a.updatedAt || a.createdAt).getTime())
-              .map((project, pi, arr) => {
+              .map((project) => {
                 const isEditing = editingId === project.id
                 const meta = { summary: project.completedSummary || '', link: project.completedLink || '', image: project.headerImage || '' }
                 const date = new Date(project.completedAt || project.updatedAt || project.createdAt)
 
                 return (
-                  <div key={project.id} className="relative pb-8">
-                    <div className="absolute left-[-2px] top-5 w-2.5 h-2.5 rounded-full bg-success border-2 border-[var(--border)]" />
-                    <div className="absolute left-3 top-[22px] w-7 h-0.5 bg-[hsl(222,25%,18%)]" />
-                    {pi !== arr.length - 1 && <div className="absolute left-[23px] top-10 bottom-0 w-0.5 bg-[hsl(222,25%,14%)]" />}
-
-                    <Card className="ml-0 card-hover">
-                      <CardContent className="p-5">
+                  <div key={project.id} className="relative pb-6">
+                    <Card className="hover:border-[var(--border-2)] transition-colors">
+                      <CardContent className="p-4">
                         {meta.image && (
-                          <div className="mb-4 -mx-5 -mt-5 rounded-t-[14px] overflow-hidden h-40 bg-[hsl(222,40%,8%)]">
+                          <div className="mb-3 -mx-4 -mt-4 rounded-t-xl overflow-hidden h-36 bg-[var(--surface-2)]">
                             <img src={meta.image} alt={project.name} className="w-full h-full object-cover" />
                           </div>
                         )}
-                        <div className="flex items-start gap-4">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-1">
-                              <h3 className="text-lg font-semibold">{project.name}</h3>
-                              <Badge variant="success" className="text-2xs">Concluído</Badge>
-                            </div>
-                            <div className="flex items-center gap-3 text-xs text-muted-foreground mb-3">
-                              <span className="flex items-center gap-1"><Calendar className="h-3 w-3" />{date.toLocaleDateString('pt-BR')}</span>
-                              {project.client && <span>Cliente: {project.client.name}</span>}
-                            </div>
-                            {!isEditing ? (
-                              <>
-                                {meta.summary && <p className="text-sm text-muted-foreground mb-3 bg-[hsl(222,40%,6%)] rounded-[10px] p-3 leading-relaxed">{meta.summary}</p>}
-                                {!meta.summary && <p className="text-sm text-muted-foreground mb-3 italic">Sem resumo. Clique em editar para adicionar.</p>}
-                                {meta.link && <a href={meta.link} target="_blank" rel="noopener" className="inline-flex items-center gap-1 text-xs text-primary hover:underline"><Link2 className="h-3 w-3" />{meta.link}</a>}
-                                <button onClick={() => setEditingId(project.id)} className="btn btn-ghost btn-sm mt-2 text-xs"><Edit3 className="h-3 w-3 mr-1" />Editar informações</button>
-                              </>
-                            ) : (
-                              <div className="space-y-3 animate-fade-in">
-                                <div>
-                                  <label className="text-xs text-muted-foreground block mb-1">URL da imagem de capa</label>
-                                  <Input id={`image-${project.id}`} placeholder="https://..." defaultValue={meta.image} className="h-8 text-xs" />
-                                </div>
-                                <div>
-                                  <label className="text-xs text-muted-foreground block mb-1">Link do projeto</label>
-                                  <Input id={`link-${project.id}`} placeholder="https://..." defaultValue={meta.link} className="h-8 text-xs" />
-                                </div>
-                                <div>
-                                  <label className="text-xs text-muted-foreground block mb-1">Resumo do conhecimento</label>
-                                  <textarea id={`summary-${project.id}`} placeholder="O que você aprendeu? Quais tecnologias?" defaultValue={meta.summary} className="input h-24 resize-none py-2" style={{ minHeight: '80px' }} />
-                                </div>
-                                <div className="flex gap-2">
-                                  <button onClick={() => saveChanges(project.id)} className="btn btn-primary btn-sm text-xs"><Save className="h-3 w-3 mr-1" />Salvar</button>
-                                  <button onClick={() => setEditingId(null)} className="btn btn-ghost btn-sm text-xs"><X className="h-3 w-3 mr-1" />Cancelar</button>
-                                </div>
-                              </div>
-                            )}
+                        <div>
+                          <div className="flex items-center gap-2 mb-1">
+                            <h3 className="text-[14px] font-[500]">{project.name}</h3>
+                            <Badge variant="success">Concluido</Badge>
                           </div>
+                          <div className="flex items-center gap-3 text-[11px] text-[var(--text-3)] mb-3">
+                            <span>{date.toLocaleDateString('pt-BR')}</span>
+                            {project.client && <span>Cliente: {project.client.name}</span>}
+                          </div>
+                          {!isEditing ? (
+                            <div className="space-y-2">
+                              {meta.summary ? (
+                                <p className="text-[12px] text-[var(--text-2)] bg-[var(--surface-2)] rounded-lg p-3 leading-relaxed">{meta.summary}</p>
+                              ) : (
+                                <p className="text-[12px] text-[var(--text-3)] italic">Sem resumo. Clique em editar para adicionar.</p>
+                              )}
+                              {meta.link && <a href={meta.link} target="_blank" rel="noopener" className="inline-flex items-center gap-1 text-[12px] text-[var(--accent)] hover:opacity-80"><IconFile className="w-[12px] h-[12px]" />{meta.link}</a>}
+                              <Button variant="ghost" size="sm" onClick={() => setEditingId(project.id)} className="mt-1">
+                                <IconEdit className="w-[12px] h-[12px]" /> Editar informacoes
+                              </Button>
+                            </div>
+                          ) : (
+                            <div className="space-y-3 animate-fade-in">
+                              <div>
+                                <label className="text-[11px] text-[var(--text-3)] block mb-1">URL da imagem de capa</label>
+                                <Input id={`image-${project.id}`} placeholder="https://..." defaultValue={meta.image} />
+                              </div>
+                              <div>
+                                <label className="text-[11px] text-[var(--text-3)] block mb-1">Link do projeto</label>
+                                <Input id={`link-${project.id}`} placeholder="https://..." defaultValue={meta.link} />
+                              </div>
+                              <div>
+                                <label className="text-[11px] text-[var(--text-3)] block mb-1">Resumo do conhecimento</label>
+                                <textarea id={`summary-${project.id}`} placeholder="O que voce aprendeu? Quais tecnologias?" defaultValue={meta.summary} className="w-full min-h-[80px] rounded-lg bg-[var(--surface-2)] border border-[var(--border)] px-3 py-2 text-[13px] text-[var(--text)] placeholder:text-[var(--text-3)] focus:outline-none focus:border-[var(--accent)] resize-vertical" />
+                              </div>
+                              <div className="flex gap-2">
+                                <Button size="sm" onClick={() => saveChanges(project.id)}><IconCheck className="w-[12px] h-[12px]" /> Salvar</Button>
+                                <Button size="sm" variant="ghost" onClick={() => setEditingId(null)}><IconClose className="w-[12px] h-[12px]" /> Cancelar</Button>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       </CardContent>
                     </Card>
@@ -130,7 +129,7 @@ export function KnowledgeClient({ projects: initialProjects }: { projects: any[]
           </div>
         ))}
         {filtered.length === 0 && (
-          <Card><CardContent className="p-12 text-center space-y-3"><div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted mx-auto"><CheckCircle2 className="h-8 w-8 text-muted-foreground" /></div><p className="text-muted-foreground">Nenhum projeto concluído ainda.</p></CardContent></Card>
+          <Card><CardContent className="p-12 text-center space-y-3"><p className="text-[var(--text-3)]">Nenhum projeto concluido ainda.</p></CardContent></Card>
         )}
       </div>
     </div>

@@ -2,16 +2,18 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
+import { useSession, signOut } from 'next-auth/react'
 import { useUIStore, useOnlineStore } from '@/stores/app-store'
 import { cn } from '@/lib/utils'
 import {
   IconDashboard, IconProject, IconClient, IconCRM, IconChat,
   IconFinancial, IconAnalytics, IconKnowledge, IconNotification,
   IconSettings, IconChevronLeft, IconChevronRight, IconMenu,
+  IconLogout, IconProfile,
 } from '@/components/icons'
 
-const topNav = [
+const adminNavItems = [
   { name: 'Dashboard', href: '/dashboard', icon: IconDashboard },
   { name: 'Projetos', href: '/projects', icon: IconProject },
   { name: 'Clientes', href: '/clients', icon: IconClient },
@@ -22,25 +24,53 @@ const topNav = [
   { name: 'Conhecimento', href: '/knowledge', icon: IconKnowledge },
 ]
 
-const bottomNav = [
+const clientNavItems = [
+  { name: 'Inicio', href: '/dashboard', icon: IconDashboard },
+  { name: 'Meus Projetos', href: '/projects', icon: IconProject },
+  { name: 'Chat', href: '/chat', icon: IconChat },
+  { name: 'Financeiro', href: '/financial', icon: IconFinancial },
+]
+
+const adminBottomNav = [
+  { name: 'Usuarios', href: '/users', icon: IconClient },
+  { name: 'Notificacoes', href: '/notifications', icon: IconNotification },
+  { name: 'Configuracoes', href: '/settings', icon: IconSettings },
+]
+
+const clientBottomNav = [
   { name: 'Notificacoes', href: '/notifications', icon: IconNotification },
   { name: 'Configuracoes', href: '/settings', icon: IconSettings },
 ]
 
 export function SidebarClient() {
   const pathname = usePathname()
+  const router = useRouter()
+  const { data: session } = useSession()
   const { mobileMenuOpen, setMobileMenuOpen } = useUIStore()
   const { onlineNow, setStats } = useOnlineStore()
   const [collapsed, setCollapsed] = useState(false)
+  const [profileOpen, setProfileOpen] = useState(false)
+
+  const role = session?.user?.role as string || 'CLIENT'
+  const isAdmin = role === 'ADMIN'
+  const topNav = isAdmin ? adminNavItems : clientNavItems
+  const bottomNav = isAdmin ? adminBottomNav : clientBottomNav
+
+  const initials = (session?.user?.name || 'AD')
+    .split(' ').slice(0, 2).map((n: string) => n[0]).join('').toUpperCase()
 
   useEffect(() => {
+    if (!isAdmin) return
     const fetchStats = () => fetch('/api/analytics/online').then(r => r.json()).then(setStats)
     fetchStats()
     const interval = setInterval(fetchStats, 30000)
     return () => clearInterval(interval)
-  }, [setStats])
+  }, [setStats, isAdmin])
 
-  const isActive = (href: string) => pathname === href || pathname.startsWith(href + '/')
+  const isActive = (href: string) => {
+    if (href === '/dashboard') return pathname === '/dashboard'
+    return pathname === href || pathname.startsWith(href + '/')
+  }
 
   const navItemClass = (active: boolean) =>
     cn(
@@ -110,17 +140,16 @@ export function SidebarClient() {
         </nav>
 
         <div className="border-t border-[var(--border)] py-2 px-2 space-y-0.5">
-          {!collapsed && (
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-md text-[11px] text-[var(--text-3)]">
+          {isAdmin && (
+            <div className={cn(
+              'flex items-center gap-2 px-3 py-1.5 rounded-md text-[11px] text-[var(--text-3)]',
+              collapsed && 'justify-center'
+            )}>
               <span className="h-1.5 w-1.5 rounded-full bg-[var(--success)] shrink-0 animate-pulse" />
-              <span>{onlineNow} online</span>
+              {!collapsed && <span>{onlineNow} online</span>}
             </div>
           )}
-          {collapsed && (
-            <div className="flex justify-center py-1.5">
-              <span className="h-1.5 w-1.5 rounded-full bg-[var(--success)] animate-pulse" />
-            </div>
-          )}
+
           {bottomNav.map(item => {
             const active = isActive(item.href)
             return (
@@ -139,6 +168,32 @@ export function SidebarClient() {
               </Link>
             )
           })}
+
+          <div className="relative">
+            <button
+              onClick={(e) => { e.stopPropagation(); setProfileOpen(!profileOpen) }}
+              className={cn(
+                'w-full flex items-center gap-2.5 h-[34px] px-3 rounded-lg text-[13px] transition-all duration-150 text-[var(--text-2)] hover:text-[var(--text)] hover:bg-[var(--surface-hover)]',
+                collapsed && 'justify-center px-2'
+              )}
+              title={collapsed ? (session?.user?.name || 'Perfil') : undefined}
+            >
+              <div className="w-[16px] h-[16px] rounded-full bg-[var(--surface-3)] flex items-center justify-center text-[9px] font-[500] text-[var(--text-2)] shrink-0">
+                {initials}
+              </div>
+              {!collapsed && <span className="truncate">{session?.user?.name || 'Perfil'}</span>}
+            </button>
+            {profileOpen && (
+              <div className="absolute bottom-full left-2 right-2 mb-1 bg-[var(--surface)] border border-[var(--border)] rounded-lg py-1 z-50" onClick={e => e.stopPropagation()}>
+                <Link href="/profile" className="flex items-center gap-2 px-3 py-1.5 text-[13px] text-[var(--text-2)] hover:bg-[var(--surface-hover)] hover:text-[var(--text)] transition-colors" onClick={() => setProfileOpen(false)}>
+                  <IconProfile className="w-[14px] h-[14px]" /> Perfil
+                </Link>
+                <button onClick={() => signOut({ callbackUrl: '/login' })} className="w-full flex items-center gap-2 px-3 py-1.5 text-[13px] text-[var(--destructive)] hover:bg-[var(--destructive-subtle)] transition-colors">
+                  <IconLogout className="w-[14px] h-[14px]" /> Sair
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </aside>
     </>

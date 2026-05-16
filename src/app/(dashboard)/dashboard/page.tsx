@@ -11,11 +11,13 @@ import { PageHeader } from '@/components/ui/page-header'
 import { StatCard } from '@/components/ui/stat-card'
 import { OnboardingTip } from '@/components/ui/onboarding-tip'
 import { IconProject, IconFinancial, IconClient, IconAnalytics, IconPlus } from '@/components/icons'
+import { cn } from '@/lib/utils'
 
 export default function DashboardPage() {
   const { data: session } = useSession()
   const [data, setData] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+  const isAdmin = session?.user?.role === 'ADMIN'
 
   useEffect(() => {
     fetch('/api/dashboard')
@@ -66,23 +68,25 @@ export default function DashboardPage() {
     <div className="p-4 space-y-5 animate-page-enter">
       <OnboardingTip
         id="dashboard_welcome"
-        title="Bem-vindo ao seu painel de controle"
-        description="Aqui voce ve tudo em tempo real: projetos ativos, receita, clientes e notificacoes."
+        title={isAdmin ? "Bem-vindo ao seu painel de controle" : "Bem-vindo ao ANDERFLOW"}
+        description={isAdmin ? "Aqui voce ve tudo em tempo real." : "Solicite projetos e acompanhe o andamento."}
       />
       <PageHeader
-        title="Painel de Controle"
-        description="Visao geral da sua plataforma"
+        title={isAdmin ? "Painel de Controle" : `Ola, ${session?.user?.name?.split(' ')[0] || 'Cliente'}`}
+        description={isAdmin ? "Visao geral da sua plataforma" : "Acompanhe seus projetos"}
       >
         <Button size="sm" asChild>
           <a href="/portal/briefing"><IconPlus className="w-[14px] h-[14px]" /> Novo Projeto</a>
         </Button>
       </PageHeader>
 
-      <div className="grid gap-3 grid-cols-2 md:grid-cols-4">
-        {stats.map((stat) => (
-          <StatCard key={stat.label} {...stat} />
-        ))}
-      </div>
+      {isAdmin && (
+        <div className="grid gap-3 grid-cols-2 md:grid-cols-4">
+          {stats.map((stat) => (
+            <StatCard key={stat.label} {...stat} />
+          ))}
+        </div>
+      )}
 
       {activeProject && (
         <Card>
@@ -105,10 +109,12 @@ export default function DashboardPage() {
       )}
 
       <div className="grid gap-5 lg:grid-cols-3 items-start">
-        <div className="lg:col-span-2">
+        <div className={isAdmin ? "lg:col-span-2" : "lg:col-span-3"}>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-[12px] font-[500] text-[var(--text-3)] uppercase tracking-wider">Projetos Recentes</CardTitle>
+              <CardTitle className="text-[12px] font-[500] text-[var(--text-3)] uppercase tracking-wider">
+                {isAdmin ? "Projetos Recentes" : "Meus Projetos"}
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-1">
@@ -137,6 +143,7 @@ export default function DashboardPage() {
           </Card>
         </div>
 
+        {isAdmin && (
         <div>
           <Card>
             <CardHeader className="pb-2">
@@ -144,13 +151,22 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                <div className="flex items-center justify-between">
+                <div className={cn(
+                  'flex items-center justify-between p-2 -mx-2 rounded-lg',
+                  (data?.stats?.pendingRevenue || 0) > 0 && 'animate-balance-negative'
+                )}>
                   <span className="text-[13px] text-[var(--text-2)]">Saldo pendente</span>
-                  <span className="text-[13px] font-[500] text-[var(--warning)]">
+                  <span className={cn(
+                    'text-[13px] font-[500]',
+                    (data?.stats?.pendingRevenue || 0) > 0 ? 'text-[var(--destructive)]' : 'text-[var(--warning)]'
+                  )}>
                     R$ {((data?.stats?.pendingRevenue || 0) / 1000).toFixed(1)}k
                   </span>
                 </div>
-                <div className="flex items-center justify-between">
+                <div className={cn(
+                  'flex items-center justify-between p-2 -mx-2 rounded-lg',
+                  (data?.stats?.paidThisMonth || 0) > 0 && 'animate-balance-positive'
+                )}>
                   <span className="text-[13px] text-[var(--text-2)]">Recebido este mes</span>
                   <span className="text-[13px] font-[500] text-[var(--success)]">
                     R$ {((data?.stats?.paidThisMonth || 0) / 1000).toFixed(1)}k
@@ -164,6 +180,7 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
         </div>
+        )}
       </div>
     </div>
   )

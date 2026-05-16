@@ -1,204 +1,202 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useTheme } from 'next-themes'
+import { useSession } from 'next-auth/react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Separator } from '@/components/ui/separator'
+import { Switch } from '@/components/ui/switch'
+import { toast } from 'sonner'
 import {
-  Settings,
-  User,
-  Bell,
-  Shield,
-  CreditCard,
-  Palette,
-  Globe,
-  Zap,
-  Database,
-  Users,
-  Key,
-  Smartphone,
-  Mail,
-  MessageSquare,
-  ToggleLeft,
-  ChevronRight,
-} from 'lucide-react'
+  IconSettings, IconProfile, IconNotification, IconLogout, IconCheck,
+  IconFinancial, IconProject, IconClient, IconChat, IconCRM,
+  IconAnalytics, IconKnowledge, IconAutomation, IconTicket, IconFile,
+  IconArrowRight,
+} from '@/components/icons'
+import { cn } from '@/lib/utils'
 
-const settingsCategories = [
-  { id: 'general', label: 'Geral', icon: Settings, description: 'Configurações gerais da plataforma' },
-  { id: 'profile', label: 'Perfil', icon: User, description: 'Dados pessoais e avatar' },
-  { id: 'team', label: 'Equipe', icon: Users, description: 'Membros e permissões' },
-  { id: 'notifications', label: 'Notificações', icon: Bell, description: 'Alertas e preferências' },
-  { id: 'security', label: 'Segurança', icon: Shield, description: '2FA, sessões e privacidade' },
-  { id: 'billing', label: 'Faturamento', icon: CreditCard, description: 'Planos, gateways e cobranças' },
-  { id: 'appearance', label: 'Aparência', icon: Palette, description: 'Tema, cores e branding' },
-  { id: 'integrations', label: 'Integrações', icon: Zap, description: 'APIs, webhooks e apps' },
-  { id: 'modules', label: 'Módulos', icon: ToggleLeft, description: 'Ativar/desativar funcionalidades' },
-  { id: 'api', label: 'API', icon: Key, description: 'Chaves e documentação' },
+const categories = [
+  { id: 'general', label: 'Geral', icon: IconSettings },
+  { id: 'notifications', label: 'Notificacoes', icon: IconNotification },
+  { id: 'appearance', label: 'Aparencia', icon: IconProject },
+  { id: 'security', label: 'Seguranca', icon: IconLogout },
+  { id: 'modules', label: 'Modulos', icon: IconAutomation },
 ]
 
 const modules = [
-  { name: 'Projetos', enabled: true, description: 'Gestão de projetos com Kanban, Timeline e Sprints' },
-  { name: 'CRM', enabled: true, description: 'Pipeline de vendas e gestão de leads' },
-  { name: 'Chat', enabled: true, description: 'Comunicação em tempo real' },
-  { name: 'Financeiro', enabled: true, description: 'Faturas, pagamentos e controle financeiro' },
-  { name: 'Contratos', enabled: true, description: 'Contratos digitais e assinatura' },
-  { name: 'Tickets', enabled: true, description: 'Central de suporte e atendimento' },
-  { name: 'IA', enabled: true, description: 'Inteligência artificial e automações' },
-  { name: 'Automações', enabled: true, description: 'Workflows e automações de tarefas' },
-  { name: 'Analytics', enabled: true, description: 'Métricas e relatórios' },
-  { name: 'WhatsApp', enabled: false, description: 'Integração com WhatsApp Business' },
-  { name: 'Chamadas', enabled: false, description: 'Video calls e compartilhamento de tela' },
-  { name: 'White Label', enabled: false, description: 'Personalização completa da marca' },
-  { name: 'App Mobile', enabled: false, description: 'Aplicativo mobile para clientes' },
-  { name: 'Onboarding', enabled: true, description: 'Tour guiado e checklist inicial' },
+  { id: 'projects', label: 'Projetos', enabled: true },
+  { id: 'crm', label: 'CRM', enabled: true },
+  { id: 'chat', label: 'Chat', enabled: true },
+  { id: 'financial', label: 'Financeiro', enabled: true },
+  { id: 'contracts', label: 'Contratos', enabled: true },
+  { id: 'tickets', label: 'Tickets', enabled: true },
+  { id: 'analytics', label: 'Analytics', enabled: true },
+  { id: 'automations', label: 'Automacoes', enabled: true },
+  { id: 'knowledge', label: 'Conhecimento', enabled: true },
+]
+
+const supportItems = [
+  { key: 'emailNotifications', label: 'Notificacoes por email', desc: 'Receber alertas no email' },
+  { key: 'pushNotifications', label: 'Notificacoes push', desc: 'Notificacoes no navegador' },
+  { key: 'soundEnabled', label: 'Som', desc: 'Som ao receber notificacao' },
+  { key: 'weeklyReport', label: 'Relatorio semanal', desc: 'Resumo semanal por email' },
 ]
 
 export default function SettingsPage() {
-  const [activeCategory, setActiveCategory] = useState('modules')
+  const { theme, setTheme, resolvedTheme } = useTheme()
+  const { data: session } = useSession()
+  const [activeCategory, setActiveCategory] = useState('appearance')
+  const [mounted, setMounted] = useState(false)
+  const [moduleToggles, setModuleToggles] = useState<Record<string, boolean>>(
+    Object.fromEntries(modules.map(m => [m.id, m.enabled]))
+  )
+  const [notifPrefs, setNotifPrefs] = useState({
+    emailNotifications: true,
+    pushNotifications: true,
+    soundEnabled: true,
+    weeklyReport: true,
+  })
+  const [orgName, setOrgName] = useState('ANDERFLOW Sistemas')
+  const [saved, setSaved] = useState(false)
+
+  useEffect(() => { setMounted(true) }, [])
+
+  const saveSettings = () => {
+    setSaved(true)
+    toast.success('Configuracoes salvas')
+    setTimeout(() => setSaved(false), 2000)
+  }
+
+  if (!mounted) return null
+  const currentTheme = resolvedTheme || theme
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-6 space-y-5 animate-page-enter">
       <div>
-        <h1 className="text-lg font-medium">Configurações</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Gerencie todas as configurações da plataforma
-        </p>
+        <h1 className="text-[17px] font-[500] tracking-[-0.015em]">Configuracoes</h1>
+        <p className="text-[12px] text-[var(--text-3)] mt-1">Gerencie todas as configuracoes da plataforma</p>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[260px_1fr]">
-        <nav className="space-y-1">
-          {settingsCategories.map((cat) => (
-            <button
-              key={cat.id}
-              onClick={() => setActiveCategory(cat.id)}
-              className={`w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors text-left ${
-                activeCategory === cat.id
-                  ? 'bg-primary/10 text-primary font-medium'
-                  : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-              }`}
-            >
-              <cat.icon className="h-4 w-4 shrink-0" />
-              <span>{cat.label}</span>
-            </button>
-          ))}
-        </nav>
+      <div className="grid gap-6 lg:grid-cols-[220px_1fr] items-start">
+        <Card>
+          <CardContent className="p-1.5">
+            <nav className="space-y-0.5">
+              {categories.map((cat) => {
+                const Icon = cat.icon
+                const active = activeCategory === cat.id
+                return (
+                  <button
+                    key={cat.id}
+                    onClick={() => setActiveCategory(cat.id)}
+                    className={cn(
+                      'w-full flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] transition-all duration-150 text-left',
+                      active
+                        ? 'text-[var(--accent)] bg-[var(--accent-subtle)]'
+                        : 'text-[var(--text-2)] hover:text-[var(--text)] hover:bg-[var(--surface-hover)]'
+                    )}
+                  >
+                    <Icon className="w-[14px] h-[14px] shrink-0" />
+                    <span>{cat.label}</span>
+                  </button>
+                )
+              })}
+            </nav>
+          </CardContent>
+        </Card>
 
-        <div className="space-y-6">
-          {activeCategory === 'modules' && (
-            <>
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Módulos</CardTitle>
-                  <CardDescription>
-                    Ative ou desative funcionalidades da plataforma
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-1">
-                    {modules.map((module) => (
-                      <div key={module.name} className="flex items-center justify-between py-3 px-2 rounded-lg hover:bg-muted/50">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2">
-                            <p className="text-sm font-medium">{module.name}</p>
-                            {module.enabled ? (
-                              <Badge variant="success" className="text-2xs">Ativo</Badge>
-                            ) : (
-                              <Badge variant="secondary" className="text-2xs">Inativo</Badge>
-                            )}
-                          </div>
-                          <p className="text-xs text-muted-foreground mt-0.5">{module.description}</p>
-                        </div>
-                        <button
-                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                            module.enabled ? 'bg-primary' : 'bg-muted'
-                          }`}
-                        >
-                          <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                            module.enabled ? 'translate-x-6' : 'translate-x-1'
-                          }`} />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            </>
-          )}
-
-          {activeCategory === 'general' && (
+        <div className="space-y-5">
+          {activeCategory === 'appearance' && (
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Configurações Gerais</CardTitle>
-                <CardDescription>Informações básicas da organização</CardDescription>
+                <CardTitle>Aprencia</CardTitle>
+                <CardDescription>Personalize o visual da plataforma</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Nome da Organização</label>
-                    <Input defaultValue="ANDERFLOW Sistemas" />
+              <CardContent className="space-y-5">
+                <div className="space-y-3">
+                  <label className="text-[11px] font-[500] text-[var(--text-3)] uppercase">Tema</label>
+                  <div className="grid grid-cols-3 gap-3">
+                    {[
+                      { key: 'light', label: 'Claro', bg: '#f5f7fa' },
+                      { key: 'dark', label: 'Escuro', bg: '#0A0A0F' },
+                      { key: 'system', label: 'Sistema', bg: 'linear-gradient(90deg, #f5f7fa 50%, #0A0A0F 50%)' },
+                    ].map((opt) => {
+                      const isActive = currentTheme === opt.key
+                      return (
+                        <button
+                          key={opt.key}
+                          onClick={() => setTheme(opt.key)}
+                          className={cn(
+                            'p-4 rounded-xl border text-center transition-all duration-150',
+                            isActive
+                              ? 'border-[var(--accent)] bg-[var(--accent-subtle)]'
+                              : 'border-[var(--border)] hover:border-[var(--border-2)]'
+                          )}
+                        >
+                          <div
+                            className="h-10 w-full rounded-lg mb-2 border border-[var(--border)]"
+                            style={{ background: opt.bg }}
+                          />
+                          <span className={cn(
+                            'text-[12px] font-[500]',
+                            isActive ? 'text-[var(--accent)]' : 'text-[var(--text-2)]'
+                          )}>
+                            {opt.label}
+                          </span>
+                          {isActive && <IconCheck className="w-[14px] h-[14px] mx-auto mt-1 text-[var(--accent)]" />}
+                        </button>
+                      )
+                    })}
                   </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Domínio</label>
-                    <Input defaultValue="andero.com.br" />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Email</label>
-                    <Input defaultValue="contato@andero.com.br" />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Telefone</label>
-                    <Input defaultValue="(11) 99999-0000" />
-                  </div>
-                </div>
-                <Separator />
-                <div className="flex justify-end">
-                  <Button>Salvar Alterações</Button>
                 </div>
               </CardContent>
             </Card>
           )}
 
-          {activeCategory === 'appearance' && (
+          {activeCategory === 'general' && (
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Aparência</CardTitle>
-                <CardDescription>Personalize o visual da plataforma</CardDescription>
+                <CardTitle>Configuracoes Gerais</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="space-y-3">
-                  <label className="text-sm font-medium">Tema</label>
-                  <div className="grid grid-cols-3 gap-3">
-                    {['light', 'dark', 'system'].map((theme) => (
-                      <button
-                        key={theme}
-                        className={`p-4 rounded-lg border text-center transition-all ${
-                          theme === 'system' ? 'border-primary bg-primary/5' : 'hover:border-primary/50'
-                        }`}
-                      >
-                        <div className={`h-8 w-full rounded mb-2 ${
-                          theme === 'light' ? 'bg-white border' :
-                          theme === 'dark' ? 'bg-zinc-900' :
-                          'bg-[var(--surface)]'
-                        }`} />
-                        <span className="text-xs font-medium capitalize">{theme === 'system' ? 'Sistema' : theme === 'light' ? 'Claro' : 'Escuro'}</span>
-                      </button>
-                    ))}
-                  </div>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <label>Nome da Organizacao</label>
+                  <Input value={orgName} onChange={e => setOrgName(e.target.value)} />
                 </div>
-                <div className="space-y-3">
-                  <label className="text-sm font-medium">Cor Primária</label>
-                  <div className="flex gap-2">
-                    {['#0066FF', '#7C3AED', '#059669', '#DC2626', '#EA580C', '#0891B2'].map((color) => (
-                      <button
-                        key={color}
-                        className={`h-8 w-8 rounded-full border-2 ${color === '#0066FF' ? 'border-foreground scale-110' : 'border-transparent'}`}
-                        style={{ backgroundColor: color }}
-                      />
-                    ))}
-                  </div>
+                <Separator />
+                <div className="flex justify-end">
+                  <Button onClick={saveSettings} size="sm">
+                    {saved ? <IconCheck className="w-[14px] h-[14px]" /> : null}
+                    {saved ? 'Salvo' : 'Salvar Alteracoes'}
+                  </Button>
                 </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {activeCategory === 'notifications' && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Notificacoes</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-1">
+                {supportItems.map((item) => (
+                  <div key={item.key} className="flex items-center justify-between py-2.5 px-2 rounded-lg hover:bg-[var(--surface-hover)]">
+                    <div>
+                      <p className="text-[13px] font-[500]">{item.label}</p>
+                      <p className="text-[11px] text-[var(--text-3)] mt-0.5">{item.desc}</p>
+                    </div>
+                    <Switch
+                      checked={notifPrefs[item.key as keyof typeof notifPrefs]}
+                      onCheckedChange={(v) => {
+                        setNotifPrefs(prev => ({ ...prev, [item.key]: v }))
+                        saveSettings()
+                      }}
+                    />
+                  </div>
+                ))}
               </CardContent>
             </Card>
           )}
@@ -206,41 +204,52 @@ export default function SettingsPage() {
           {activeCategory === 'security' && (
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Segurança</CardTitle>
-                <CardDescription>Proteção da conta e acessos</CardDescription>
+                <CardTitle>Seguranca</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between py-3">
-                  <div>
-                    <p className="text-sm font-medium">Autenticação 2FA</p>
-                    <p className="text-xs text-muted-foreground">Adicione uma camada extra de segurança</p>
+              <CardContent className="space-y-1">
+                {[
+                  { label: 'Autenticacao 2FA', desc: 'Adicione uma camada extra de seguranca', action: 'Configurar' },
+                  { label: 'Sessoes Ativas', desc: 'Gerencie dispositivos conectados', action: 'Ver Sessoes' },
+                  { label: 'Alterar Senha', desc: 'Atualize sua senha de acesso', action: 'Alterar' },
+                ].map((item) => (
+                  <div key={item.label} className="flex items-center justify-between py-2.5 px-2 rounded-lg hover:bg-[var(--surface-hover)]">
+                    <div>
+                      <p className="text-[13px] font-[500]">{item.label}</p>
+                      <p className="text-[11px] text-[var(--text-3)] mt-0.5">{item.desc}</p>
+                    </div>
+                    <Button variant="outline" size="sm">{item.action}</Button>
                   </div>
-                  <Button variant="outline" size="sm">Configurar</Button>
-                </div>
-                <Separator />
-                <div className="flex items-center justify-between py-3">
-                  <div>
-                    <p className="text-sm font-medium">Sessões Ativas</p>
-                    <p className="text-xs text-muted-foreground">Gerencie dispositivos conectados</p>
+                ))}
+              </CardContent>
+            </Card>
+          )}
+
+          {activeCategory === 'modules' && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Modulos</CardTitle>
+                <CardDescription>Ative ou desative funcionalidades da plataforma</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-1">
+                {modules.map((mod) => (
+                  <div key={mod.id} className="flex items-center justify-between py-2.5 px-2 rounded-lg hover:bg-[var(--surface-hover)]">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <p className="text-[13px] font-[500]">{mod.label}</p>
+                        <Badge variant={moduleToggles[mod.id] ? 'success' : 'secondary'}>
+                          {moduleToggles[mod.id] ? 'Ativo' : 'Inativo'}
+                        </Badge>
+                      </div>
+                    </div>
+                    <Switch
+                      checked={moduleToggles[mod.id]}
+                      onCheckedChange={(v) => {
+                        setModuleToggles(prev => ({ ...prev, [mod.id]: v }))
+                        saveSettings()
+                      }}
+                    />
                   </div>
-                  <Button variant="outline" size="sm">Ver Sessões</Button>
-                </div>
-                <Separator />
-                <div className="flex items-center justify-between py-3">
-                  <div>
-                    <p className="text-sm font-medium">Logs de Auditoria</p>
-                    <p className="text-xs text-muted-foreground">Histórico de atividades da conta</p>
-                  </div>
-                  <Button variant="outline" size="sm">Ver Logs</Button>
-                </div>
-                <Separator />
-                <div className="flex items-center justify-between py-3">
-                  <div>
-                    <p className="text-sm font-medium">LGPD / Privacidade</p>
-                    <p className="text-xs text-muted-foreground">Configurações de proteção de dados</p>
-                  </div>
-                  <Button variant="outline" size="sm">Configurar</Button>
-                </div>
+                ))}
               </CardContent>
             </Card>
           )}

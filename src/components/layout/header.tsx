@@ -3,39 +3,34 @@
 import { useEffect, useState, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { signOut, useSession } from 'next-auth/react'
-import {
-  IconNotification, IconKnowledge, IconProfile, IconSettings,
-  IconLogout, IconClose,
-} from '@/components/icons'
+import { useSession } from 'next-auth/react'
+import { useUIStore } from '@/stores/app-store'
+import { IconNotification, IconClose, IconMenu, IconArrowRight } from '@/components/icons'
 import { cn } from '@/lib/utils'
 
-interface NotificationBanner {
+interface NotificationItem {
   id: string
   title: string
   message: string
   type: string
-  createdAt: number
+  createdAt: string
   metadata?: any
 }
 
 export function Header() {
   const { data: session } = useSession()
   const router = useRouter()
-  const initials = (session?.user?.name || 'AD').split(' ').slice(0, 2).map((n: string) => n[0]).join('').toUpperCase()
-  const [unreadCount, setUnreadCount] = useState(0)
-  const [profileOpen, setProfileOpen] = useState(false)
-  const [banners, setBanners] = useState<NotificationBanner[]>([])
-  const [currentBanner, setCurrentBanner] = useState(0)
+  const { setMobileMenuOpen } = useUIStore()
+  const [unreadItems, setUnreadItems] = useState<NotificationItem[]>([])
+  const [dropdownOpen, setDropdownOpen] = useState(false)
+  const [carouselIdx, setCarouselIdx] = useState(0)
+  const dropdownRef = useRef<HTMLDivElement>(null)
   const [seenIds, setSeenIds] = useState<Set<string>>(() => {
     try {
       const stored = sessionStorage.getItem('anderflow_seen_notifications')
       return new Set(stored ? JSON.parse(stored) : [])
-    } catch {
-      return new Set()
-    }
+    } catch { return new Set() }
   })
-  const bannerTimers = useRef<Map<string, NodeJS.Timeout>>(new Map())
 
   useEffect(() => {
     const fetchNotifications = () => {
@@ -43,30 +38,21 @@ export function Header() {
       fetch('/api/notifications?unread=true')
         .then(r => r.json())
         .then(json => {
-          const items = json.data || []
-          setUnreadCount(items.length)
+          const items: any[] = json.data || []
+          const parsed: NotificationItem[] = items.map((n: any) => {
+            let meta: any = null
+            try { if (n.metadata) meta = typeof n.metadata === 'string' ? JSON.parse(n.metadata) : n.metadata } catch {}
+            return { id: n.id, title: n.title, message: n.message, type: n.type, createdAt: n.createdAt, metadata: meta }
+          })
+          setUnreadItems(parsed)
 
-          const newItems = items.filter((n: any) => !seenIds.has(n.id))
-          if (newItems.length > 0) {
-            const nextIds = new Set(seenIds)
-            newItems.forEach((n: any) => nextIds.add(n.id))
+          const newIds = items.map(n => n.id)
+          const nextIds = new Set(seenIds)
+          let changed = false
+          newIds.forEach((id: string) => { if (!nextIds.has(id)) { nextIds.add(id); changed = true } })
+          if (changed) {
             setSeenIds(nextIds)
             try { sessionStorage.setItem('anderflow_seen_notifications', JSON.stringify(Array.from(nextIds))) } catch {}
-            fetch('/api/notifications', {
-              method: 'PATCH',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ ids: newItems.map((n: any) => n.id) }),
-            }).catch(() => {})
-            setBanners(prev => {
-              const existingIds = new Set(prev.map(b => b.id))
-              const toAdd = newItems.filter((n: any) => !existingIds.has(n.id))
-                .map((n: any) => {
-                  let meta: any = null
-                  try { if (n.metadata) meta = typeof n.metadata === 'string' ? JSON.parse(n.metadata) : n.metadata } catch {}
-                  return { id: n.id, title: n.title, message: n.message, type: n.type, createdAt: Date.now(), metadata: meta }
-                })
-              return [...prev, ...toAdd]
-            })
           }
         })
         .catch(() => {})
@@ -77,40 +63,26 @@ export function Header() {
   }, [])
 
   useEffect(() => {
-    banners.forEach(b => {
-      if (!bannerTimers.current.has(b.id)) {
-        const timer = setTimeout(() => {
-          setBanners(prev => prev.filter(x => x.id !== b.id))
-          bannerTimers.current.delete(b.id)
-        }, 600000)
-        bannerTimers.current.set(b.id, timer)
+    if (unreadItems.length === 0) return
+    const timer = setInterval(() => {
+      setCarouselIdx(prev => (prev + 1) % unreadItems.length)
+    }, 60000)
+    return () => clearInterval(timer)
+  }, [unreadItems.length])
+
+  useEffect(() => {
+    const close = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setDropdownOpen(false)
       }
-    })
-    return () => {
-      bannerTimers.current.forEach(t => clearTimeout(t))
     }
-  }, [banners])
+    if (dropdownOpen) document.addEventListener('click', close)
+    return () => document.removeEventListener('click', close)
+  }, [dropdownOpen])
 
-  useEffect(() => {
-    const close = () => setProfileOpen(false)
-    if (profileOpen) {
-      document.addEventListener('click', close)
-      return () => document.removeEventListener('click', close)
-    }
-  }, [profileOpen])
-
-  useEffect(() => {
-    if (banners.length === 0) return
-    const rotator = setInterval(() => {
-      setCurrentBanner(prev => (prev + 1) % banners.length)
-    }, 5000)
-    return () => clearInterval(rotator)
-  }, [banners.length])
-
-  const dismissBanner = (id: string) => {
-    setBanners(prev => prev.filter(b => b.id !== id))
-    const timer = bannerTimers.current.get(id)
-    if (timer) { clearTimeout(timer); bannerTimers.current.delete(id) }
+  const dismissOne = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+    setUnreadItems(prev => prev.filter(n => n.id !== id))
     fetch('/api/notifications', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -118,106 +90,108 @@ export function Header() {
     }).catch(() => {})
   }
 
+  const getNotifLink = (n: NotificationItem) => {
+    if (n.metadata?.projectId) return `/projects/${n.metadata.projectId}`
+    if (n.type === 'MESSAGE') return '/chat'
+    if (n.type === 'CONTRACT') return '/contracts'
+    return '/notifications'
+  }
+
+  const currentNotification = unreadItems[carouselIdx] || null
+
   return (
-    <>
-      <header className="sticky top-0 z-30 h-[48px] border-b border-[var(--border)] bg-[var(--bg)] flex items-center justify-between px-3 lg:px-4">
-        <div className="flex items-center gap-2 text-[12px] text-[var(--text-3)]">
-          <Link href="/dashboard" className="text-[var(--text)] font-[500] hover:opacity-70 transition-opacity text-[13px]">
-            ANDERFLOW
-          </Link>
-        </div>
+    <header
+      className="sticky top-0 z-30 h-[48px] flex items-center justify-between px-3 lg:px-4 shrink-0"
+      style={{
+        background: 'rgba(10,10,15,0.5)',
+        backdropFilter: 'blur(16px) saturate(200%)',
+        WebkitBackdropFilter: 'blur(16px) saturate(200%)',
+        borderBottom: '1px solid rgba(255,255,255,0.06)',
+      }}
+    >
+      <div className="flex items-center gap-3 flex-1 min-w-0">
+        <button
+          onClick={() => setMobileMenuOpen(true)}
+          className="lg:hidden flex items-center justify-center h-7 w-7 rounded-md hover:bg-[var(--surface-hover)] text-[var(--text-2)] hover:text-[var(--text)] transition-colors"
+        >
+          <IconMenu className="w-[16px] h-[16px]" />
+        </button>
 
-        <div className="flex items-center gap-1">
-          <Link
-            href="/knowledge"
-            className="flex items-center justify-center h-7 w-7 rounded-md hover:bg-[var(--surface-hover)] text-[var(--text-2)] hover:text-[var(--text)] transition-colors"
-            title="Conhecimento"
+        {currentNotification && (
+          <div className="hidden md:flex items-center gap-2 min-w-0 flex-1 animate-fade-in"
+            onClick={() => router.push(getNotifLink(currentNotification))}
           >
-            <IconKnowledge className="w-[16px] h-[16px]" />
-          </Link>
-
-          <Link
-            href="/notifications"
-            className="flex items-center justify-center h-7 w-7 rounded-md hover:bg-[var(--surface-hover)] text-[var(--text-2)] hover:text-[var(--text)] transition-colors relative"
-          >
-            <IconNotification className="w-[16px] h-[16px]" />
-            {unreadCount > 0 && (
-              <span className="absolute top-0.5 right-0.5 flex h-[16px] min-w-[16px] items-center justify-center rounded-full bg-[var(--accent)] text-[10px] font-[500] text-white px-1">
-                {unreadCount > 9 ? '9+' : unreadCount}
-              </span>
-            )}
-          </Link>
-
-          <div className="relative ml-0.5">
-            <button
-              onClick={(e) => { e.stopPropagation(); setProfileOpen(!profileOpen) }}
-              className="flex items-center justify-center h-[28px] w-[28px] rounded-full bg-[var(--surface-3)] text-[var(--text-2)] text-[11px] font-[500] hover:bg-[var(--surface-hover)] transition-colors"
-            >
-              {initials}
-            </button>
-            {profileOpen && (
-              <div className="absolute right-0 top-full mt-1 w-44 bg-[var(--surface)] border border-[var(--border)] rounded-lg py-1 z-50" onClick={e => e.stopPropagation()}>
-                <div className="px-3 py-2 border-b border-[var(--border)]">
-                  <p className="text-[13px] font-[500] text-[var(--text)]">{session?.user?.name || 'Usuario'}</p>
-                  <p className="text-[11px] text-[var(--text-3)] mt-0.5">{session?.user?.email}</p>
-                </div>
-                <Link href="/profile" className="flex items-center gap-2 px-3 py-1.5 text-[13px] text-[var(--text-2)] hover:bg-[var(--surface-hover)] hover:text-[var(--text)] transition-colors" onClick={() => setProfileOpen(false)}>
-                  <IconProfile className="w-[14px] h-[14px]" /> Perfil
-                </Link>
-                <Link href="/settings" className="flex items-center gap-2 px-3 py-1.5 text-[13px] text-[var(--text-2)] hover:bg-[var(--surface-hover)] hover:text-[var(--text)] transition-colors" onClick={() => setProfileOpen(false)}>
-                  <IconSettings className="w-[14px] h-[14px]" /> Configuracoes
-                </Link>
-                <button onClick={() => signOut()} className="w-full flex items-center gap-2 px-3 py-1.5 text-[13px] text-[var(--destructive)] hover:bg-[var(--destructive-subtle)] transition-colors">
-                  <IconLogout className="w-[14px] h-[14px]" /> Sair
-                </button>
-              </div>
-            )}
+            <span className="h-1.5 w-1.5 rounded-full bg-[var(--accent)] shrink-0" />
+            <span className="text-[12px] text-[var(--text-2)] truncate cursor-pointer hover:text-[var(--text)]">
+              {currentNotification.title}
+            </span>
+            <span className="text-[11px] text-[var(--text-3)] truncate hidden lg:inline">
+              — {currentNotification.message}
+            </span>
+            <span className="text-[10px] text-[var(--text-3)] shrink-0">
+              {carouselIdx + 1}/{unreadItems.length}
+            </span>
           </div>
-        </div>
-      </header>
+        )}
+      </div>
 
-      {banners.length > 0 && (
-        <div className="fixed top-0 left-0 right-0 z-50 flex justify-center pointer-events-none pt-1">
-          <div
-            onClick={() => {
-              const meta = banners[currentBanner]?.metadata
-              if (meta?.projectId && meta?.action === 'fill_briefing') {
-                dismissBanner(banners[currentBanner]?.id)
-                router.push(`/portal/briefing-fill/${meta.projectId}`)
-              }
-            }}
-            className={cn(
-              'pointer-events-auto max-w-[400px] w-[calc(100%-16px)]',
-              'bg-[var(--surface-2)] border border-[var(--border-2)] border-l-[2px] border-l-[var(--accent)]',
-              'rounded-lg px-4 py-3',
-              'flex items-start gap-3',
-              'animate-slide-up cursor-pointer'
-            )}
-          >
-            <div className="flex-1 min-w-0">
-              <p className="text-[13px] font-[500] text-[var(--text)] truncate">
-                {banners[currentBanner]?.title}
-              </p>
-              <p className="text-[12px] text-[var(--text-2)] mt-0.5 line-clamp-1">
-                {banners[currentBanner]?.message}
-              </p>
-              {banners.length > 1 && (
-                <div className="flex gap-1 mt-2">
-                  {banners.map((_, i) => (
-                    <span key={i} className={`h-1 rounded-full transition-all ${i === currentBanner ? 'w-3 bg-[var(--accent)]' : 'w-1 bg-[var(--border-2)]'}`} />
-                  ))}
-                </div>
-              )}
+      <div className="flex items-center gap-1 shrink-0" ref={dropdownRef}>
+        <button
+          onClick={() => setDropdownOpen(!dropdownOpen)}
+          className="relative flex items-center justify-center h-7 w-9 rounded-md hover:bg-[var(--surface-hover)] text-[var(--text-2)] hover:text-[var(--text)] transition-colors"
+        >
+          <IconNotification className="w-[16px] h-[16px]" />
+          {unreadItems.length > 0 && (
+            <span className="absolute top-0.5 right-0 flex h-[15px] min-w-[15px] items-center justify-center rounded-full bg-[var(--accent)] text-[10px] font-[500] text-white px-1">
+              {unreadItems.length > 9 ? '9+' : unreadItems.length}
+            </span>
+          )}
+        </button>
+
+        {dropdownOpen && (
+          <div className="absolute right-0 top-full mt-1 w-[380px] max-w-[calc(100vw-16px)] bg-[var(--surface)] border border-[var(--border)] rounded-xl shadow-lg z-50 overflow-hidden animate-fade-in">
+            <div className="flex items-center justify-between px-4 py-2.5 border-b border-[var(--border)]">
+              <span className="text-[13px] font-[500] text-[var(--text)]">Notificacoes</span>
+              <Link
+                href="/notifications"
+                onClick={() => setDropdownOpen(false)}
+                className="text-[12px] text-[var(--accent)] hover:opacity-80 transition-opacity"
+              >
+                Ver todas
+              </Link>
             </div>
-            <button
-              onClick={(e) => { e.stopPropagation(); dismissBanner(banners[currentBanner]?.id) }}
-              className="shrink-0 flex items-center justify-center h-5 w-5 rounded text-[var(--text-3)] hover:text-[var(--text)] hover:bg-[var(--surface-hover)] transition-colors"
-            >
-              <IconClose className="h-3 w-3" />
-            </button>
+            <div className="max-h-[350px] overflow-y-auto">
+              {unreadItems.length === 0 && (
+                <p className="p-6 text-center text-[12px] text-[var(--text-3)]">
+                  Nenhuma notificacao nova
+                </p>
+              )}
+              {unreadItems.slice(0, 10).map(n => (
+                <div
+                  key={n.id}
+                  onClick={() => {
+                    setDropdownOpen(false)
+                    router.push(getNotifLink(n))
+                  }}
+                  className="flex items-start gap-3 px-4 py-2.5 hover:bg-[var(--surface-hover)] cursor-pointer transition-colors group"
+                >
+                  <span className="h-1.5 w-1.5 rounded-full bg-[var(--accent)] mt-1.5 shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[13px] font-[500] text-[var(--text)] truncate">{n.title}</p>
+                    <p className="text-[11px] text-[var(--text-3)] mt-0.5 line-clamp-2">{n.message}</p>
+                  </div>
+                  <button
+                    onClick={(e) => dismissOne(n.id, e)}
+                    className="shrink-0 opacity-0 group-hover:opacity-100 flex items-center justify-center h-5 w-5 rounded text-[var(--text-3)] hover:text-[var(--text)] hover:bg-[var(--surface-hover)] transition-all"
+                  >
+                    <IconClose className="h-3 w-3" />
+                  </button>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
-      )}
-    </>
+        )}
+      </div>
+    </header>
   )
 }

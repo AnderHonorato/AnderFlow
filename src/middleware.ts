@@ -1,18 +1,17 @@
 import { withAuth } from 'next-auth/middleware'
 import { NextResponse } from 'next/server'
 
-// Rotas exclusivas do admin — clientes NUNCA podem acessar
-const adminRoutes = [
-  '/dashboard', '/projects', '/clients', '/crm', '/chat',
-  '/financial', '/contracts', '/analytics', '/automations',
-  '/ai', '/audit-logs', '/files', '/tickets',
-  '/calendar', '/onboarding', '/settings',
+const adminOnlyRoutes = [
+  '/users', '/audit-logs', '/clients', '/crm', '/analytics',
+  '/automations', '/files', '/tickets', '/calendar', '/onboarding', '/settings',
+  '/knowledge', '/ai', '/contracts',
 ]
 
-// Rotas permitidas para todos (admin + cliente)
-const sharedRoutes = [
-  '/portal', '/profile', '/notifications', '/help',
+const clientAllowedRoutes = [
+  '/dashboard', '/profile', '/notifications', '/help',
   '/plans', '/changelog', '/feedback',
+  '/projects', '/chat', '/financial',
+  '/portal',
 ]
 
 export default withAuth(
@@ -21,16 +20,20 @@ export default withAuth(
     const path = req.nextUrl.pathname
     const role = (token?.role as string) || 'CLIENT'
 
-    // Cliente tentando acessar rota de admin → redireciona pro portal
+    if (!token) return NextResponse.next()
+
+    // CLIENT: bloquear rotas administrativas
     if (role === 'CLIENT') {
-      const isAdminRoute = adminRoutes.some(r => path === r || path.startsWith(r + '/'))
+      const isAdminRoute = adminOnlyRoutes.some(r => path === r || path.startsWith(r + '/'))
       if (isAdminRoute) {
-        return NextResponse.redirect(new URL('/portal', req.url))
+        return NextResponse.redirect(new URL('/dashboard', req.url))
       }
     }
 
-    // Admin acessando /portal → deixa passar (admin pode ver portal do cliente)
-    // Admin acessando /login → redireciona pro dashboard
+    // ADMIN acessando /portal: permitir
+    if (role === 'ADMIN' && path === '/portal') {
+      return NextResponse.next()
+    }
 
     return NextResponse.next()
   },
@@ -38,8 +41,6 @@ export default withAuth(
     callbacks: {
       authorized: ({ token, req }) => {
         const path = req.nextUrl.pathname
-
-        // Rotas públicas — qualquer um acessa
         if (
           path.startsWith('/login') ||
           path.startsWith('/register') ||
@@ -48,8 +49,6 @@ export default withAuth(
         ) {
           return true
         }
-
-        // Precisa estar logado para o resto
         return !!token
       },
     },
@@ -58,28 +57,6 @@ export default withAuth(
 
 export const config = {
   matcher: [
-    '/dashboard/:path*',
-    '/projects/:path*',
-    '/clients/:path*',
-    '/crm/:path*',
-    '/chat/:path*',
-    '/financial/:path*',
-    '/contracts/:path*',
-    '/tickets/:path*',
-    '/files/:path*',
-    '/analytics/:path*',
-    '/automations/:path*',
-    '/ai/:path*',
-    '/calendar/:path*',
-    '/onboarding/:path*',
-    '/settings/:path*',
-    '/notifications/:path*',
-    '/help/:path*',
-    '/portal/:path*',
-    '/profile/:path*',
-    '/plans/:path*',
-    '/changelog/:path*',
-    '/feedback/:path*',
-    '/audit-logs/:path*',
+    '/((?!_next/static|_next/image|favicon.ico|branding|api/).*)',
   ],
 }

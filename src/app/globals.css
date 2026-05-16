@@ -47,29 +47,27 @@
   --card-foreground: #F0F0EB;
   --muted: #1A1A1F;
   --muted-foreground: rgba(255,255,255,0.40);
-  --accent-shad: #1E1E24;
   --accent-foreground: #F0F0EB;
   --primary: #E8622A;
   --primary-foreground: #ffffff;
   --secondary: #1A1A1F;
   --secondary-foreground: #d1d5db;
-  --destructive-shad: #C44A3A;
   --destructive-foreground: #ffffff;
   --ring: #E8622A;
+  --input: rgba(255,255,255,0.10);
+  --popover: #141418;
+  --popover-foreground: #F0F0EB;
+
   --input-bg: #1A1A1F;
   --input-bg-hover: #202026;
   --input-border: rgba(255,255,255,0.10);
   --placeholder: #5C5C58;
   --sidebar-bg: #0F0F15;
   --header-bg: #0A0A0F;
-  --primary: #E8622A;
   --primary-hover: #D4561F;
   --primary-subtle: rgba(232,98,42,0.08);
   --text-muted: #5C5C58;
   --text-secondary: #A8A8A2;
-  --destructive-subtle-shad: rgba(196,74,58,0.08);
-  --surface-hover: #1E1E24;
-  --input: rgba(255,255,255,0.10);
 }
 
 @layer base {
@@ -155,6 +153,28 @@
 
   .label { font-size: 11px; font-weight: 500; letter-spacing: 0.03em; text-transform: uppercase; color: var(--text-3); }
   .text-muted { font-size: 12px; font-weight: 400; color: var(--text-3); }
+
+  .dialog-overlay {
+    position: fixed; inset: 0; z-index: 50;
+    background: rgba(0, 0, 0, 0.55);
+    display: flex; align-items: center; justify-content: center;
+    opacity: 0; visibility: hidden;
+    transition: opacity 0.2s ease, visibility 0.2s ease;
+  }
+  .dialog-overlay.open { opacity: 1; visibility: visible; }
+  .dialog-content {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 20px;
+    max-width: 400px;
+    width: 90%;
+    max-height: 85vh;
+    overflow-y: auto;
+    transform: scale(0.97);
+    transition: transform 0.2s ease;
+  }
+  .dialog-overlay.open .dialog-content { transform: scale(1); }
 }
 
 @layer utilities {
@@ -178,6 +198,16 @@
   0%, 100% { opacity: 0.3 }
   50% { opacity: 0.6 }
 }
+@keyframes balanceNegative {
+  0%, 100% { background: rgba(196,74,58,0.04); }
+  50% { background: rgba(196,74,58,0.12); }
+}
+@keyframes balancePositive {
+  0%, 100% { background: rgba(61,154,110,0.04); }
+  50% { background: rgba(61,154,110,0.10); }
+}
+.animate-balance-negative { animation: balanceNegative 2s ease-in-out infinite; }
+.animate-balance-positive { animation: balancePositive 2s ease-in-out infinite; }
 
 @media (max-width: 768px) {
   .sidebar-desktop { display: none; }
