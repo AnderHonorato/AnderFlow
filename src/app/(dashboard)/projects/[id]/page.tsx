@@ -52,6 +52,33 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
   const [stepTimes, setStepTimes] = useState<Record<number, number>>({})
   const [delayMargin, setDelayMargin] = useState(20)
   const [briefingOpen, setBriefingOpen] = useState(false)
+  const [infoRequestOpen, setInfoRequestOpen] = useState(false)
+  const [infoRequestMsg, setInfoRequestMsg] = useState('')
+  const [infoRequestLoading, setInfoRequestLoading] = useState(false)
+  const [clientReplyMsg, setClientReplyMsg] = useState('')
+  const [clientReplyLoading, setClientReplyLoading] = useState(false)
+
+  const setDefaultSteps = (projectData: any) => {
+    const hasBriefing = !!projectData.briefing
+    const init = DEFAULT_STEPS.map(s => ({
+      id: s.id,
+      status: (hasBriefing && s.id === 1 ? 'completed' : 'waiting') as NodeStatus,
+      timeEstimate: '',
+      comments: hasBriefing && s.id === 1
+        ? [{ text: 'Briefing preenchido pelo cliente', author: projectData.client?.name || 'Cliente', time: new Date(projectData.createdAt).toLocaleString('pt-BR'), type: 'text' as const }]
+        : [],
+    }))
+    setSteps(init)
+    if (hasBriefing) {
+      const initHistory = [{
+        time: new Date(projectData.createdAt).toLocaleString('pt-BR'),
+        action: '"Briefing" → Concluido (preenchido pelo cliente)',
+        author: projectData.client?.name || 'Cliente',
+      }]
+      setHistory(initHistory)
+      try { localStorage.setItem(`project_history_${id}`, JSON.stringify(initHistory)) } catch {}
+    }
+  }
 
   const totalDays = Object.values(stepTimes).reduce((sum, d) => sum + d, 0)
   const totalWithMargin = Math.ceil(totalDays * (1 + delayMargin / 100))
@@ -68,14 +95,16 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
       .then(r => r.json())
       .then(json => {
         if (json.data) {
-          setProject(json.data)
+          const projectData = json.data
+          setProject(projectData)
           const savedSteps = localStorage.getItem(`anderflow_project_steps_${id}`)
-          if (savedSteps) {
+          // Prioridade: DB > localStorage > default
+          if (projectData.stepsData) {
+            try { setSteps(JSON.parse(projectData.stepsData)) } catch { setDefaultSteps(projectData) }
+          } else if (savedSteps) {
             setSteps(JSON.parse(savedSteps))
           } else {
-            setSteps(DEFAULT_STEPS.map(s => ({
-              id: s.id, status: 'waiting' as NodeStatus, timeEstimate: '', comments: [],
-            })))
+            setDefaultSteps(projectData)
           }
           try {
             const savedHistory = localStorage.getItem(`project_history_${id}`)
@@ -90,6 +119,12 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
   const saveSteps = (newSteps: StepState[]) => {
     setSteps(newSteps)
     localStorage.setItem(`anderflow_project_steps_${id}`, JSON.stringify(newSteps))
+    // Salvar no banco para compartilhar entre admin e cliente
+    fetch(`/api/projects/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ stepsData: JSON.stringify(newSteps) }),
+    }).catch(() => {})
   }
 
   const updateStepStatus = (stepId: number, status: NodeStatus) => {
@@ -134,7 +169,17 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
   }
 
   const updateTimeEstimate = (stepId: number, time: string) => {
+    const step = DEFAULT_STEPS.find(s => s.id === stepId)
+    const oldValue = steps.find(s => s.id === stepId)?.timeEstimate || 'nao definido'
     saveSteps(steps.map(s => s.id === stepId ? { ...s, timeEstimate: time } : s))
+    const entry = {
+      time: new Date().toLocaleString('pt-BR'),
+      action: `Prazo de "${step?.label}" estendido: ${oldValue} → ${new Date(time + 'T00:00:00').toLocaleDateString('pt-BR')}`,
+      author: session?.user?.name || 'Admin',
+    }
+    const newHistory = [entry, ...history]
+    setHistory(newHistory)
+    try { localStorage.setItem(`project_history_${id}`, JSON.stringify(newHistory)) } catch {}
   }
 
   const handleApprove = async () => {
@@ -174,6 +219,121 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
     } else {
       toast.error('Erro ao recusar projeto')
     }
+  }
+
+  const handleInfoRequest = async () => {
+    if (!infoRequestMsg.trim()) return
+    setInfoRequestLoading(true)
+    try {
+      const res = await fetch('/api/notifications', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: project.clientId,
+          type: 'INFO_REQUEST',
+          title: 'Solicitacao de dados extras',
+          message: infoRequestMsg,
+          metadata: JSON.stringify({ projectId: id }),
+        }),
+      })
+      if (res.ok) {
+        toast.success('Solicitacao enviada ao cliente')
+
+        // Travar fluxo: voltar etapa Briefing para aguardando resposta
+        const newSteps = steps.map(s => {
+          if (s.id === 1) {
+            return {
+              ...s,
+              status: 'paused' as NodeStatus,
+              comments: [...s.comments, {
+                text: `[SOL. DADOS] ${infoRequestMsg}`,
+                author: session?.user?.name || 'Admin',
+                time: new Date().toLocaleString('pt-BR'),
+                type: 'text' as const,
+              }],
+            }
+          }
+          return s
+        })
+        saveSteps(newSteps)
+
+        // Historico
+        const entry = {
+          time: new Date().toLocaleString('pt-BR'),
+          action: 'Solicitacao de dados extras enviada ao cliente',
+          author: session?.user?.name || 'Admin',
+        }
+        const newHistory = [entry, ...history]
+        setHistory(newHistory)
+        try { localStorage.setItem(`project_history_${id}`, JSON.stringify(newHistory)) } catch {}
+
+        setInfoRequestOpen(false)
+        setInfoRequestMsg('')
+      } else {
+        toast.error('Erro ao enviar solicitacao')
+      }
+    } catch {
+      toast.error('Erro ao enviar solicitacao')
+    }
+    setInfoRequestLoading(false)
+  }
+
+  const handleClientReply = async () => {
+    if (!clientReplyMsg.trim()) return
+    setClientReplyLoading(true)
+    try {
+      // Salvar resposta na etapa Briefing
+      const newSteps = steps.map(s => {
+        if (s.id === 1) {
+          return {
+            ...s,
+            status: 'completed' as NodeStatus,
+            comments: [...s.comments, {
+              text: `[RESPOSTA] ${clientReplyMsg}`,
+              author: session?.user?.name || 'Cliente',
+              time: new Date().toLocaleString('pt-BR'),
+              type: 'text' as const,
+            }],
+          }
+        }
+        return s
+      })
+      saveSteps(newSteps)
+
+      // Historico
+      const entry = {
+        time: new Date().toLocaleString('pt-BR'),
+        action: 'Cliente respondeu a solicitacao de dados',
+        author: session?.user?.name || 'Cliente',
+      }
+      const newHistory = [entry, ...history]
+      setHistory(newHistory)
+      try { localStorage.setItem(`project_history_${id}`, JSON.stringify(newHistory)) } catch {}
+
+      // Notificar admins
+      const adminsRes = await fetch('/api/admins')
+      const adminsJson = await adminsRes.json()
+      const admins = adminsJson.data || []
+      for (const admin of admins) {
+        await fetch('/api/notifications', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: admin.id,
+            type: 'INFO_REQUEST',
+            title: 'Cliente respondeu dados extras',
+            message: `${project.client?.name || 'Cliente'} enviou resposta: ${clientReplyMsg.slice(0, 100)}`,
+            metadata: JSON.stringify({ projectId: id }),
+          }),
+        })
+      }
+
+      toast.success('Resposta enviada ao desenvolvedor')
+      setClientReplyMsg('')
+    } catch {
+      toast.error('Erro ao enviar resposta')
+    }
+    setClientReplyLoading(false)
   }
 
   const handleClientResponse = async (action: 'accept' | 'reject') => {
@@ -223,6 +383,11 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
     status: s.status, timeEstimate: s.timeEstimate, comments: s.comments,
   }))
 
+  const briefingStep = steps.find(s => s.id === 1)
+  const infoRequestComments = briefingStep?.comments?.filter(c => c.text.startsWith('[SOL. DADOS]')) || []
+  const hasClientReplied = briefingStep?.comments?.some(c => c.text.startsWith('[RESPOSTA]'))
+  const lastInfoRequest = infoRequestComments[infoRequestComments.length - 1]
+
   if (loading) return <div className="p-6 space-y-4"><Skeleton className="h-8 w-64" /><Skeleton className="h-96" /></div>
   if (!project) return <div className="p-6"><p className="text-[var(--text-3)]">Projeto nao encontrado</p></div>
 
@@ -236,7 +401,14 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
         <CardContent className="p-4">
           <div className="flex items-start justify-between">
             <div>
-              <h1 className="text-[17px] font-[500] tracking-[-0.015em]">{project.name}</h1>
+              <div className="flex items-center gap-2">
+                <h1 className="text-[17px] font-[500] tracking-[-0.015em]">{project.name}</h1>
+                {project.number && (
+                  <span className="text-[11px] font-[500] text-[var(--text-3)] bg-[var(--surface-2)] px-2 py-0.5 rounded">
+                    {project.number}
+                  </span>
+                )}
+              </div>
               <p className="text-[12px] text-[var(--text-3)] mt-1">{project.description}</p>
               <div className="flex items-center gap-3 mt-3">
                 <Badge status={isCancelled ? 'CANCELLED' : (isPending ? 'PENDING' : (isDraft ? 'DRAFT' : (isReview ? 'REVIEW' : (project.status === 'COMPLETED' ? 'COMPLETED' : 'IN_PROGRESS'))))}>
@@ -259,6 +431,13 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                 </div>
               )}
 
+              {isClient && isPending && (
+                <div className="mt-3 p-3 rounded-lg bg-[var(--warning-subtle)] border border-[var(--warning)]/20">
+                  <p className="text-[13px] text-[var(--warning)]">Sua solicitacao esta em analise pelo desenvolvedor.</p>
+                  <p className="text-[11px] text-[var(--text-3)] mt-1">Aguarde ate 24 horas que retornamos com uma resposta.</p>
+                </div>
+              )}
+
               {project.proposalMessage && (
                 <div className="mt-3 p-3 rounded-lg bg-[var(--surface-2)] border border-[var(--border)]">
                   <p className="text-[13px] text-[var(--text)]">{project.proposalMessage}</p>
@@ -271,7 +450,16 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
               {project.briefing && (() => {
                 try {
                   JSON.parse(project.briefing)
-                  return <Button variant="outline" size="sm" onClick={() => setBriefingOpen(true)} className="h-7 text-[11px]">Ver Briefing</Button>
+                  return (
+                    <div className="flex items-center gap-2">
+                      <Button variant="outline" size="sm" onClick={() => setBriefingOpen(true)} className="h-7 text-[11px]">Ver Briefing</Button>
+                      {isAdmin && isPending && (
+                        <Button variant="outline" size="sm" onClick={() => { setInfoRequestMsg(''); setInfoRequestOpen(true) }} className="h-7 text-[11px] text-[var(--info)] border-[var(--info)]/30">
+                          Sol. mais dados
+                        </Button>
+                      )}
+                    </div>
+                  )
                 } catch { return null }
               })()}
 
@@ -301,6 +489,31 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
               {isClient && project.contractSignedAt && (
                 <div className="mt-3 p-3 rounded-lg bg-[var(--success-subtle)] border border-[var(--success)]/20">
                   <p className="text-[13px] text-[var(--success)]">Contrato assinado em {new Date(project.contractSignedAt).toLocaleDateString('pt-BR')}</p>
+                </div>
+              )}
+
+              {isClient && isPending && lastInfoRequest && !hasClientReplied && (
+                <div className="mt-3 p-3 rounded-lg bg-[var(--info-subtle)] border border-[var(--info)]/20">
+                  <p className="text-[13px] font-[500] text-[var(--info)] mb-1">Desenvolvedor solicita dados extras:</p>
+                  <p className="text-[12px] text-[var(--text)] whitespace-pre-wrap">{lastInfoRequest.text.replace('[SOL. DADOS] ', '')}</p>
+                  <div className="mt-3 flex items-start gap-2">
+                    <textarea
+                      className="flex-1 min-h-[60px] rounded-lg bg-[var(--surface-2)] border border-[var(--border)] px-3 py-2 text-[12px] text-[var(--text)] placeholder:text-[var(--text-3)] focus:outline-none focus:border-[var(--accent)] resize-vertical"
+                      placeholder="Digite sua resposta com as informacoes solicitadas..."
+                      value={clientReplyMsg}
+                      onChange={e => setClientReplyMsg(e.target.value)}
+                    />
+                    <Button size="sm" onClick={handleClientReply} disabled={clientReplyLoading || !clientReplyMsg.trim()} className="h-8 text-[11px]">
+                      {clientReplyLoading && <IconLoader className="w-[12px] h-[12px] animate-spin" />}
+                      Responder
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {isClient && isPending && hasClientReplied && (
+                <div className="mt-3 p-3 rounded-lg bg-[var(--success-subtle)] border border-[var(--success)]/20">
+                  <p className="text-[12px] text-[var(--success)]">Voce ja respondeu a solicitacao de dados. Aguarde a analise do desenvolvedor.</p>
                 </div>
               )}
             </div>
@@ -519,28 +732,23 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                 if (template?.stages) {
                   return template.stages.map((stage: any, si: number) => (
                     <div key={si} className="border border-[var(--border)] rounded-lg p-3">
-                      <h4 className="text-[13px] font-[500] text-[var(--text)] mb-2">{stage.label}</h4>
+                      <h4 className="text-[13px] font-[500] text-[var(--text)] mb-2">{stage.title || stage.label}</h4>
                       <div className="space-y-2">
-                        {stage.sections?.map((section: any, ssi: number) => (
-                          <div key={ssi}>
-                            <p className="text-[11px] font-[500] text-[var(--text-3)] uppercase">{section.label}</p>
-                            {section.questions?.map((q: any, qi: number) => {
-                              const key = `${stage.id}_${section.id}_${q.id}`
-                              const value = answers[key]
-                              const label = q.options?.[value] || value
-                              return (
-                                <div key={qi} className="flex items-start gap-2 mt-1">
-                                  <span className="text-[12px] text-[var(--text-2)]">{q.label}:</span>
-                                  <span className="text-[12px] text-[var(--text)]">
-                                    {Array.isArray(value)
-                                      ? value.map((v: string) => q.options?.[v] || v).join(', ')
-                                      : (label || '-')}
-                                  </span>
-                                </div>
-                              )
-                            })}
-                          </div>
-                        ))}
+                        {stage.questions?.map((q: any, qi: number) => {
+                          const value = answers[q.id]
+                          const display = Array.isArray(value)
+                            ? value.map((v: string) => (typeof v === 'string' && v.length > 30 ? v : (q.options?.[v] || v))).join(', ')
+                            : (typeof value === 'string' && value.length > 40 ? value : (q.options?.[value] || value || '-'))
+                          return (
+                            <div key={qi} className="flex items-start gap-2">
+                              <span className="text-[12px] text-[var(--text-2)] shrink-0 min-w-[110px]">{q.label}:</span>
+                              <span className="text-[12px] text-[var(--text)] break-words">{display}</span>
+                            </div>
+                          )
+                        })}
+                        {(!stage.questions || stage.questions.length === 0) && (
+                          <p className="text-[12px] text-[var(--text-3)]">Nenhuma pergunta nesta etapa</p>
+                        )}
                       </div>
                     </div>
                   ))
@@ -548,8 +756,8 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                 return <div className="space-y-2">
                   {Object.entries(answers).map(([key, value]: [string, any]) => (
                     <div key={key} className="flex items-start gap-2">
-                      <span className="text-[12px] text-[var(--text-3)] shrink-0">{key}:</span>
-                      <span className="text-[12px] text-[var(--text)]">{typeof value === 'string' ? value : JSON.stringify(value)}</span>
+                      <span className="text-[12px] text-[var(--text-3)] shrink-0 min-w-[140px]">{key.replace(/_/g, ' ')}:</span>
+                      <span className="text-[12px] text-[var(--text)] break-words">{typeof value === 'string' ? value : JSON.stringify(value)}</span>
                     </div>
                   ))}
                 </div>
@@ -572,6 +780,35 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
           <DialogFooter>
             <Button variant="outline" onClick={() => setBriefingOpen(false)}>Fechar</Button>
             <Button onClick={() => window.print()} size="sm">Baixar PDF</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={infoRequestOpen} onOpenChange={setInfoRequestOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Solicitar Dados Extras ao Cliente</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <p className="text-[12px] text-[var(--text-2)]">
+              O cliente recebera uma notificacao com sua mensagem e podera responder com as informacoes solicitadas.
+            </p>
+            <div className="space-y-2">
+              <label>O que voce precisa saber?</label>
+              <textarea
+                className="w-full min-h-[120px] rounded-lg bg-[var(--surface-2)] border border-[var(--border)] px-3 py-2 text-[13px] text-[var(--text)] placeholder:text-[var(--text-3)] focus:outline-none focus:border-[var(--accent)] resize-vertical"
+                placeholder="Descreva as informacoes ou documentos que o cliente precisa enviar..."
+                value={infoRequestMsg}
+                onChange={e => setInfoRequestMsg(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setInfoRequestOpen(false)}>Cancelar</Button>
+            <Button onClick={handleInfoRequest} disabled={infoRequestLoading || !infoRequestMsg.trim()}>
+              {infoRequestLoading && <IconLoader className="w-[14px] h-[14px] animate-spin" />}
+              Enviar solicitacao
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

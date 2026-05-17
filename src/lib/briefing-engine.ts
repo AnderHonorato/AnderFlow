@@ -362,7 +362,7 @@ export function generateSummary(categoryId: string, answers: Record<string, any>
   const parts: string[] = []
 
   const objective = answers.main_objective
-  if (objective) parts.push(`Cliente deseja: ${objective.slice(0, 120)}`)
+  if (objective) parts.push(`Solicitacao: ${objective.slice(0, 120)}`)
 
   const budget = answers.budget
   if (budget) parts.push(`Orçamento: ${budget}`)

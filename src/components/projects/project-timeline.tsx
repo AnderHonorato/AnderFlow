@@ -97,17 +97,19 @@ export function ProjectTimeline({
   const [extendOpen, setExtendOpen] = useState<string | null>(null)
   const [newDeadline, setNewDeadline] = useState('')
   const [extendReason, setExtendReason] = useState('')
+  const [expandedCompleted, setExpandedCompleted] = useState<number | null>(null)
 
   const activeIndex = active ? nodes.findIndex(n => n.id === active.id) : -1
   const total = nodes.length
 
   const handleExtendDeadline = (nodeId: number) => {
-    const node = nodes.find(n => n.id === nodeId)
-    if (!newDeadline || !extendReason.trim() || !node) return
-
     const step = nodes.find(n => n.id === nodeId)
+    if (!newDeadline || !extendReason.trim() || !step) return
+
     if (onTimeChange) onTimeChange(nodeId, newDeadline)
-    toast.success(`Prazo de "${step?.label}" estendido para ${new Date(newDeadline).toLocaleDateString('pt-BR')}`)
+
+    const toastMsg = `Prazo de "${step.label}" estendido para ${new Date(newDeadline + 'T00:00:00').toLocaleDateString('pt-BR')}`
+    toast.success(toastMsg)
 
     setExtendOpen(null)
     setNewDeadline('')
@@ -116,7 +118,7 @@ export function ProjectTimeline({
 
   return (
     <div className={cn('space-y-4', className)}>
-      {active && onStatusChange && (
+      {active && (
         <div className="p-4 rounded-xl border border-[var(--accent)]/20 bg-[var(--accent-subtle)]/30">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
@@ -243,16 +245,47 @@ export function ProjectTimeline({
           <span className="text-[10px] font-[500] text-[var(--text-3)] uppercase tracking-wider mb-2 block">
             Concluido
           </span>
-          <div className="flex items-center gap-2 flex-wrap">
-            {completed.map(n => (
-              <span
-                key={n.id}
-                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] bg-[var(--success-subtle)]"
-              >
-                <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="var(--success)" strokeWidth="1.5"><path d="M2 5l2 2 4-4"/></svg>
-                <span className="text-[var(--success)] font-[500]">{n.label}</span>
-              </span>
-            ))}
+          <div className="space-y-1.5">
+            {completed.map(n => {
+              const isExpanded = expandedCompleted === n.id
+              return (
+                <div key={n.id} id={`step-${n.id}`}>
+                  <button
+                    onClick={() => setExpandedCompleted(isExpanded ? null : n.id)}
+                    className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-[var(--surface)] transition-colors text-left group"
+                  >
+                    <NodeIcon status={n.status} nodeId={n.id} />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[13px] font-[500] text-[var(--text)]">{n.label}</span>
+                        <StatusLabel status={n.status} />
+                      </div>
+                      <p className="text-[12px] text-[var(--text-3)] truncate">{n.description}</p>
+                    </div>
+                    <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"
+                      className={`transition-transform text-[var(--text-3)] ${isExpanded ? 'rotate-180' : ''}`}>
+                      <path d="M4 6l4 4 4-4"/>
+                    </svg>
+                  </button>
+                  {isExpanded && n.comments && n.comments.length > 0 && (
+                    <div className="ml-10 mt-1 mb-2 space-y-1.5 bg-[var(--surface)] rounded-lg p-2.5 animate-expand">
+                      {n.comments.map((c, ci) => (
+                        <div key={ci} className="text-[12px]">
+                          <span className="font-[500] text-[var(--accent)]">{c.author}</span>
+                          <span className="text-[var(--text-3)] ml-1">{c.time}</span>
+                          <p className="mt-0.5 text-[var(--text-2)]">{c.text.replace(/^\[SOL\. DADOS\]\s*/, '').replace(/^\[RESPOSTA\]\s*/, '')}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {isExpanded && (!n.comments || n.comments.length === 0) && (
+                    <div className="ml-10 mt-1 mb-2 p-2.5 rounded-lg bg-[var(--surface)] animate-expand">
+                      <p className="text-[12px] text-[var(--text-3)]">Nenhum registro de atividade nesta etapa</p>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
           </div>
         </div>
       )}

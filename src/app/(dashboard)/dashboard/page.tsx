@@ -125,6 +125,7 @@ export default function DashboardPage() {
                   <div key={project.id} className="flex items-center gap-3 rounded-lg px-2 py-2 transition-colors hover:bg-[var(--surface-hover)]">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
+                        {project.number && <span className="text-[10px] font-[500] text-[var(--text-3)]">{project.number}</span>}
                         <p className="text-[13px] font-[500] truncate">{project.name}</p>
                         <Badge status={project.status}>
                           {project.status === 'COMPLETED' ? 'Concluido' : project.status === 'REVIEW' ? 'Revisao' : project.status === 'PENDING' ? 'Solicitacao' : project.status === 'DRAFT' ? 'Rascunho' : 'Em andamento'}

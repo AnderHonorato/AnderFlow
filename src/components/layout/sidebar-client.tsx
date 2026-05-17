@@ -114,7 +114,7 @@ export function SidebarClient() {
         mobileMenuOpen ? 'translate-x-0' : '-translate-x-full',
         'lg:translate-x-0 lg:flex',
         collapsed ? 'w-[60px]' : 'w-[220px]'
-      )} suppressHydrationWarning style={{ transition: 'width var(--motion-medium) var(--ease-standard)' }}>
+      )} suppressHydrationWarning>
         <div className={cn(
           'flex h-12 items-center border-b border-[var(--border)] px-3',
           collapsed ? 'justify-center' : 'justify-between'

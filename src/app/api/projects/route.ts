@@ -5,19 +5,17 @@ import { getSessionUser, isAdmin } from '@/lib/auth-utils'
 export async function GET(request: NextRequest) {
   try {
     const user = await getSessionUser(request)
+    if (!user) {
+      return NextResponse.json({ error: 'Nao autenticado' }, { status: 401 })
+    }
     const { searchParams } = new URL(request.url)
     const where: any = { isArchived: false }
     const status = searchParams.get('status')
     if (status) where.status = status
 
-    // CLIENT: filtra apenas seus projetos
-    // Se user é null (SSR / sessao expirada), retorna sem filtro de clientId
-    // Admin ve tudo; cliente nao-autenticado ve array vazio abaixo
-    if (user && !isAdmin(user)) {
+    // CLIENT: filtra apenas seus projetos. Admin ve tudo.
+    if (!isAdmin(user)) {
       where.clientId = user.id
-    }
-    if (!user) {
-      return NextResponse.json({ data: [] })
     }
 
     const projects = await prisma.project.findMany({
@@ -30,8 +28,9 @@ export async function GET(request: NextRequest) {
     })
 
     return NextResponse.json({ data: projects })
-  } catch {
-    return NextResponse.json({ data: [], error: 'Erro' }, { status: 200 })
+  } catch (error: any) {
+    console.error('[projects GET]', error?.message || error)
+    return NextResponse.json({ data: [], error: error?.message || 'Erro' }, { status: 500 })
   }
 }
 
@@ -99,6 +98,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ data: project }, { status: 201 })
   } catch (error: any) {
     console.error('[projects] POST error:', error?.message || error)
-    return NextResponse.json({ error: error?.message || 'Erro ao criar projeto' }, { status: 200 })
+    return NextResponse.json({ error: error?.message || 'Erro ao criar projeto' }, { status: 500 })
   }
 }

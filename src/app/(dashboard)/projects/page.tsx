@@ -51,7 +51,10 @@ function ProjectCard({ project, onView, onArchive, index = 0 }: {
 
         <div className="flex items-start justify-between">
           <div className="flex-1 min-w-0">
-            <p className="text-[13px] font-[500] truncate">{project.name}</p>
+            <div className="flex items-center gap-1.5">
+              {project.number && <span className="text-[10px] font-[500] text-[var(--text-3)] shrink-0">{project.number}</span>}
+              <p className="text-[13px] font-[500] truncate">{project.name}</p>
+            </div>
             <p className="text-[11px] text-[var(--text-3)] mt-0.5">{project.client?.company || project.client?.name}</p>
           </div>
           <DropdownMenu>
@@ -239,6 +242,7 @@ export default function ProjectsPage() {
                 <div key={project.id} className="flex items-center gap-4 p-3 hover:bg-[var(--surface-hover)] transition-colors cursor-pointer" onClick={() => handleViewProject(project.id)}>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
+                      {project.number && <span className="text-[10px] font-[500] text-[var(--text-3)]">{project.number}</span>}
                       <p className="text-[13px] font-[500]">{project.name}</p>
                       <Badge variant={project.priority === 'URGENT' ? 'destructive' : project.priority === 'HIGH' ? 'warning' : 'secondary'}>
                         {project.priority}

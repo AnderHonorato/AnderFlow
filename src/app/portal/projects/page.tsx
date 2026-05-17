@@ -40,6 +40,7 @@ export default function PortalProjects() {
             <CardContent className="p-4 flex items-center gap-4">
               <div className="flex-1">
                 <div className="flex items-center gap-2">
+                  {p.number && <span className="text-[10px] font-[500] text-[var(--text-3)]">{p.number}</span>}
                   <p className="text-[13px] font-[500]">{p.name}</p>
                   <Badge status={p.status === 'COMPLETED' ? 'COMPLETED' : p.status === 'REVIEW' ? 'REVIEW' : p.status === 'PENDING' ? 'PENDING' : p.status === 'DRAFT' ? 'DRAFT' : p.status === 'TODO' ? 'TODO' : 'IN_PROGRESS'}>
                     {p.status === 'COMPLETED' ? 'Concluido' : p.status === 'REVIEW' ? 'Revisao' : p.status === 'PENDING' ? 'Solicitacao' : p.status === 'DRAFT' ? 'Rascunho' : p.status === 'TODO' ? 'A fazer' : 'Em andamento'}
@@ -51,9 +52,15 @@ export default function PortalProjects() {
                   )}
                 </div>
                 <p className="text-[12px] text-[var(--text-3)] mt-1">{p.description}</p>
-                <p className="text-[11px] text-[var(--text-3)] mt-1">
-                  Prazo: {p.deadline ? new Date(p.deadline).toLocaleDateString('pt-BR') : 'Nao definido'}
-                </p>
+                {p.status === 'PENDING' ? (
+                  <p className="text-[11px] text-[var(--warning)] mt-1">
+                    Sua solicitacao esta em analise. Aguarde ate 24 horas que retornamos com uma resposta.
+                  </p>
+                ) : (
+                  <p className="text-[11px] text-[var(--text-3)] mt-1">
+                    Prazo: {p.deadline ? new Date(p.deadline).toLocaleDateString('pt-BR') : 'Nao definido'}
+                  </p>
+                )}
               </div>
               <div className="flex items-center gap-3">
                 <Progress value={p.progress || 0} className="w-32 h-[2px]" />
