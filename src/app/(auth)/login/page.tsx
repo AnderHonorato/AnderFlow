@@ -7,6 +7,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Separator } from '@/components/ui/separator'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Eye, EyeOff, Loader2, AlertCircle } from 'lucide-react'
 
 function LoginForm() {
@@ -18,6 +19,7 @@ function LoginForm() {
   const [error, setError] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [rememberMe, setRememberMe] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -28,10 +30,11 @@ function LoginForm() {
       email,
       password,
       redirect: false,
+      rememberMe: rememberMe ? 'true' : 'false',
     })
 
     if (result?.error) {
-      setError('Email ou senha inválidos')
+      setError(result.error || 'Email ou senha invalidos')
       setIsLoading(false)
     } else {
       router.push(callbackUrl)
@@ -47,9 +50,7 @@ function LoginForm() {
     <div className="space-y-6">
       <div className="space-y-2">
         <h1 className="text-2xl font-semibold tracking-tight">Entrar</h1>
-        <p className="text-sm text-muted-foreground">
-          Acesse sua conta para continuar
-        </p>
+        <p className="text-sm text-muted-foreground">Acesse sua conta para continuar</p>
       </div>
 
       <div className="space-y-3">
@@ -65,66 +66,39 @@ function LoginForm() {
       </div>
 
       <div className="relative">
-        <div className="absolute inset-0 flex items-center">
-          <Separator />
-        </div>
-        <div className="relative flex justify-center text-xs uppercase">
-          <span className="bg-background px-2 text-muted-foreground">ou</span>
-        </div>
+        <div className="absolute inset-0 flex items-center"><Separator /></div>
+        <div className="relative flex justify-center text-xs uppercase"><span className="bg-background px-2 text-muted-foreground">ou</span></div>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         {error && (
           <div className="flex items-center gap-2 rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
-            <AlertCircle className="h-4 w-4 shrink-0" />
-            {error}
+            <AlertCircle className="h-4 w-4 shrink-0" />{error}
           </div>
         )}
         <div className="space-y-2">
-          <label className="text-sm font-medium" htmlFor="email">
-            Email
-          </label>
-          <Input
-            id="email"
-            type="email"
-            placeholder="seu@email.com"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            className="h-11"
-          />
+          <label className="text-sm font-medium" htmlFor="email">Email</label>
+          <Input id="email" type="email" placeholder="seu@email.com" value={email} onChange={(e) => setEmail(e.target.value)} required className="h-11" />
         </div>
 
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <label className="text-sm font-medium" htmlFor="password">
-              Senha
-            </label>
-            <Link
-              href="/forgot-password"
-              className="text-xs text-primary hover:underline"
-            >
-              Esqueceu a senha?
-            </Link>
+            <label className="text-sm font-medium" htmlFor="password">Senha</label>
+            <Link href="/forgot-password" className="text-xs text-primary hover:underline">Esqueceu a senha?</Link>
           </div>
           <div className="relative">
-            <Input
-              id="password"
-              type={showPassword ? 'text' : 'password'}
-              placeholder="••••••••"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              className="h-11 pr-10"
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-            >
+            <Input id="password" type={showPassword ? 'text' : 'password'} placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} required className="h-11 pr-10" />
+            <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
               {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
             </button>
           </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <Checkbox id="rememberMe" checked={rememberMe} onCheckedChange={(v) => setRememberMe(!!v)} />
+          <label htmlFor="rememberMe" className="text-sm text-muted-foreground cursor-pointer">
+            Permanecer conectado por 30 dias
+          </label>
         </div>
 
         <Button type="submit" className="w-full h-11" disabled={isLoading}>
@@ -133,12 +107,17 @@ function LoginForm() {
         </Button>
       </form>
 
-      <p className="text-center text-sm text-muted-foreground">
-        Não tem uma conta?{' '}
-        <Link href="/register" className="text-primary hover:underline font-medium">
-          Criar conta
-        </Link>
-      </p>
+      <div className="space-y-2">
+        <p className="text-center text-sm text-muted-foreground">
+          Não tem uma conta?{' '}
+          <Link href="/register" className="text-primary hover:underline font-medium">Criar conta</Link>
+        </p>
+        <p className="text-center text-sm">
+          <Link href="/pre-register" className="text-xs text-[var(--accent)] hover:underline">
+            Já fez pré-cadastro pelo WhatsApp? Clique aqui
+          </Link>
+        </p>
+      </div>
     </div>
   )
 }

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { useTheme } from 'next-themes'
 import { useSession } from 'next-auth/react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
@@ -20,11 +21,13 @@ import { cn } from '@/lib/utils'
 
 const categories = [
   { id: 'general', label: 'Geral', icon: IconSettings },
-  { id: 'notifications', label: 'Notificacoes', icon: IconNotification },
-  { id: 'appearance', label: 'Aparencia', icon: IconProject },
-  { id: 'security', label: 'Seguranca', icon: IconLogout },
-  { id: 'modules', label: 'Modulos', icon: IconAutomation },
-]
+  { id: 'notifications', label: 'Notificações', icon: IconNotification },
+  { id: 'appearance', label: 'Aparência', icon: IconProject },
+  { id: 'security', label: 'Segurança', icon: IconLogout },
+  { id: 'modules', label: 'Módulos', icon: IconAutomation },
+  { id: 'integrations', label: 'Integrações', icon: IconAutomation, href: '/settings/integrations' },
+  { id: 'api-keys', label: 'Chaves de API', icon: IconSettings, href: '/settings/api-keys' },
+] as const
 
 const modules = [
   { id: 'projects', label: 'Projetos', enabled: true },
@@ -34,18 +37,19 @@ const modules = [
   { id: 'contracts', label: 'Contratos', enabled: true },
   { id: 'tickets', label: 'Tickets', enabled: true },
   { id: 'analytics', label: 'Analytics', enabled: true },
-  { id: 'automations', label: 'Automacoes', enabled: true },
+  { id: 'automations', label: 'Automações', enabled: true },
   { id: 'knowledge', label: 'Conhecimento', enabled: true },
 ]
 
 const supportItems = [
-  { key: 'emailNotifications', label: 'Notificacoes por email', desc: 'Receber alertas no email' },
-  { key: 'pushNotifications', label: 'Notificacoes push', desc: 'Notificacoes no navegador' },
-  { key: 'soundEnabled', label: 'Som', desc: 'Som ao receber notificacao' },
-  { key: 'weeklyReport', label: 'Relatorio semanal', desc: 'Resumo semanal por email' },
+  { key: 'emailNotifications', label: 'Notificações por email', desc: 'Receber alertas no email' },
+  { key: 'pushNotifications', label: 'Notificações push', desc: 'Notificações no navegador' },
+  { key: 'soundEnabled', label: 'Som', desc: 'Som ao receber notificação' },
+  { key: 'weeklyReport', label: 'Relatório semanal', desc: 'Resumo semanal por email' },
 ]
 
 export default function SettingsPage() {
+  const router = useRouter()
   const { theme, setTheme, resolvedTheme } = useTheme()
   const { data: session } = useSession()
   const [activeCategory, setActiveCategory] = useState('appearance')
@@ -66,7 +70,7 @@ export default function SettingsPage() {
 
   const saveSettings = () => {
     setSaved(true)
-    toast.success('Configuracoes salvas')
+    toast.success('Configurações salvas')
     setTimeout(() => setSaved(false), 2000)
   }
 
@@ -76,8 +80,8 @@ export default function SettingsPage() {
   return (
     <div className="p-6 space-y-5 animate-page-enter">
       <div>
-        <h1 className="text-[17px] font-[500] tracking-[-0.015em]">Configuracoes</h1>
-        <p className="text-[12px] text-[var(--text-3)] mt-1">Gerencie todas as configuracoes da plataforma</p>
+        <h1 className="text-[17px] font-[500] tracking-[-0.015em]">Configurações</h1>
+        <p className="text-[12px] text-[var(--text-3)] mt-1">Gerencie todas as configurações da plataforma</p>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[220px_1fr] items-start">
@@ -90,7 +94,15 @@ export default function SettingsPage() {
                 return (
                   <button
                     key={cat.id}
-                    onClick={() => setActiveCategory(cat.id)}
+                    onClick={() => {
+                      if (cat.id === 'integrations') {
+                        router.push('/settings/integrations')
+                      } else if (cat.id === 'api-keys') {
+                        router.push('/settings/api-keys')
+                      } else {
+                        setActiveCategory(cat.id)
+                      }
+                    }}
                     className={cn(
                       'w-full flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] transition-all duration-150 text-left',
                       active
@@ -111,7 +123,7 @@ export default function SettingsPage() {
           {activeCategory === 'appearance' && (
             <Card>
               <CardHeader>
-                <CardTitle>Aprencia</CardTitle>
+                <CardTitle>Aparência</CardTitle>
                 <CardDescription>Personalize o visual da plataforma</CardDescription>
               </CardHeader>
               <CardContent className="space-y-5">
@@ -158,18 +170,18 @@ export default function SettingsPage() {
           {activeCategory === 'general' && (
             <Card>
               <CardHeader>
-                <CardTitle>Configuracoes Gerais</CardTitle>
+                <CardTitle>Configurações Gerais</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <label>Nome da Organizacao</label>
+                  <label>Nome da Organização</label>
                   <Input value={orgName} onChange={e => setOrgName(e.target.value)} />
                 </div>
                 <Separator />
                 <div className="flex justify-end">
                   <Button onClick={saveSettings} size="sm">
                     {saved ? <IconCheck className="w-[14px] h-[14px]" /> : null}
-                    {saved ? 'Salvo' : 'Salvar Alteracoes'}
+                    {saved ? 'Salvo' : 'Salvar Alterações'}
                   </Button>
                 </div>
               </CardContent>
@@ -179,7 +191,7 @@ export default function SettingsPage() {
           {activeCategory === 'notifications' && (
             <Card>
               <CardHeader>
-                <CardTitle>Notificacoes</CardTitle>
+                <CardTitle>Notificações</CardTitle>
               </CardHeader>
               <CardContent className="space-y-1">
                 {supportItems.map((item) => (
@@ -204,12 +216,12 @@ export default function SettingsPage() {
           {activeCategory === 'security' && (
             <Card>
               <CardHeader>
-                <CardTitle>Seguranca</CardTitle>
+                <CardTitle>Segurança</CardTitle>
               </CardHeader>
               <CardContent className="space-y-1">
                 {[
-                  { label: 'Autenticacao 2FA', desc: 'Adicione uma camada extra de seguranca', action: 'Configurar' },
-                  { label: 'Sessoes Ativas', desc: 'Gerencie dispositivos conectados', action: 'Ver Sessoes' },
+                  { label: 'Autenticação 2FA', desc: 'Adicione uma camada extra de segurança', action: 'Configurar' },
+                  { label: 'Sessões Ativas', desc: 'Gerencie dispositivos conectados', action: 'Ver Sessões' },
                   { label: 'Alterar Senha', desc: 'Atualize sua senha de acesso', action: 'Alterar' },
                 ].map((item) => (
                   <div key={item.label} className="flex items-center justify-between py-2.5 px-2 rounded-lg hover:bg-[var(--surface-hover)]">
@@ -227,7 +239,7 @@ export default function SettingsPage() {
           {activeCategory === 'modules' && (
             <Card>
               <CardHeader>
-                <CardTitle>Modulos</CardTitle>
+                <CardTitle>Módulos</CardTitle>
                 <CardDescription>Ative ou desative funcionalidades da plataforma</CardDescription>
               </CardHeader>
               <CardContent className="space-y-1">

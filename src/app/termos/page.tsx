@@ -7,55 +7,55 @@ import { Input } from '@/components/ui/input'
 interface SectionDef { id: string; num: string; label: string; cat: string }
 
 const allSections: SectionDef[] = [
-  { id: 'aceitacao', num: '1', label: 'Aceitacao dos Termos', cat: 'geral' },
+  { id: 'aceitacao', num: '1', label: 'Aceitação dos Termos', cat: 'geral' },
   { id: 'partes', num: '2', label: 'Partes Envolvidas', cat: 'geral' },
-  { id: 'alteracoes', num: '3', label: 'Alteracoes nos Termos', cat: 'geral' },
-  { id: 'escopo', num: '4', label: 'Escopo dos Servicos', cat: 'servicos' },
+  { id: 'alteracoes', num: '3', label: 'Alterações nos Termos', cat: 'geral' },
+  { id: 'escopo', num: '4', label: 'Escopo dos Serviços', cat: 'servicos' },
   { id: 'etapas', num: '5', label: 'Etapas do Projeto', cat: 'servicos' },
-  { id: 'revisoes', num: '6', label: 'Revisoes e Alteracoes', cat: 'servicos' },
+  { id: 'revisoes', num: '6', label: 'Revisões e Alterações', cat: 'servicos' },
   { id: 'prazos', num: '7', label: 'Prazos e Atrasos', cat: 'servicos' },
-  { id: 'comunicacao', num: '8', label: 'Comunicacao Oficial', cat: 'servicos' },
-  { id: 'politica-pg', num: '9', label: 'Politica de Pagamentos', cat: 'pagamentos' },
-  { id: 'modelos', num: '10', label: 'Modelos de Cobranca', cat: 'pagamentos' },
+  { id: 'comunicacao', num: '8', label: 'Comunicação Oficial', cat: 'servicos' },
+  { id: 'politica-pg', num: '9', label: 'Política de Pagamentos', cat: 'pagamentos' },
+  { id: 'modelos', num: '10', label: 'Modelos de Cobrança', cat: 'pagamentos' },
   { id: 'parcelas', num: '11', label: 'Estrutura de Parcelas', cat: 'pagamentos' },
   { id: 'meios-pg', num: '12', label: 'Meios de Pagamento', cat: 'pagamentos' },
-  { id: 'atraso', num: '13', label: 'Atrasos e Inadimplencia', cat: 'pagamentos' },
-  { id: 'reembolso', num: '14', label: 'Politica de Reembolso', cat: 'pagamentos' },
+  { id: 'atraso', num: '13', label: 'Atrasos e Inadimplência', cat: 'pagamentos' },
+  { id: 'reembolso', num: '14', label: 'Política de Reembolso', cat: 'pagamentos' },
   { id: 'titularidade', num: '15', label: 'Titularidade dos Direitos', cat: 'propriedade' },
-  { id: 'cessao', num: '16', label: 'Cessao de Direitos', cat: 'propriedade' },
-  { id: 'portfolio', num: '17', label: 'Portfolio e Divulgacao', cat: 'propriedade' },
-  { id: 'terceiros', num: '18', label: 'Conteudo de Terceiros', cat: 'propriedade' },
+  { id: 'cessao', num: '16', label: 'Cessão de Direitos', cat: 'propriedade' },
+  { id: 'portfolio', num: '17', label: 'Portfólio e Divulgação', cat: 'propriedade' },
+  { id: 'terceiros', num: '18', label: 'Conteúdo de Terceiros', cat: 'propriedade' },
   { id: 'lgpd', num: '19', label: 'Conformidade LGPD', cat: 'privacidade' },
   { id: 'dados', num: '20', label: 'Dados Coletados', cat: 'privacidade' },
   { id: 'compartilhamento', num: '21', label: 'Compartilhamento', cat: 'privacidade' },
   { id: 'direitos', num: '22', label: 'Direitos do Titular', cat: 'privacidade' },
-  { id: 'retencao', num: '23', label: 'Retencao de Dados', cat: 'privacidade' },
+  { id: 'retencao', num: '23', label: 'Retenção de Dados', cat: 'privacidade' },
   { id: 'cookies', num: '24', label: 'Cookies', cat: 'privacidade' },
-  { id: 'periodo', num: '25', label: 'Periodo de Garantia', cat: 'garantia' },
+  { id: 'periodo', num: '25', label: 'Período de Garantia', cat: 'garantia' },
   { id: 'cobertura', num: '26', label: 'O que a Garantia Cobre', cat: 'garantia' },
-  { id: 'exclusoes', num: '27', label: 'Exclusoes da Garantia', cat: 'garantia' },
+  { id: 'exclusoes', num: '27', label: 'Exclusões da Garantia', cat: 'garantia' },
   { id: 'sla', num: '28', label: 'SLA de Atendimento', cat: 'garantia' },
-  { id: 'pos-garantia', num: '29', label: 'Suporte Pos-Garantia', cat: 'garantia' },
+  { id: 'pos-garantia', num: '29', label: 'Suporte Pós-Garantia', cat: 'garantia' },
   { id: 'resp-dev', num: '30', label: 'Responsabilidades do Desenvolvedor', cat: 'responsabilidades' },
   { id: 'resp-cliente', num: '31', label: 'Responsabilidades do Cliente', cat: 'responsabilidades' },
-  { id: 'limitacoes', num: '32', label: 'Limitacoes de Responsabilidade', cat: 'responsabilidades' },
-  { id: 'forca-maior', num: '33', label: 'Caso Fortuito e Forca Maior', cat: 'responsabilidades' },
-  { id: 'res-cliente', num: '34', label: 'Rescisao pelo Cliente', cat: 'rescisao' },
-  { id: 'res-dev', num: '35', label: 'Rescisao pelo Desenvolvedor', cat: 'rescisao' },
-  { id: 'efeitos', num: '36', label: 'Efeitos da Rescisao', cat: 'rescisao' },
-  { id: 'sobrevivencia', num: '37', label: 'Sobrevivencia de Clausulas', cat: 'rescisao' },
-  { id: 'disputas', num: '38', label: 'Resolucao de Disputas', cat: 'rescisao' },
+  { id: 'limitacoes', num: '32', label: 'Limitações de Responsabilidade', cat: 'responsabilidades' },
+  { id: 'forca-maior', num: '33', label: 'Caso Fortuito e Força Maior', cat: 'responsabilidades' },
+  { id: 'res-cliente', num: '34', label: 'Rescisão pelo Cliente', cat: 'rescisao' },
+  { id: 'res-dev', num: '35', label: 'Rescisão pelo Desenvolvedor', cat: 'rescisao' },
+  { id: 'efeitos', num: '36', label: 'Efeitos da Rescisão', cat: 'rescisao' },
+  { id: 'sobrevivencia', num: '37', label: 'Sobrevivência de Cláusulas', cat: 'rescisao' },
+  { id: 'disputas', num: '38', label: 'Resolução de Disputas', cat: 'rescisao' },
 ]
 
 const catLabels: Record<string, string> = {
-  geral: 'Visao Geral',
-  servicos: 'Servicos',
+  geral: 'Visão Geral',
+  servicos: 'Serviços',
   pagamentos: 'Pagamentos',
   propriedade: 'Propriedade Intelectual',
   privacidade: 'Privacidade & LGPD',
   garantia: 'Garantia',
   responsabilidades: 'Responsabilidades',
-  rescisao: 'Rescisao',
+  rescisao: 'Rescisão',
 }
 
 function CatIcon({ cat }: { cat: string }) {
@@ -170,50 +170,50 @@ export default function TermosPage() {
         <main className="flex-1 min-w-0 px-4 py-8">
           <div className="mb-8">
             <p className="text-[10px] font-[600] text-[var(--accent)] uppercase tracking-widest mb-2">termos legais</p>
-            <h1 className="text-[32px] font-[700] tracking-[-0.03em] text-[var(--text)] mb-3">Termos e <span className="text-[var(--accent)]">Condicoes</span> de Uso</h1>
-            <p className="text-[13px] text-[var(--text-2)] max-w-lg leading-relaxed">Este documento rege a relacao entre o desenvolvedor e os clientes que solicitam servicos de desenvolvimento de software e aplicacoes web.</p>
+            <h1 className="text-[32px] font-[700] tracking-[-0.03em] text-[var(--text)] mb-3">Termos e <span className="text-[var(--accent)]">Condições</span> de Uso</h1>
+            <p className="text-[13px] text-[var(--text-2)] max-w-lg leading-relaxed">Este documento rege a relação entre o desenvolvedor e os clientes que solicitam serviços de desenvolvimento de software e aplicações web.</p>
           </div>
 
           {filteredSections.length === 0 && (
             <div className="text-center py-12">
-              <p className="text-[var(--text-3)]">Nenhuma secao encontrada para "{search}"</p>
+              <p className="text-[var(--text-3)]">Nenhuma seção encontrada para "{search}"</p>
               <button onClick={() => setSearch('')} className="text-[var(--accent)] text-[12px] mt-2 underline">Limpar busca</button>
             </div>
           )}
 
-          <Section id="aceitacao" num="1" title="Aceitacao dos Termos">
-            <p>Ao preencher o briefing de solicitacao de projeto, realizar qualquer pagamento ou assinar o contrato de prestacao de servicos, o contratante confirma que leu e aceita integralmente estes Termos e Condicoes.</p>
-            <p>Estes termos se aplicam a todas as interacoes, projetos, comunicacoes e relacoes comerciais estabelecidas com este desenvolvedor, independentemente do canal utilizado.</p>
-            <Callout type="info">Nenhum trabalho sera iniciado sem a confirmacao formal da proposta e o pagamento da entrada acordada em contrato.</Callout>
+          <Section id="aceitacao" num="1" title="Aceitação dos Termos">
+            <p>Ao preencher o briefing de solicitação de projeto, realizar qualquer pagamento ou assinar o contrato de prestação de serviços, o contratante confirma que leu e aceita integralmente estes Termos e Condições.</p>
+            <p>Estes termos se aplicam a todas as interações, projetos, comunicações e relações comerciais estabelecidas com este desenvolvedor, independentemente do canal utilizado.</p>
+            <Callout type="info">Nenhum trabalho será iniciado sem a confirmação formal da proposta e o pagamento da entrada acordada em contrato.</Callout>
           </Section>
 
           <Section id="partes" num="2" title="Partes Envolvidas">
             <table className="w-full text-[12px]">
-              <thead><tr className="text-left text-[var(--text-3)] text-[10px] uppercase tracking-wider"><th className="p-2 border-b border-[var(--border)]">Parte</th><th className="p-2 border-b border-[var(--border)]">Descricao</th></tr></thead>
+              <thead><tr className="text-left text-[var(--text-3)] text-[10px] uppercase tracking-wider"><th className="p-2 border-b border-[var(--border)]">Parte</th><th className="p-2 border-b border-[var(--border)]">Descrição</th></tr></thead>
               <tbody>
-                <tr><td className="p-2 border-b border-[var(--border)] font-[500] text-[var(--text)]">Desenvolvedor / Prestador</td><td className="p-2 border-b border-[var(--border)] text-[var(--text-2)]">Profissional autonomo responsavel pela execucao dos servicos de desenvolvimento.</td></tr>
-                <tr><td className="p-2 border-b border-[var(--border)] font-[500] text-[var(--text)]">Contratante / Cliente</td><td className="p-2 border-b border-[var(--border)] text-[var(--text-2)]">Pessoa fisica ou juridica que solicita e remunera os servicos.</td></tr>
-                <tr><td className="p-2 font-[500] text-[var(--text)]">Plataforma</td><td className="p-2 text-[var(--text-2)]">Sistema online de gestao de projetos utilizado para comunicacao e acompanhamento.</td></tr>
+                <tr><td className="p-2 border-b border-[var(--border)] font-[500] text-[var(--text)]">Desenvolvedor / Prestador</td><td className="p-2 border-b border-[var(--border)] text-[var(--text-2)]">Profissional autônomo responsável pela execução dos serviços de desenvolvimento.</td></tr>
+                <tr><td className="p-2 border-b border-[var(--border)] font-[500] text-[var(--text)]">Contratante / Cliente</td><td className="p-2 border-b border-[var(--border)] text-[var(--text-2)]">Pessoa física ou jurídica que solicita e remunera os serviços.</td></tr>
+                <tr><td className="p-2 font-[500] text-[var(--text)]">Plataforma</td><td className="p-2 text-[var(--text-2)]">Sistema online de gestão de projetos utilizado para comunicação e acompanhamento.</td></tr>
               </tbody>
             </table>
           </Section>
 
-          <Section id="alteracoes" num="3" title="Alteracoes nestes Termos">
-            <p>O desenvolvedor reserva-se o direito de atualizar estes Termos a qualquer momento. Alteracoes significativas serao comunicadas com <strong className="text-[var(--text)]">15 dias de antecedencia</strong> via e-mail cadastrado. O uso continuado dos servicos apos esse prazo implica na aceitacao dos novos termos.</p>
+          <Section id="alteracoes" num="3" title="Alterações nestes Termos">
+            <p>O desenvolvedor reserva-se o direito de atualizar estes Termos a qualquer momento. Alterações significativas serão comunicadas com <strong className="text-[var(--text)]">15 dias de antecedência</strong> via e-mail cadastrado. O uso continuado dos serviços após esse prazo implica na aceitação dos novos termos.</p>
           </Section>
 
-          <Section id="escopo" num="4" title="Escopo dos Servicos">
-            <p>Os servicos prestados sao exclusivamente os descritos no briefing aprovado e no contrato assinado. Funcionalidades nao documentadas antes do inicio do projeto sao consideradas fora do escopo.</p>
-            <SubTitle>Servicos disponiveis</SubTitle>
-            <List items={['Desenvolvimento Web: Criacao de sites, landing pages, portfolios e paginas institucionais.', 'Sistemas Web: Plataformas com autenticacao, dashboards, paineis administrativos e CRUDs.', 'APIs e Integracoes: APIs REST, integracoes com servicos terceiros.', 'E-commerce: Lojas virtuais com carrinho, checkout e gestao de produtos.', 'Design UI/UX: Prototipagem, design de interfaces e identidade visual digital.', 'Manutencao: Correcoes, atualizacoes e melhorias em sistemas existentes.']} />
-            <Callout type="warning">Qualquer funcionalidade adicionada apos a aprovacao do escopo sera cobrada separadamente como aditivo contratual.</Callout>
+          <Section id="escopo" num="4" title="Escopo dos Serviços">
+            <p>Os serviços prestados são exclusivamente os descritos no briefing aprovado e no contrato assinado. Funcionalidades não documentadas antes do início do projeto são consideradas fora do escopo.</p>
+            <SubTitle>Serviços disponíveis</SubTitle>
+            <List items={['Desenvolvimento Web: Criação de sites, landing pages, portfólios e páginas institucionais.', 'Sistemas Web: Plataformas com autenticação, dashboards, painéis administrativos e CRUDs.', 'APIs e Integrações: APIs REST, integrações com serviços terceiros.', 'E-commerce: Lojas virtuais com carrinho, checkout e gestão de produtos.', 'Design UI/UX: Prototipagem, design de interfaces e identidade visual digital.', 'Manutenção: Correções, atualizações e melhorias em sistemas existentes.']} />
+            <Callout type="warning">Qualquer funcionalidade adicionada após a aprovação do escopo será cobrada separadamente como aditivo contratual.</Callout>
           </Section>
 
           <Section id="etapas" num="5" title="Etapas do Projeto">
             <table className="w-full text-[12px]">
-              <thead><tr className="text-left text-[var(--text-3)] text-[10px] uppercase tracking-wider"><th className="p-2 border-b border-[var(--border)]">Etapa</th><th className="p-2 border-b border-[var(--border)]">Responsavel</th></tr></thead>
+              <thead><tr className="text-left text-[var(--text-3)] text-[10px] uppercase tracking-wider"><th className="p-2 border-b border-[var(--border)]">Etapa</th><th className="p-2 border-b border-[var(--border)]">Responsável</th></tr></thead>
               <tbody>
-                {['Briefing (Cliente)', 'Proposta & Contrato (Desenvolvedor)', 'Planejamento (Desenvolvedor)', 'Design UI/UX (Desenvolvedor)', 'Aprovacao do Design (Cliente)', 'Desenvolvimento (Desenvolvedor)', 'Testes Internos (Desenvolvedor)', 'Homologacao (Cliente)', 'Deploy (Desenvolvedor)', 'Entrega (Ambos)', 'Garantia (Ambos)'].map((e, i) => {
+                {['Briefing (Cliente)', 'Proposta & Contrato (Desenvolvedor)', 'Planejamento (Desenvolvedor)', 'Design UI/UX (Desenvolvedor)', 'Aprovação do Design (Cliente)', 'Desenvolvimento (Desenvolvedor)', 'Testes Internos (Desenvolvedor)', 'Homologação (Cliente)', 'Deploy (Desenvolvedor)', 'Entrega (Ambos)', 'Garantia (Ambos)'].map((e, i) => {
                   const [name, resp] = e.split(' (')
                   return <tr key={i}><td className="p-2 border-b border-[var(--border)] font-[500] text-[var(--text)]">{name}</td><td className="p-2 border-b border-[var(--border)] text-[var(--text-2)]">{resp?.replace(')', '')}</td></tr>
                 })}
@@ -221,21 +221,21 @@ export default function TermosPage() {
             </table>
           </Section>
 
-          <Section id="revisoes" num="6" title="Revisoes e Alteracoes">
-            <p>O numero de rodadas de revisao e definido no contrato. Rodadas extras sao cobradas separadamente.</p>
-            <List items={['Alteracao de cor, tipografia ou layout nao especificado no briefing original.', 'Mudanca no fluxo de navegacao apos aprovacao do prototipo.', 'Adicao ou remocao de elementos visuais significativos apos aprovacao do design.']} />
+          <Section id="revisoes" num="6" title="Revisões e Alterações">
+            <p>O número de rodadas de revisão é definido no contrato. Rodadas extras são cobradas separadamente.</p>
+            <List items={['Alteração de cor, tipografia ou layout não especificado no briefing original.', 'Mudança no fluxo de navegação após aprovação do protótipo.', 'Adição ou remoção de elementos visuais significativos após aprovação do design.']} />
           </Section>
 
           <Section id="prazos" num="7" title="Prazos e Atrasos">
-            <List items={['Atraso do cliente: Feedback fora do prazo prorroga o projeto pelo mesmo periodo.', 'Alteracao de escopo: Qualquer adicao ao projeto pode impactar o prazo.', 'Dependencias externas: Atraso de servicos terceiros fora do controle do desenvolvedor.']} />
-            <Callout type="info">O cliente tem ate <code className="text-[var(--accent)] bg-[var(--accent-subtle)] px-1.5 py-0.5 rounded text-[11px]">5 dias uteis</code> para responder qualquer aprovacao.</Callout>
+            <List items={['Atraso do cliente: Feedback fora do prazo prorroga o projeto pelo mesmo período.', 'Alteração de escopo: Qualquer adição ao projeto pode impactar o prazo.', 'Dependências externas: Atraso de serviços terceiros fora do controle do desenvolvedor.']} />
+            <Callout type="info">O cliente tem até <code className="text-[var(--accent)] bg-[var(--accent-subtle)] px-1.5 py-0.5 rounded text-[11px]">5 dias úteis</code> para responder qualquer aprovação.</Callout>
           </Section>
 
-          <Section id="comunicacao" num="8" title="Comunicacao Oficial">
+          <Section id="comunicacao" num="8" title="Comunicação Oficial">
             <table className="w-full text-[12px]">
               <thead><tr className="text-left text-[var(--text-3)] text-[10px] uppercase tracking-wider"><th className="p-2 border-b border-[var(--border)]">Canal</th><th className="p-2 border-b border-[var(--border)]">Validade</th></tr></thead>
               <tbody>
-                <tr><td className="p-2 border-b border-[var(--border)] font-[500] text-[var(--text)]">Plataforma de Gestao</td><td className="p-2 border-b border-[var(--border)] text-[var(--success)]">Contratual</td></tr>
+                <tr><td className="p-2 border-b border-[var(--border)] font-[500] text-[var(--text)]">Plataforma de Gestão</td><td className="p-2 border-b border-[var(--border)] text-[var(--success)]">Contratual</td></tr>
                 <tr><td className="p-2 border-b border-[var(--border)] font-[500] text-[var(--text)]">E-mail</td><td className="p-2 border-b border-[var(--border)] text-[var(--success)]">Contratual</td></tr>
                 <tr><td className="p-2 border-b border-[var(--border)] font-[500] text-[var(--text)]">WhatsApp</td><td className="p-2 border-b border-[var(--border)] text-[var(--warning)]">Referencia apenas</td></tr>
                 <tr><td className="p-2 font-[500] text-[var(--text)]">Redes Sociais / DM</td><td className="p-2 text-[var(--text-3)]">Sem validade</td></tr>
@@ -243,17 +243,17 @@ export default function TermosPage() {
             </table>
           </Section>
 
-          <Section id="politica-pg" num="9" title="Politica de Pagamentos">
-            <Callout type="danger">A entrada (primeira parcela) e condicao obrigatoria para inicio. Sem confirmacao de pagamento, nenhuma atividade e executada.</Callout>
+          <Section id="politica-pg" num="9" title="Política de Pagamentos">
+            <Callout type="danger">A entrada (primeira parcela) é condição obrigatória para início. Sem confirmação de pagamento, nenhuma atividade é executada.</Callout>
           </Section>
 
-          <Section id="modelos" num="10" title="Modelos de Cobranca">
+          <Section id="modelos" num="10" title="Modelos de Cobrança">
             <table className="w-full text-[12px]">
-              <thead><tr className="text-left text-[var(--text-3)] text-[10px] uppercase tracking-wider"><th className="p-2 border-b border-[var(--border)]">Modalidade</th><th className="p-2 border-b border-[var(--border)]">Descricao</th></tr></thead>
+              <thead><tr className="text-left text-[var(--text-3)] text-[10px] uppercase tracking-wider"><th className="p-2 border-b border-[var(--border)]">Modalidade</th><th className="p-2 border-b border-[var(--border)]">Descrição</th></tr></thead>
               <tbody>
                 <tr><td className="p-2 border-b border-[var(--border)] font-[500] text-[var(--text)]">Projeto Fechado</td><td className="p-2 border-b border-[var(--border)] text-[var(--text-2)]">Valor total por escopo. Parcelas vinculadas a marcos.</td></tr>
-                <tr><td className="p-2 border-b border-[var(--border)] font-[500] text-[var(--text)]">Por Hora</td><td className="p-2 border-b border-[var(--border)] text-[var(--text-2)]">Cobranca por hora trabalhada. Horas reportadas semanalmente.</td></tr>
-                <tr><td className="p-2 font-[500] text-[var(--text)]">Mensal (Retainer)</td><td className="p-2 text-[var(--text-2)]">Valor mensal fixo para horas ou funcionalidades continuas.</td></tr>
+                <tr><td className="p-2 border-b border-[var(--border)] font-[500] text-[var(--text)]">Por Hora</td><td className="p-2 border-b border-[var(--border)] text-[var(--text-2)]">Cobrança por hora trabalhada. Horas reportadas semanalmente.</td></tr>
+                <tr><td className="p-2 font-[500] text-[var(--text)]">Mensal (Retainer)</td><td className="p-2 text-[var(--text-2)]">Valor mensal fixo para horas ou funcionalidades contínuas.</td></tr>
               </tbody>
             </table>
           </Section>
@@ -263,53 +263,53 @@ export default function TermosPage() {
               <thead><tr className="text-left text-[var(--text-3)] text-[10px] uppercase tracking-wider"><th className="p-2 border-b border-[var(--border)]">Marco</th><th className="p-2 border-b border-[var(--border)]">% do Valor</th></tr></thead>
               <tbody>
                 <tr><td className="p-2 border-b border-[var(--border)] font-[500] text-[var(--text)]">1 - Entrada (assinatura)</td><td className="p-2 border-b border-[var(--border)] text-[var(--text-2)]">40-50%</td></tr>
-                <tr><td className="p-2 border-b border-[var(--border)] font-[500] text-[var(--text)]">2 - Aprovacao do Design</td><td className="p-2 border-b border-[var(--border)] text-[var(--text-2)]">25-30%</td></tr>
+                <tr><td className="p-2 border-b border-[var(--border)] font-[500] text-[var(--text)]">2 - Aprovação do Design</td><td className="p-2 border-b border-[var(--border)] text-[var(--text-2)]">25-30%</td></tr>
                 <tr><td className="p-2 font-[500] text-[var(--text)]">3 - Entrega Final</td><td className="p-2 text-[var(--text-2)]">20-35%</td></tr>
               </tbody>
             </table>
           </Section>
 
           <Section id="meios-pg" num="12" title="Meios de Pagamento">
-            <List items={['PIX — chave definida no contrato', 'Transferencia bancaria (TED/DOC)', 'Boleto bancario (compensacao em ate 3 dias uteis)', 'Cartao de credito via link de pagamento']} />
+            <List items={['PIX — chave definida no contrato', 'Transferência bancária (TED/DOC)', 'Boleto bancário (compensação em até 3 dias úteis)', 'Cartão de crédito via link de pagamento']} />
           </Section>
 
-          <Section id="atraso" num="13" title="Atrasos e Inadimplencia">
-            <p>Em caso de atraso, aplicam-se juros de mora de <strong className="text-[var(--text)]">1% ao mes</strong> e multa de <strong className="text-[var(--text)]">2%</strong>. Apos 15 dias, o desenvolvedor pode suspender os trabalhos.</p>
+          <Section id="atraso" num="13" title="Atrasos e Inadimplência">
+            <p>Em caso de atraso, aplicam-se juros de mora de <strong className="text-[var(--text)]">1% ao mês</strong> e multa de <strong className="text-[var(--text)]">2%</strong>. Após 15 dias, o desenvolvedor pode suspender os trabalhos.</p>
           </Section>
 
-          <Section id="reembolso" num="14" title="Politica de Reembolso">
+          <Section id="reembolso" num="14" title="Política de Reembolso">
             <table className="w-full text-[12px]">
-              <thead><tr className="text-left text-[var(--text-3)] text-[10px] uppercase tracking-wider"><th className="p-2 border-b border-[var(--border)]">Momento do Cancelamento</th><th className="p-2 border-b border-[var(--border)]">Politica</th></tr></thead>
+              <thead><tr className="text-left text-[var(--text-3)] text-[10px] uppercase tracking-wider"><th className="p-2 border-b border-[var(--border)]">Momento do Cancelamento</th><th className="p-2 border-b border-[var(--border)]">Política</th></tr></thead>
               <tbody>
-                <tr><td className="p-2 border-b border-[var(--border)] font-[500] text-[var(--text)]">Antes do inicio</td><td className="p-2 border-b border-[var(--border)] text-[var(--text-2)]">Entrada nao reembolsavel.</td></tr>
+                <tr><td className="p-2 border-b border-[var(--border)] font-[500] text-[var(--text)]">Antes do início</td><td className="p-2 border-b border-[var(--border)] text-[var(--text-2)]">Entrada não reembolsável.</td></tr>
                 <tr><td className="p-2 border-b border-[var(--border)] font-[500] text-[var(--text)]">Durante Design/Dev</td><td className="p-2 border-b border-[var(--border)] text-[var(--text-2)]">Valor proporcional ao trabalho executado.</td></tr>
-                <tr><td className="p-2 font-[500] text-[var(--text)]">Apos Entrega</td><td className="p-2 text-[var(--text-2)]">Nenhum reembolso. Projeto encerrado.</td></tr>
+                <tr><td className="p-2 font-[500] text-[var(--text)]">Após Entrega</td><td className="p-2 text-[var(--text-2)]">Nenhum reembolso. Projeto encerrado.</td></tr>
               </tbody>
             </table>
           </Section>
 
           <Section id="titularidade" num="15" title="Titularidade dos Direitos">
-            <Callout type="danger">Antes da quitacao integral: Todo o codigo-fonte, designs e prototipos permanecem propriedade exclusiva do desenvolvedor.</Callout>
-            <Callout type="success">Apos quitacao integral: Direitos patrimoniais de uso cedidos ao cliente de forma nao exclusiva, perpetua e para territorio nacional.</Callout>
+            <Callout type="danger">Antes da quitação integral: Todo o código-fonte, designs e protótipos permanecem propriedade exclusiva do desenvolvedor.</Callout>
+            <Callout type="success">Após quitação integral: Direitos patrimoniais de uso cedidos ao cliente de forma não exclusiva, perpétua e para território nacional.</Callout>
           </Section>
 
-          <Section id="cessao" num="16" title="Cessao de Direitos">
+          <Section id="cessao" num="16" title="Cessão de Direitos">
             <SubTitle>Cedido ao cliente</SubTitle>
-            <List items={['Direito de usar, executar e operar o software entregue.', 'Direito de modificar o codigo-fonte para uso proprio.', 'Direito de usar os layouts e designs produzidos.']} />
+            <List items={['Direito de usar, executar e operar o software entregue.', 'Direito de modificar o código-fonte para uso próprio.', 'Direito de usar os layouts e designs produzidos.']} />
           </Section>
 
-          <Section id="portfolio" num="17" title="Portfolio e Divulgacao">
-            <p>O desenvolvedor reserva-se o direito de mencionar e exibir o projeto em seu portfolio. O cliente pode solicitar restricao por escrito antes da assinatura.</p>
+          <Section id="portfolio" num="17" title="Portfólio e Divulgação">
+            <p>O desenvolvedor reserva-se o direito de mencionar e exibir o projeto em seu portfólio. O cliente pode solicitar restrição por escrito antes da assinatura.</p>
           </Section>
 
-          <Section id="terceiros" num="18" title="Conteudo de Terceiros">
-            <p>O cliente declara que todos os conteudos fornecidos sao de sua propriedade ou que possui autorizacao legal, isentando o desenvolvedor de responsabilidade por violacao de direitos autorais.</p>
+          <Section id="terceiros" num="18" title="Conteúdo de Terceiros">
+            <p>O cliente declara que todos os conteúdos fornecidos são de sua propriedade ou que possui autorização legal, isentando o desenvolvedor de responsabilidade por violação de direitos autorais.</p>
           </Section>
 
           <Section id="lgpd" num="19" title="Conformidade com a LGPD">
-            <p>Este desenvolvedor cumpre as disposicoes da <strong className="text-[var(--text)]">Lei Geral de Protecao de Dados (Lei 13.709/2018 — LGPD)</strong>.</p>
+            <p>Este desenvolvedor cumpre as disposições da <strong className="text-[var(--text)]">Lei Geral de Proteção de Dados (Lei 13.709/2018 — LGPD)</strong>.</p>
             <blockquote className="border-l-2 border-[var(--accent)] pl-4 py-2 my-3 text-[11px] text-[var(--text-3)] italic bg-[var(--surface-2)] rounded-r-lg">
-              Art. 6 da LGPD — As atividades de tratamento de dados pessoais deverao observar a boa-fe e os principios de: finalidade, adequacao, necessidade, livre acesso, qualidade dos dados, transparencia, seguranca, prevencao, nao discriminacao, responsabilizacao e prestacao de contas.
+              Art. 6 da LGPD — As atividades de tratamento de dados pessoais deverão observar a boa-fé e os princípios de: finalidade, adequação, necessidade, livre acesso, qualidade dos dados, transparência, segurança, prevenção, não discriminação, responsabilização e prestação de contas.
             </blockquote>
           </Section>
 
@@ -317,7 +317,7 @@ export default function TermosPage() {
             <table className="w-full text-[12px]">
               <thead><tr className="text-left text-[var(--text-3)] text-[10px] uppercase tracking-wider"><th className="p-2 border-b border-[var(--border)]">Dado</th><th className="p-2 border-b border-[var(--border)]">Finalidade</th><th className="p-2 border-b border-[var(--border)]">Base Legal</th></tr></thead>
               <tbody>
-                {[['Nome e CPF/CNPJ', 'Identificacao e emissao de contrato', 'Execucao de contrato'],['E-mail e telefone', 'Comunicacao e notificacoes', 'Execucao de contrato'],['Endereco', 'Dados contratuais e fiscais', 'Obrigacao legal'],['Dados bancarios', 'Processamento de pagamentos', 'Execucao de contrato'],['Dados do negocio', 'Execucao do projeto e briefing', 'Legitimo interesse'],['Logs de acesso', 'Seguranca e rastreabilidade', 'Legitimo interesse']].map(([d, f, b], i) => (
+                {[['Nome e CPF/CNPJ', 'Identificação e emissão de contrato', 'Execução de contrato'],['E-mail e telefone', 'Comunicação e notificações', 'Execução de contrato'],['Endereço', 'Dados contratuais e fiscais', 'Obrigação legal'],['Dados bancários', 'Processamento de pagamentos', 'Execução de contrato'],['Dados do negócio', 'Execução do projeto e briefing', 'Legítimo interesse'],['Logs de acesso', 'Segurança e rastreabilidade', 'Legítimo interesse']].map(([d, f, b], i) => (
                   <tr key={i}><td className="p-2 border-b border-[var(--border)] font-[500] text-[var(--text)]">{d}</td><td className="p-2 border-b border-[var(--border)] text-[var(--text-2)]">{f}</td><td className="p-2 border-b border-[var(--border)] text-[var(--text-3)]">{b}</td></tr>
                 ))}
               </tbody>
@@ -325,98 +325,98 @@ export default function TermosPage() {
           </Section>
 
           <Section id="compartilhamento" num="21" title="Compartilhamento de Dados">
-            <p>Os dados dos clientes <strong className="text-[var(--text)]">nunca sao vendidos</strong>. Compartilhamento apenas com processadores de pagamento, ferramentas de gestao e por obrigacao legal.</p>
-            <Callout type="success">Nenhum dado pessoal de clientes e compartilhado com terceiros para fins publicitarios ou de marketing.</Callout>
+            <p>Os dados dos clientes <strong className="text-[var(--text)]">nunca são vendidos</strong>. Compartilhamento apenas com processadores de pagamento, ferramentas de gestão e por obrigação legal.</p>
+            <Callout type="success">Nenhum dado pessoal de clientes é compartilhado com terceiros para fins publicitários ou de marketing.</Callout>
           </Section>
 
           <Section id="direitos" num="22" title="Direitos do Titular de Dados">
-            <List items={['Acesso: Solicitar confirmacao e acesso aos dados tratados.', 'Correcao: Solicitar a correcao de dados incompletos ou inexatos.', 'Exclusao: Solicitar a anonimizacao ou exclusao de dados desnecessarios.', 'Portabilidade: Solicitar a portabilidade dos dados a outro fornecedor.', 'Revogacao: Revogar o consentimento a qualquer momento.']} />
-            <p>Para exercer seus direitos, envie e-mail com assunto <code className="text-[var(--accent)] bg-[var(--accent-subtle)] px-1.5 py-0.5 rounded text-[11px]">LGPD - [Seu Nome]</code>. Prazo: 15 dias uteis.</p>
+            <List items={['Acesso: Solicitar confirmação e acesso aos dados tratados.', 'Correção: Solicitar a correção de dados incompletos ou inexatos.', 'Exclusão: Solicitar a anonimização ou exclusão de dados desnecessários.', 'Portabilidade: Solicitar a portabilidade dos dados a outro fornecedor.', 'Revogação: Revogar o consentimento a qualquer momento.']} />
+            <p>Para exercer seus direitos, envie e-mail com assunto <code className="text-[var(--accent)] bg-[var(--accent-subtle)] px-1.5 py-0.5 rounded text-[11px]">LGPD - [Seu Nome]</code>. Prazo: 15 dias úteis.</p>
           </Section>
 
-          <Section id="retencao" num="23" title="Retencao e Eliminacao de Dados">
+          <Section id="retencao" num="23" title="Retenção e Eliminação de Dados">
             <table className="w-full text-[12px]">
               <thead><tr className="text-left text-[var(--text-3)] text-[10px] uppercase tracking-wider"><th className="p-2 border-b border-[var(--border)]">Tipo</th><th className="p-2 border-b border-[var(--border)]">Prazo</th></tr></thead>
               <tbody>
                 <tr><td className="p-2 border-b border-[var(--border)] font-[500] text-[var(--text)]">Dados contratuais</td><td className="p-2 border-b border-[var(--border)] text-[var(--text-2)]">5 anos</td></tr>
-                <tr><td className="p-2 border-b border-[var(--border)] font-[500] text-[var(--text)]">Dados de comunicacao</td><td className="p-2 border-b border-[var(--border)] text-[var(--text-2)]">2 anos</td></tr>
+                <tr><td className="p-2 border-b border-[var(--border)] font-[500] text-[var(--text)]">Dados de comunicação</td><td className="p-2 border-b border-[var(--border)] text-[var(--text-2)]">2 anos</td></tr>
                 <tr><td className="p-2 font-[500] text-[var(--text)]">Dados de pagamento</td><td className="p-2 text-[var(--text-2)]">5 anos</td></tr>
               </tbody>
             </table>
           </Section>
 
           <Section id="cookies" num="24" title="Cookies e Rastreamento">
-            <p>A plataforma utiliza apenas cookies estritamente necessarios (sessao, autenticacao e seguranca). Nao sao utilizados cookies de rastreamento publicitario.</p>
+            <p>A plataforma utiliza apenas cookies estritamente necessários (sessão, autenticação e segurança). Não são utilizados cookies de rastreamento publicitário.</p>
           </Section>
 
-          <Section id="periodo" num="25" title="Periodo de Garantia">
-            <p>Apos a entrega formal, o projeto entra em periodo de garantia padrao de <strong className="text-[var(--text)]">30 dias corridos</strong>.</p>
+          <Section id="periodo" num="25" title="Período de Garantia">
+            <p>Após a entrega formal, o projeto entra em período de garantia padrão de <strong className="text-[var(--text)]">30 dias corridos</strong>.</p>
           </Section>
 
           <Section id="cobertura" num="26" title="O que a Garantia Cobre">
-            <List items={['Bugs e erros decorrentes do codigo desenvolvido.', 'Comportamentos divergentes do especificado no briefing.', 'Erros de layout em navegadores acordados.', 'Falhas em integracoes implementadas conforme especificacao.']} />
+            <List items={['Bugs e erros decorrentes do código desenvolvido.', 'Comportamentos divergentes do especificado no briefing.', 'Erros de layout em navegadores acordados.', 'Falhas em integrações implementadas conforme especificação.']} />
           </Section>
 
-          <Section id="exclusoes" num="27" title="Exclusoes da Garantia">
-            <List items={['Novas funcionalidades nao previstas no escopo.', 'Erros causados por alteracoes do cliente ou terceiros no codigo.', 'Indisponibilidade de servicos de terceiros (hospedagem, APIs).', 'Problemas por conteudo inserido pelo cliente.']} cross />
+          <Section id="exclusoes" num="27" title="Exclusões da Garantia">
+            <List items={['Novas funcionalidades não previstas no escopo.', 'Erros causados por alterações do cliente ou terceiros no código.', 'Indisponibilidade de serviços de terceiros (hospedagem, APIs).', 'Problemas por conteúdo inserido pelo cliente.']} cross />
           </Section>
 
           <Section id="sla" num="28" title="Tempo de Resposta (SLA)">
             <table className="w-full text-[12px]">
-              <thead><tr className="text-left text-[var(--text-3)] text-[10px] uppercase tracking-wider"><th className="p-2 border-b border-[var(--border)]">Severidade</th><th className="p-2 border-b border-[var(--border)]">Resposta</th><th className="p-2 border-b border-[var(--border)]">Resolucao</th></tr></thead>
+              <thead><tr className="text-left text-[var(--text-3)] text-[10px] uppercase tracking-wider"><th className="p-2 border-b border-[var(--border)]">Severidade</th><th className="p-2 border-b border-[var(--border)]">Resposta</th><th className="p-2 border-b border-[var(--border)]">Resolução</th></tr></thead>
               <tbody>
-                <tr><td className="p-2 border-b border-[var(--border)]"><span className="h-2 w-2 rounded-full bg-[var(--destructive)] inline-block mr-1.5"/>Critico</td><td className="p-2 border-b border-[var(--border)] text-[var(--text-2)]">ate 4h uteis</td><td className="p-2 border-b border-[var(--border)] text-[var(--text-2)]">ate 24h uteis</td></tr>
-                <tr><td className="p-2 border-b border-[var(--border)]"><span className="h-2 w-2 rounded-full bg-[var(--warning)] inline-block mr-1.5"/>Alto</td><td className="p-2 border-b border-[var(--border)] text-[var(--text-2)]">ate 8h uteis</td><td className="p-2 border-b border-[var(--border)] text-[var(--text-2)]">ate 3 dias uteis</td></tr>
-                <tr><td className="p-2"><span className="h-2 w-2 rounded-full bg-[var(--success)] inline-block mr-1.5"/>Medio</td><td className="p-2 text-[var(--text-2)]">ate 24h uteis</td><td className="p-2 text-[var(--text-2)]">ate 5 dias uteis</td></tr>
+                <tr><td className="p-2 border-b border-[var(--border)]"><span className="h-2 w-2 rounded-full bg-[var(--destructive)] inline-block mr-1.5"/>Crítico</td><td className="p-2 border-b border-[var(--border)] text-[var(--text-2)]">até 4h úteis</td><td className="p-2 border-b border-[var(--border)] text-[var(--text-2)]">até 24h úteis</td></tr>
+                <tr><td className="p-2 border-b border-[var(--border)]"><span className="h-2 w-2 rounded-full bg-[var(--warning)] inline-block mr-1.5"/>Alto</td><td className="p-2 border-b border-[var(--border)] text-[var(--text-2)]">até 8h úteis</td><td className="p-2 border-b border-[var(--border)] text-[var(--text-2)]">até 3 dias úteis</td></tr>
+                <tr><td className="p-2"><span className="h-2 w-2 rounded-full bg-[var(--success)] inline-block mr-1.5"/>Médio</td><td className="p-2 text-[var(--text-2)]">até 24h úteis</td><td className="p-2 text-[var(--text-2)]">até 5 dias úteis</td></tr>
               </tbody>
             </table>
           </Section>
 
-          <Section id="pos-garantia" num="29" title="Suporte Pos-Garantia">
-            <p>Apos o vencimento da garantia, qualquer suporte ou manutencao sera cobrado conforme a tabela de horas vigente.</p>
+          <Section id="pos-garantia" num="29" title="Suporte Pós-Garantia">
+            <p>Após o vencimento da garantia, qualquer suporte ou manutenção será cobrado conforme a tabela de horas vigente.</p>
           </Section>
 
           <Section id="resp-dev" num="30" title="Responsabilidades do Desenvolvedor">
-            <List items={['Executar os servicos com qualidade tecnica e profissionalismo.', 'Comunicar proativamente qualquer impedimento.', 'Manter sigilo sobre informacoes confidenciais.', 'Realizar testes internos antes de qualquer entrega.']} />
+            <List items={['Executar os serviços com qualidade técnica e profissionalismo.', 'Comunicar proativamente qualquer impedimento.', 'Manter sigilo sobre informações confidenciais.', 'Realizar testes internos antes de qualquer entrega.']} />
           </Section>
 
           <Section id="resp-cliente" num="31" title="Responsabilidades do Cliente">
-            <List items={['Realizar pagamentos nos prazos acordados.', 'Fornecer materiais e acessos necessarios.', 'Responder aprovacoes em ate 5 dias uteis.', 'Realizar testes de homologacao antes do deploy.']} />
+            <List items={['Realizar pagamentos nos prazos acordados.', 'Fornecer materiais e acessos necessários.', 'Responder aprovações em até 5 dias úteis.', 'Realizar testes de homologação antes do deploy.']} />
           </Section>
 
-          <Section id="limitacoes" num="32" title="Limitacoes de Responsabilidade">
-            <List items={['Resultados comerciais ou financeiros do software entregue.', 'Perda de dados por falha na infraestrutura do cliente.', 'Indisponibilidade de servicos de terceiros.', 'Ataques ciberneticos a infraestrutura nao gerenciada.']} cross />
-            <Callout type="danger">Em qualquer hipotese, a responsabilidade total do desenvolvedor fica limitada ao valor efetivamente pago pelo cliente neste contrato.</Callout>
+          <Section id="limitacoes" num="32" title="Limitações de Responsabilidade">
+            <List items={['Resultados comerciais ou financeiros do software entregue.', 'Perda de dados por falha na infraestrutura do cliente.', 'Indisponibilidade de serviços de terceiros.', 'Ataques cibernéticos a infraestrutura não gerenciada.']} cross />
+            <Callout type="danger">Em qualquer hipótese, a responsabilidade total do desenvolvedor fica limitada ao valor efetivamente pago pelo cliente neste contrato.</Callout>
           </Section>
 
-          <Section id="forca-maior" num="33" title="Caso Fortuito e Forca Maior">
-            <p>Nenhuma das partes sera responsabilizada por atrasos decorrentes de eventos fora de seu controle (desastres naturais, pandemias, acoes governamentais). Comunicacao em ate 48 horas.</p>
+          <Section id="forca-maior" num="33" title="Caso Fortuito e Força Maior">
+            <p>Nenhuma das partes será responsabilizada por atrasos decorrentes de eventos fora de seu controle (desastres naturais, pandemias, ações governamentais). Comunicação em até 48 horas.</p>
           </Section>
 
-          <Section id="res-cliente" num="34" title="Rescisao pelo Cliente">
-            <p>O cliente pode rescindir com <strong className="text-[var(--text)]">5 dias uteis de antecedencia</strong>. A entrada nao e reembolsavel.</p>
+          <Section id="res-cliente" num="34" title="Rescisão pelo Cliente">
+            <p>O cliente pode rescindir com <strong className="text-[var(--text)]">5 dias úteis de antecedência</strong>. A entrada não é reembolsável.</p>
           </Section>
 
-          <Section id="res-dev" num="35" title="Rescisao pelo Desenvolvedor">
-            <p>Rescisao por justa causa em casos de: inadimplencia (15+ dias), comportamento abusivo, solicitacoes ilegais ou informacoes falsas.</p>
+          <Section id="res-dev" num="35" title="Rescisão pelo Desenvolvedor">
+            <p>Rescisão por justa causa em casos de: inadimplência (15+ dias), comportamento abusivo, solicitações ilegais ou informações falsas.</p>
           </Section>
 
-          <Section id="efeitos" num="36" title="Efeitos da Rescisao">
-            <List items={['Suspensao imediata dos trabalhos.', 'Apuracao dos valores devidos por etapas concluidas.', 'Entrega dos materiais apos quitacao integral.', 'Obrigacoes de confidencialidade permanecem por 2 anos.']} />
+          <Section id="efeitos" num="36" title="Efeitos da Rescisão">
+            <List items={['Suspensão imediata dos trabalhos.', 'Apuração dos valores devidos por etapas concluídas.', 'Entrega dos materiais após quitação integral.', 'Obrigações de confidencialidade permanecem por 2 anos.']} />
           </Section>
 
-          <Section id="sobrevivencia" num="37" title="Sobrevivencia de Clausulas">
-            <p>Permanecem em vigor apos rescisao: confidencialidade (2 anos), propriedade intelectual, limitacao de responsabilidade e foro de eleicao.</p>
+          <Section id="sobrevivencia" num="37" title="Sobrevivência de Cláusulas">
+            <p>Permanecem em vigor após rescisão: confidencialidade (2 anos), propriedade intelectual, limitação de responsabilidade e foro de eleição.</p>
           </Section>
 
-          <Section id="disputas" num="38" title="Resolucao de Disputas">
-            <p>Sequencia: 1) Negociacao direta (15 dias); 2) Mediacao extrajudicial; 3) Via judicial no foro da comarca do domicilio do desenvolvedor.</p>
+          <Section id="disputas" num="38" title="Resolução de Disputas">
+            <p>Sequência: 1) Negociação direta (15 dias); 2) Mediação extrajudicial; 3) Via judicial no foro da comarca do domicílio do desenvolvedor.</p>
           </Section>
 
           <footer className="border-t border-[var(--border)] mt-12 pt-6 flex items-center justify-between text-[10px] text-[var(--text-3)] flex-wrap gap-2">
             <span>2026 AnderFlow · Todos os direitos reservados</span>
-            <span>Codigo Civil (Lei 10.406/2002) · LGPD (Lei 13.709/2018)</span>
-            <span>Versao 1.0</span>
+            <span>Código Civil (Lei 10.406/2002) · LGPD (Lei 13.709/2018)</span>
+            <span>Versão 1.0</span>
           </footer>
         </main>
       </div>

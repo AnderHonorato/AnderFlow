@@ -36,7 +36,7 @@ export default function ProfilePage() {
     if (res.ok) {
       setDeleteResult(json.message)
     } else {
-      toast.error(json.error || 'Erro ao solicitar exclusao')
+      toast.error(json.error || 'Erro ao solicitar exclusão')
     }
     setDeleteLoading(false)
   }
@@ -45,12 +45,12 @@ export default function ProfilePage() {
     <div className="p-6 space-y-5 max-w-3xl mx-auto animate-page-enter">
       <div>
         <h1 className="text-[17px] font-[500] tracking-[-0.015em]">Perfil</h1>
-        <p className="text-[12px] text-[var(--text-3)] mt-1">Gerencie suas informacoes pessoais e de seguranca</p>
+        <p className="text-[12px] text-[var(--text-3)] mt-1">Gerencie suas informações pessoais e de segurança</p>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Informacoes Pessoais</CardTitle>
+          <CardTitle>Informações Pessoais</CardTitle>
           <CardDescription>Atualize seus dados de perfil</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -74,15 +74,15 @@ export default function ProfilePage() {
           </div>
           <Separator />
           <div className="flex justify-end">
-            <Button><IconCheck className="w-[14px] h-[14px]" /> Salvar Alteracoes</Button>
+            <Button><IconCheck className="w-[14px] h-[14px]" /> Salvar Alterações</Button>
           </div>
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle>Seguranca</CardTitle>
-          <CardDescription>Configuracoes de autenticacao e acesso</CardDescription>
+          <CardTitle>Segurança</CardTitle>
+          <CardDescription>Configurações de autenticação e acesso</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between py-2">
@@ -95,7 +95,7 @@ export default function ProfilePage() {
           <Separator />
           <div className="flex items-center justify-between py-2">
             <div>
-              <p className="text-[13px] font-[500]">Funcao</p>
+              <p className="text-[13px] font-[500]">Função</p>
               <p className="text-[12px] text-[var(--text-3)] mt-0.5">{session?.user?.role === 'ADMIN' ? 'Administrador' : 'Cliente'}</p>
             </div>
             <Badge variant={session?.user?.role === 'ADMIN' ? 'warning' : 'info'}>{session?.user?.role}</Badge>
@@ -106,7 +106,7 @@ export default function ProfilePage() {
       <Card className="border-[var(--destructive-subtle)]">
         <CardHeader>
           <CardTitle className="text-[var(--destructive)]">Excluir Conta</CardTitle>
-          <CardDescription>A exclusao e programada para 7 dias e pode ser revertida por um administrador</CardDescription>
+          <CardDescription>A exclusão é programada para 7 dias e pode ser revertida por um administrador</CardDescription>
         </CardHeader>
         <CardContent>
           {deleteResult ? (
@@ -115,7 +115,7 @@ export default function ProfilePage() {
             </div>
           ) : (
             <Button variant="destructive" onClick={() => setDeleteOpen(true)}>
-              <IconTrash className="w-[14px] h-[14px]" /> Solicitar exclusao da conta
+              <IconTrash className="w-[14px] h-[14px]" /> Solicitar exclusão da conta
             </Button>
           )}
         </CardContent>
@@ -128,8 +128,8 @@ export default function ProfilePage() {
           </DialogHeader>
           <div className="space-y-4 py-2">
             <p className="text-[13px] text-[var(--text-2)]">
-              Sua conta sera desativada imediatamente e excluida permanentemente em 7 dias.
-              Um administrador pode reverter essa acao ate la. Esta acao nao pode ser desfeita por voce.
+              Sua conta será desativada imediatamente e excluída permanentemente em 7 dias.
+              Um administrador pode reverter essa ação até lá. Esta ação não pode ser desfeita por você.
             </p>
             <div className="space-y-2">
               <label>Digite "confirmo" para prosseguir</label>
@@ -145,7 +145,7 @@ export default function ProfilePage() {
             <Button variant="outline" onClick={() => { setDeleteOpen(false); setDeleteConfirm('') }}>Cancelar</Button>
             <Button variant="destructive" onClick={handleDelete} disabled={deleteLoading || deleteConfirm !== 'confirmo'}>
               {deleteLoading && <IconLoader className="w-[14px] h-[14px] animate-spin" />}
-              Confirmar exclusao
+              Confirmar exclusão
             </Button>
           </DialogFooter>
         </DialogContent>

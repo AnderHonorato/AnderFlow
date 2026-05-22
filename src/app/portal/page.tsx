@@ -142,6 +142,64 @@ export default function PortalDashboard() {
 
       <div className="grid gap-5 lg:grid-cols-3 items-start">
         <div className="lg:col-span-2 space-y-5">
+          <Card className="border-[var(--info-subtle)] bg-[var(--info-subtle)]">
+            <CardContent className="p-4">
+              <p className="text-[11px] font-[500] text-[var(--text-3)] uppercase tracking-wider mb-2">Proxima acao sugerida</p>
+              {projects.length === 0 ? (
+                <div className="flex items-center gap-3">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--accent)]/10">
+                    <IconArrowUpRight className="w-4 h-4 text-[var(--accent)]" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-[14px] font-[500] text-[var(--text)]">Solicite seu primeiro projeto</p>
+                    <p className="text-[11px] text-[var(--text-2)] mt-0.5">Comece sua jornada conosco preenchendo um briefing detalhado.</p>
+                  </div>
+                  <Button size="sm" asChild>
+                    <a href="/portal/briefing">Comecar</a>
+                  </Button>
+                </div>
+              ) : pendingInvoices.filter((i: any) => i.status !== 'PAID' && i.status !== 'CANCELLED').length > 0 ? (
+                <div className="flex items-center gap-3">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--warning)]/10">
+                    <IconFinancial className="w-4 h-4 text-[var(--warning)]" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-[14px] font-[500] text-[var(--text)]">Voce tem faturas em aberto</p>
+                    <p className="text-[11px] text-[var(--text-2)] mt-0.5">Regularize seus pagamentos para evitar bloqueios.</p>
+                  </div>
+                  <Button size="sm" variant="outline" asChild>
+                    <a href="/portal/financial">Ver faturas</a>
+                  </Button>
+                </div>
+              ) : projects.some((p: any) => p.status === 'PENDING') ? (
+                <div className="flex items-center gap-3">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--warning)]/10">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="var(--warning)" strokeWidth="1.5" strokeLinecap="round"><circle cx="8" cy="8" r="6"/><path d="M8 5v3M8 11v.01"/></svg>
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-[14px] font-[500] text-[var(--text)]">Aguardando analise da sua solicitacao</p>
+                    <p className="text-[11px] text-[var(--text-2)] mt-0.5">Sua solicitacao esta em analise. Aguarde ate 24 horas.</p>
+                  </div>
+                  <Button size="sm" variant="outline" asChild>
+                    <a href="/portal/projects">Ver projetos</a>
+                  </Button>
+                </div>
+              ) : projects.some((p: any) => p.status === 'IN_PROGRESS') ? (
+                <div className="flex items-center gap-3">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--info)]/10">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="var(--info)" strokeWidth="1.5" strokeLinecap="round"><circle cx="8" cy="8" r="6"/><path d="M8 5v3l2 2"/></svg>
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-[14px] font-[500] text-[var(--text)]">Acompanhe o progresso</p>
+                    <p className="text-[11px] text-[var(--text-2)] mt-0.5">Seus projetos estao em andamento. Confira as atualizacoes.</p>
+                  </div>
+                  <Button size="sm" variant="outline" asChild>
+                    <a href="/portal/projects">Acompanhar</a>
+                  </Button>
+                </div>
+              ) : null}
+            </CardContent>
+          </Card>
           {projects.length === 0 && (
             <Card className="bg-[var(--accent-subtle)] border-[var(--accent)]/20 animate-card-pop">
               <CardContent className="p-5 flex items-center gap-4">
@@ -194,36 +252,6 @@ export default function PortalDashboard() {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-[12px] font-[500] text-[var(--text-3)] uppercase tracking-wider">Dicas Uteis</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <div className="flex gap-2.5">
-                  <span className="text-[15px] shrink-0">1</span>
-                  <div>
-                    <p className="text-[13px] font-[500] text-[var(--text)]">Preencha o briefing completo</p>
-                    <p className="text-[11px] text-[var(--text-3)] mt-0.5">Quanto mais detalhes voce fornecer, mais precisa sera nossa proposta.</p>
-                  </div>
-                </div>
-                <div className="flex gap-2.5">
-                  <span className="text-[15px] shrink-0">2</span>
-                  <div>
-                    <p className="text-[13px] font-[500] text-[var(--text)]">Acompanhe o progresso</p>
-                    <p className="text-[11px] text-[var(--text-3)] mt-0.5">No fluxo do projeto voce ve cada etapa sendo concluida em tempo real.</p>
-                  </div>
-                </div>
-                <div className="flex gap-2.5">
-                  <span className="text-[15px] shrink-0">3</span>
-                  <div>
-                    <p className="text-[13px] font-[500] text-[var(--text)]">Responda as solicitacoes</p>
-                    <p className="text-[11px] text-[var(--text-3)] mt-0.5">Quando o desenvolvedor pedir dados extras, responda rapido para nao atrasar.</p>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
         </div>
 
         <div className="space-y-5">

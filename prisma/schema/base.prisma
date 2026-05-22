@@ -1,0 +1,14 @@
+// ============================================
+// BASE — Configuração do Prisma
+// Conexão principal: ANDERFLOW Sistemas (PostgreSQL)
+// ============================================
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["prismaSchemaFolder"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}

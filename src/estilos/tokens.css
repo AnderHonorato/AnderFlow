@@ -1,0 +1,99 @@
+/* ═══════════════════════════════════════════════════════
+   TOKENS DE DESIGN — Cores, tipografia, espaçamento
+   Material Design 3 Expressive
+   ═══════════════════════════════════════════════════════ */
+
+:root {
+  /* ─── Superfície / Fundo ─── */
+  --bg: #0A0A0F;
+  --bg-secondary: #0F0F15;
+  --surface: #141418;
+  --surface-2: #1A1A1F;
+  --surface-3: #202026;
+  --surface-hover: #1E1E24;
+
+  /* ─── Texto ─── */
+  --text: #F0F0EB;
+  --text-2: #A8A8A2;
+  --text-3: #5C5C58;
+
+  /* ─── Bordas ─── */
+  --border: rgba(255,255,255,0.06);
+  --border-2: rgba(255,255,255,0.10);
+
+  /* ─── Acento / Marca ─── */
+  --accent: #E8622A;
+  --accent-hover: #D4561F;
+  --accent-subtle: rgba(232,98,42,0.08);
+  --accent-subtle-2: rgba(232,98,42,0.15);
+
+  /* ─── Semânticas ─── */
+  --success: #3D9A6E;
+  --success-subtle: rgba(61,154,110,0.08);
+  --warning: #C4852A;
+  --warning-subtle: rgba(196,133,42,0.08);
+  --destructive: #C44A3A;
+  --destructive-subtle: rgba(196,74,58,0.08);
+  --info: #3A7AC4;
+  --info-subtle: rgba(58,122,196,0.08);
+
+  /* ─── Layout ─── */
+  --sidebar-width: 220px;
+  --header-height: 48px;
+
+  /* ─── Tipografia ─── */
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+
+  /* ─── Cantos ─── */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+
+  /* ─── Mapeamento shadcn/ui ─── */
+  --background: #0A0A0F;
+  --foreground: #F0F0EB;
+  --card: #141418;
+  --card-foreground: #F0F0EB;
+  --muted: #1A1A1F;
+  --muted-foreground: rgba(255,255,255,0.40);
+  --accent-foreground: #F0F0EB;
+  --primary: #E8622A;
+  --primary-foreground: #ffffff;
+  --secondary: #1A1A1F;
+  --secondary-foreground: #d1d5db;
+  --destructive-foreground: #ffffff;
+  --ring: #E8622A;
+  --input: rgba(255,255,255,0.10);
+  --popover: #141418;
+  --popover-foreground: #F0F0EB;
+
+  /* ─── Inputs ─── */
+  --input-bg: #1A1A1F;
+  --input-bg-hover: #202026;
+  --input-border: rgba(255,255,255,0.10);
+  --placeholder: #5C5C58;
+
+  /* ─── Layout extras ─── */
+  --sidebar-bg: #0F0F15;
+  --header-bg: #0A0A0F;
+  --primary-hover: #D4561F;
+  --primary-subtle: rgba(232,98,42,0.08);
+  --text-muted: #5C5C58;
+  --text-secondary: #A8A8A2;
+
+  /* ─── Durações de movimento ─── */
+  --motion-fast: 100ms;
+  --motion-short: 200ms;
+  --motion-medium: 300ms;
+  --motion-long: 400ms;
+  --motion-extra-long: 600ms;
+
+  /* ─── Curvas de easing MD3 ─── */
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --ease-decelerate: cubic-bezier(0, 0, 0, 1);
+  --ease-accelerate: cubic-bezier(0.3, 0, 1, 1);
+  --ease-emphasized: cubic-bezier(0.2, 0, 0, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-bounce: cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}

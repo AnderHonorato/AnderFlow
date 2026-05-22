@@ -1,0 +1,24 @@
+// ============================================
+// IA — Conversas e mensagens da inteligência artificial
+// ============================================
+
+model AiConversation {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String   @default("Nova conversa")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user     User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages AiMessage[]
+}
+
+model AiMessage {
+  id             String   @id @default(cuid())
+  conversationId String
+  role           String
+  content        String
+  createdAt      DateTime @default(now())
+
+  conversation AiConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+}

@@ -59,6 +59,18 @@ export async function PATCH(
       data,
     })
 
+    if (body.status === 'COMPLETED' && project.clientId) {
+      await prisma.notification.create({
+        data: {
+          userId: project.clientId,
+          type: 'NPS',
+          title: 'Avalie seu projeto!',
+          message: 'Leva menos de 1 minuto.',
+          metadata: JSON.stringify({ url: `/portal/feedback/${project.id}` }),
+        },
+      })
+    }
+
     return NextResponse.json({ data: project })
   } catch (error) {
     return NextResponse.json({ error: 'Erro ao atualizar projeto' }, { status: 500 })

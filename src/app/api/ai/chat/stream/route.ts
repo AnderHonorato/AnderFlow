@@ -1,0 +1,217 @@
+import { NextRequest } from 'next/server'
+import { prisma } from '@/lib/prisma'
+import { getSessionUser } from '@/lib/auth-utils'
+import { ICON_SYSTEM_PROMPT } from '@/components/ui/chat-icons'
+
+const API_URL = 'https://api.deepseek.com/chat/completions'
+
+const models: Record<string, { id: string; name: string; isPro: boolean }> = {
+  'metrys-pro': { id: 'deepseek-v4-pro', name: 'Metrys v4 Pro', isPro: true },
+  'metrys-flash': { id: 'deepseek-v4-flash', name: 'Metrys v4 Flash', isPro: false },
+}
+
+async function saveToDb(conversationId: string, lastText: string, reply: string, reasoning: string) {
+  try {
+    await prisma.aiMessage.create({ data: { conversationId, role: 'user', content: lastText } })
+    const assistContent = reasoning ? `[PENSAMENTO]\n${reasoning}\n[/PENSAMENTO]\n${reply}` : reply
+    await prisma.aiMessage.create({ data: { conversationId, role: 'assistant', content: assistContent } })
+    const cnt = await prisma.aiMessage.count({ where: { conversationId } })
+    if (cnt <= 2) {
+      await prisma.aiConversation.update({
+        where: { id: conversationId },
+        data: { title: lastText.slice(0, 50).replace(/\n/g, ' ') || 'Conversa', updatedAt: new Date() },
+      })
+    } else {
+      await prisma.aiConversation.update({ where: { id: conversationId }, data: { updatedAt: new Date() } })
+    }
+  } catch (e) { console.error('Stream save fail:', e) }
+}
+
+function buildSystemPrompt(user: any, isAdmin: boolean, projectId?: string, files?: any[], replyTo?: string): string {
+  let sp = `[IDENTIDADE ABSOLUTA] Voce e Metrys, IA criada exclusivamente por Anderson Honorato, integrada ao ANDERFLOW Sistemas.
+
+SOBRE O ANDERFLOW: ANDERFLOW Sistemas e uma plataforma de GESTAO DE PROJETOS DE SOFTWARE. Nao tem NADA a ver com emprestimos, bancos, financeiras, creditos, ou qualquer servico financeiro.
+
+IDIOMA DO PENSAMENTO: Todo o pensamento/raciocinio (reasoning) DEVE ser escrito em portugues do Brasil (pt-BR). NUNCA use ingles no pensamento. Use portugues claro e natural. A resposta final tambem em portugues.
+
+REGRAS INQUEBRAVEIS:
+1. NUNCA mencione DeepSeek, OpenAI, Anthropic, Google. Se perguntarem responda: "Sou Metrys, IA criada por Anderson Honorato para o ANDERFLOW Sistemas."
+2. NUNCA invente funcionalidades. ANDERFLOW E plataforma de GESTAO DE PROJETOS DE SOFTWARE.
+3. Responda APENAS sobre ANDERFLOW. Recuse assuntos externos educadamente.
+4. ${isAdmin ? 'Admin: acesso TOTAL.' : 'Nao revele dados sensiveis.'}
+5. Para topicos distintos use "---" em linha propria com MODERACAO. Cada bloco com conteudo UNICO.
+
+ETAPAS DO FLUXO ANDERFLOW (12 etapas):
+1. Briefing 2. Proposta/Orcamento 3. Contrato 4. Planejamento 5. Design 6. Aprovacao do Design
+7. Desenvolvimento 8. Testes 9. Homologacao 10. Deploy 11. Entrega 12. Garantia
+
+Usuario: ${user.name||'N/A'} (${isAdmin?'Admin':'Cliente'})
+${replyTo ? `Respondendo mensagem #${replyTo}.` : ''}
+
+${ICON_SYSTEM_PROMPT}`
+
+  return sp
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const user = await getSessionUser(request)
+    if (!user) return new Response(JSON.stringify({ error: 'Nao autenticado' }), { status: 401, headers: { 'Content-Type': 'application/json' } })
+
+    const existing = await prisma.user.findUnique({ where: { id: user.id } })
+    if (!existing) await prisma.user.create({ data: { id: user.id, name: user.name || 'Usuario', email: user.email || `${user.id}@anderflow.local` } })
+
+    const body = await request.json()
+    const { messages, projectId, conversationId, files, replyTo, modelKey } = body as {
+      messages: { role: string; content: any; msgId?: string }[]
+      projectId?: string; conversationId?: string; replyTo?: string; modelKey?: string
+      files?: { name: string; type: string; content: string }[]
+    }
+
+    if (!messages?.length) return new Response(JSON.stringify({ error: 'Mensagens obrigatorias' }), { status: 400, headers: { 'Content-Type': 'application/json' } })
+
+    const apiKey = process.env.DEEPSEEK_API_KEY
+    if (!apiKey) {
+      const encoder = new TextEncoder()
+      const stream = new ReadableStream({
+        start(ctrl) {
+          ctrl.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'error', code: 'NO_KEY', reply: 'Chave de API nao configurada.' })}\n\n`))
+          ctrl.close()
+        }
+      })
+      return new Response(stream, { headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive' } })
+    }
+
+    const model = models[modelKey as keyof typeof models] || models['metrys-pro']
+    const isAdmin = user.role === 'ADMIN'
+
+    let sp = buildSystemPrompt(user, isAdmin, projectId, files, replyTo)
+
+    try {
+      const pwhere = isAdmin ? {} : { clientId: user.id } as any
+      const ps = await prisma.project.findMany({
+        where: pwhere, select: { name: true, status: true, progress: true }, orderBy: { updatedAt: 'desc' as const }, take: 10,
+      })
+      if (ps.length) sp += `\nProjetos: ${ps.map(p => `"${p.name}" [${p.status}] ${p.progress}%`).join(' | ')}`
+    } catch {}
+    if (isAdmin) {
+      try {
+        const uc = await prisma.user.count(); const pc = await prisma.project.count({ where: { status: { notIn: ['COMPLETED', 'CANCELLED'] } } })
+        sp += `\nStats: ${uc} usuarios, ${pc} projetos ativos.`
+      } catch {}
+    }
+    if (projectId) {
+      try {
+        const p = await prisma.project.findUnique({ where: { id: projectId }, select: { name: true, status: true, progress: true, type: true, description: true, deadline: true, budget: true, client: { select: { name: true } } } })
+        if (p) sp += `\nProjeto: ${p.name} [${p.status}] ${p.progress}% | ${p.client?.name || ''} | ${p.deadline ? 'Prazo: '+new Date(p.deadline).toLocaleDateString('pt-BR') : ''}`
+      } catch {}
+    }
+    if (files?.length) {
+      sp += '\nArquivos: ' + files.map(f => `${f.name}: ${(f.content||'').slice(0, 1500)}`).join('\n')
+    }
+
+    const cm: any[] = [{ role: 'system', content: sp }]
+    for (const m of messages) {
+      const role = m.role === 'assistant' ? 'assistant' : 'user'
+      if (typeof m.content === 'string') cm.push({ role, content: m.content })
+      else if (Array.isArray(m.content)) cm.push({ role: 'user', content: m.content })
+      else cm.push({ role: 'user', content: String(m.content) })
+    }
+
+    const bodyParams: any = {
+      model: model.id,
+      messages: cm,
+      max_tokens: 4000,
+      thinking: { type: 'enabled' },
+      reasoning_effort: 'high',
+      stream: true,
+    }
+
+    const res = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+      body: JSON.stringify(bodyParams),
+    })
+
+    if (!res.ok) {
+      const status = res.status
+      const msg = status === 401 ? 'Erro de autenticacao. Verifique a chave API.' :
+                  status === 402 ? 'Saldo insuficiente na API.' :
+                  status === 429 ? 'Muitas requisicoes. Aguarde.' :
+                  status >= 500 ? 'Servidor ocupado. Tente novamente.' :
+                  `Erro ${status} ao processar.`
+      const encoder = new TextEncoder()
+      const stream = new ReadableStream({
+        start(ctrl) {
+          ctrl.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'error', code: `DS_${status}`, reply: msg })}\n\n`))
+          ctrl.close()
+        }
+      })
+      return new Response(stream, { headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive' } })
+    }
+
+    const encoder = new TextEncoder()
+    const lastMsg = messages[messages.length - 1]
+    const lastText = typeof lastMsg?.content === 'string' ? lastMsg.content : '(imagem)'
+    const convId = conversationId || ''
+    let fullContent = ''
+    let fullReasoning = ''
+
+    const stream = new ReadableStream({
+      async start(controller) {
+        const reader = res.body!.getReader()
+        const decoder = new TextDecoder()
+        let buffer = ''
+
+        try {
+          while (true) {
+            const { done, value } = await reader.read()
+            if (done) break
+
+            buffer += decoder.decode(value, { stream: true })
+            const lines = buffer.split('\n')
+            buffer = lines.pop() || ''
+
+            for (const line of lines) {
+              const trimmed = line.trim()
+              if (!trimmed.startsWith('data: ')) continue
+              const data = trimmed.slice(6)
+              if (data === '[DONE]') continue
+
+              let parsed: any
+              try { parsed = JSON.parse(data) } catch { continue }
+
+              const delta = parsed?.choices?.[0]?.delta
+              if (delta?.content) fullContent += delta.content
+              if (delta?.reasoning_content) fullReasoning += delta.reasoning_content
+
+              controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'chunk', choices: parsed?.choices, model: model.name })}\n\n`))
+            }
+          }
+        } catch (e) {
+          console.error('Stream read error:', e)
+        }
+
+        if (convId && (fullContent || fullReasoning)) {
+          await saveToDb(convId, lastText, fullContent, fullReasoning)
+        }
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'done', code: 'OK', model: model.name })}\n\n`))
+        controller.close()
+      }
+    })
+
+    return new Response(stream, {
+      headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive' },
+    })
+  } catch (e) {
+    console.error('AI stream error:', e)
+    const encoder = new TextEncoder()
+    const stream = new ReadableStream({
+      start(ctrl) {
+        ctrl.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'error', code: 'INTERNAL', reply: 'Erro interno.' })}\n\n`))
+        ctrl.close()
+      }
+    })
+    return new Response(stream, { headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive' } })
+  }
+}

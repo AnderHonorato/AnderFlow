@@ -136,6 +136,12 @@ export const IconPause = (props: React.SVGProps<SVGSVGElement>) => (
 export const IconClock = (props: React.SVGProps<SVGSVGElement>) => (
   <Svg {...props}><circle cx="8" cy="8" r="6"/><path d="M8 5v3l2 2"/></Svg>
 )
+export const IconSparkles = (props: React.SVGProps<SVGSVGElement>) => (
+  <Svg {...props}><path d="M12 2l1.5 3.5L17 7l-3.5 1.5L12 12l-1.5-3.5L7 7l3.5-1.5zM5 12l1 2 2 1-2 1-1 2-1-2-2-1 2-1z"/></Svg>
+)
+export const IconBot = (props: React.SVGProps<SVGSVGElement>) => (
+  <Svg {...props}><rect x="3" y="4" width="10" height="8" rx="1.5"/><path d="M6 4V2h4v2M5 8h6M5 10h6"/><circle cx="7" cy="7.5" r="0.5" fill="currentColor"/><circle cx="9" cy="7.5" r="0.5" fill="currentColor"/><path d="M8 12v2M3 12h10"/></Svg>
+)
 export const IconArrowUpRight = (props: React.SVGProps<SVGSVGElement>) => (
   <Svg {...props}><path d="M4 12l8-8M12 4H5m7 0v7"/></Svg>
 )

@@ -83,8 +83,8 @@ export default function NotificationsPage() {
     <div className="p-6 space-y-5 max-w-3xl mx-auto animate-page-enter">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-[17px] font-[500] tracking-[-0.015em]">Notificacoes</h1>
-          <p className="text-[12px] text-[var(--text-3)] mt-1">{unreadCount} nao lidas</p>
+          <h1 className="text-[17px] font-[500] tracking-[-0.015em]">Notificações</h1>
+          <p className="text-[12px] text-[var(--text-3)] mt-1">{unreadCount} não lidas</p>
         </div>
         {unreadCount > 0 && (
           <Button variant="outline" size="sm" onClick={markAllRead}>
@@ -97,7 +97,7 @@ export default function NotificationsPage() {
         <CardContent className="p-0">
           <div className="divide-y divide-[var(--border)]">
             {notifications.length === 0 && (
-              <div className="p-12 text-center text-[var(--text-3)] text-[13px]">Nenhuma notificacao</div>
+              <div className="p-12 text-center text-[var(--text-3)] text-[13px]">Nenhuma notificação</div>
             )}
             {notifications.map(n => {
               const isExpanded = expandedId === n.id

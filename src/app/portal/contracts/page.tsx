@@ -9,7 +9,8 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { toast } from 'sonner'
-import { FileText, Download, Upload, Check } from 'lucide-react'
+import { FileText, Download, Upload, Check, PenLine } from 'lucide-react'
+import { SignaturePad } from '@/components/ui/signature-pad'
 
 export default function PortalContracts() {
   const { data: session } = useSession()
@@ -19,6 +20,9 @@ export default function PortalContracts() {
   const [selectedContract, setSelectedContract] = useState<any>(null)
   const [uploadFile, setUploadFile] = useState<File | null>(null)
   const [uploading, setUploading] = useState(false)
+  const [signOpen, setSignOpen] = useState(false)
+  const [signContract, setSignContract] = useState<any>(null)
+  const [signing, setSigning] = useState(false)
 
   useEffect(() => {
     if (!session?.user?.id) { setLoading(false); return }
@@ -62,6 +66,30 @@ export default function PortalContracts() {
       toast.error('Erro ao fazer upload')
     }
     setUploading(false)
+  }
+
+  const handleSignDigitally = async (base64: string) => {
+    if (!signContract) return
+    setSigning(true)
+    try {
+      const res = await fetch(`/api/contracts/${signContract.id}/sign`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ signature: base64 }),
+      })
+      if (res.ok) {
+        toast.success('Contrato assinado com sucesso!')
+        setSignOpen(false)
+        setSignContract(null)
+        setContracts(prev => prev.map(c => c.id === signContract.id ? { ...c, status: 'SIGNED', signedAt: new Date().toISOString() } : c))
+      } else {
+        const json = await res.json()
+        toast.error(json.error || 'Erro ao assinar contrato')
+      }
+    } catch {
+      toast.error('Erro ao assinar contrato')
+    }
+    setSigning(false)
   }
 
   if (loading) {
@@ -112,6 +140,18 @@ export default function PortalContracts() {
                     )}
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
+                    {contract.status !== 'SIGNED' && (
+                      <Button
+                        size="sm"
+                        className="h-8 text-[11px]"
+                        onClick={() => {
+                          setSignContract(contract)
+                          setSignOpen(true)
+                        }}
+                      >
+                        <PenLine className="w-[12px] h-[12px]" /> Assinar
+                      </Button>
+                    )}
                     {contract.status === 'PENDING_SIGNATURE' && (
                       <>
                         <Button
@@ -173,6 +213,29 @@ export default function PortalContracts() {
               {uploading ? 'Enviando...' : 'Enviar contrato'}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={signOpen} onOpenChange={setSignOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Assinar Contrato</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            {signContract && (
+              <p className="text-[13px] font-[500]">{signContract.title}</p>
+            )}
+            <p className="text-[12px] text-[var(--text-2)]">
+              Desenhe sua assinatura no campo abaixo. Ao assinar, voce concorda com os termos do contrato.
+            </p>
+            <SignaturePad
+              onSign={handleSignDigitally}
+              onCancel={() => setSignOpen(false)}
+            />
+            <p className="text-[11px] text-[var(--text-3)]">
+              Ao assinar, voce concorda com os termos do contrato
+            </p>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

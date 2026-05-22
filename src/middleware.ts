@@ -1,24 +1,29 @@
 import { withAuth } from 'next-auth/middleware'
 import { NextResponse } from 'next/server'
 
-const adminOnlyRoutes = [
-  '/users', '/audit-logs', '/clients', '/crm', '/analytics',
-  '/automations', '/files', '/tickets', '/calendar', '/onboarding', '/settings',
-  '/ai', '/contracts',
+const roleLevels: Record<string, number> = {
+  OWNER: 100,
+  ADMIN: 80,
+  MODERATOR: 60,
+  DEVELOPER: 40,
+  USER: 20,
+  GUEST: 0,
+}
+
+const adminRoutes = [
+  '/users', '/clients', '/crm', '/analytics',
+  '/automations', '/files', '/tickets', '/calendar',
+  '/settings', '/ai', '/contracts', '/feedbacks-ia', '/audit-logs',
 ]
 
-const clientAllowedRoutes = [
-  '/dashboard', '/profile', '/notifications', '/help',
-  '/plans', '/changelog', '/feedback',
-  '/projects', '/chat', '/financial',
-  '/portal', '/knowledge',
-]
+function getRoleLevel(role: string | undefined): number {
+  return role ? (roleLevels[role] ?? 0) : 0
+}
 
 export default withAuth(
   function middleware(req) {
     const token = req.nextauth.token
     const path = req.nextUrl.pathname
-    const role = (token?.role as string) || 'CLIENT'
 
     if (!token) return NextResponse.next()
 
@@ -27,17 +32,20 @@ export default withAuth(
       return NextResponse.redirect(new URL('/clients', req.url))
     }
 
-    // CLIENT: bloquear rotas administrativas
-    if (role === 'CLIENT') {
-      const isAdminRoute = adminOnlyRoutes.some(r => path === r || path.startsWith(r + '/'))
-      if (isAdminRoute) {
+    const roleLevel = getRoleLevel(token?.role as string | undefined)
+
+    const isAdminRoute = adminRoutes.some(r => path === r || path.startsWith(r + '/'))
+
+    if (isAdminRoute) {
+      const isUsersRoute = path === '/users' || path.startsWith('/users/')
+      const requiredLevel = isUsersRoute ? 100 : 60
+
+      if (roleLevel < requiredLevel) {
+        if (roleLevel === 0) {
+          return NextResponse.redirect(new URL('/login', req.url))
+        }
         return NextResponse.redirect(new URL('/dashboard', req.url))
       }
-    }
-
-    // ADMIN acessando /portal: permitir
-    if (role === 'ADMIN' && path === '/portal') {
-      return NextResponse.next()
     }
 
     return NextResponse.next()
@@ -49,8 +57,10 @@ export default withAuth(
         if (
           path.startsWith('/login') ||
           path.startsWith('/register') ||
+          path.startsWith('/pre-register') ||
           path.startsWith('/forgot-password') ||
           path.startsWith('/termos') ||
+          path.startsWith('/briefing-public') ||
           path.startsWith('/api/auth')
         ) {
           return true

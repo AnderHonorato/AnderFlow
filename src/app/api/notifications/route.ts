@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getToken } from 'next-auth/jwt'
+import { sendPushToUser } from '@/lib/push'
 
 export async function GET(request: NextRequest) {
   try {
@@ -52,6 +53,8 @@ export async function POST(request: NextRequest) {
         metadata: metadata || null,
       },
     })
+
+    sendPushToUser(userId, title, message || '').catch(() => {})
 
     return NextResponse.json({ data: notification }, { status: 201 })
   } catch (error) {

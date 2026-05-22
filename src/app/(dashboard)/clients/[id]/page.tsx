@@ -5,10 +5,14 @@ import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Progress } from '@/components/ui/progress'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Separator } from '@/components/ui/separator'
-import { ArrowLeft, Mail, Phone, Building2, Calendar, Clock, FolderKanban, DollarSign, MessageSquare, TicketIcon } from 'lucide-react'
+import { Dialog, DialogContent } from '@/components/ui/dialog'
+import { toast } from 'sonner'
+import { ArrowLeft, Mail, Phone, Building2, Calendar, Clock, FolderKanban, DollarSign, MessageSquare, TicketIcon, Link2, Copy } from 'lucide-react'
 
 export default function ClientDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -18,6 +22,9 @@ export default function ClientDetailPage() {
   const [messages, setMessages] = useState<any[]>([])
   const [tickets, setTickets] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [linkDialogOpen, setLinkDialogOpen] = useState(false)
+  const [generatedLink, setGeneratedLink] = useState('')
+  const [generatingLink, setGeneratingLink] = useState(false)
 
   useEffect(() => {
     Promise.all([
@@ -41,6 +48,33 @@ export default function ClientDetailPage() {
       setLoading(false)
     }).catch(() => setLoading(false))
   }, [id])
+
+  const handleGenerateLink = async () => {
+    setGeneratingLink(true)
+    try {
+      const res = await fetch('/api/briefing/generate-link', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ clientId: id }),
+      })
+      const json = await res.json()
+      if (json.data?.link) {
+        const fullLink = `${window.location.origin}${json.data.link}`
+        setGeneratedLink(fullLink)
+        setLinkDialogOpen(true)
+      } else {
+        toast.error(json.error || 'Erro ao gerar link')
+      }
+    } catch {
+      toast.error('Erro ao gerar link')
+    }
+    setGeneratingLink(false)
+  }
+
+  const handleCopyLink = () => {
+    navigator.clipboard.writeText(generatedLink)
+    toast.success('Link copiado!')
+  }
 
   if (loading) return <div className="p-6 space-y-4"><Skeleton className="h-8 w-64" /><Skeleton className="h-48" /><Skeleton className="h-64" /></div>
   if (!client) return <div className="p-6"><Link href="/clients" className="text-primary text-sm hover:underline"><ArrowLeft className="inline h-4 w-4 mr-1" />Voltar</Link><p className="text-muted-foreground mt-4">Cliente não encontrado</p></div>
@@ -79,6 +113,10 @@ export default function ClientDetailPage() {
                 <span className="flex items-center gap-1"><Calendar className="h-3.5 w-3.5" />Cliente desde {new Date(client.createdAt).toLocaleDateString('pt-BR')}</span>
               </div>
             </div>
+            <Button variant="outline" size="sm" onClick={handleGenerateLink} disabled={generatingLink} className="ml-auto shrink-0">
+              <Link2 className="mr-1.5 h-3.5 w-3.5" />
+              {generatingLink ? 'Gerando...' : 'Gerar link de briefing'}
+            </Button>
           </div>
         </CardContent>
       </Card>
@@ -157,6 +195,26 @@ export default function ClientDetailPage() {
           </CardContent>
         </Card>
       )}
+
+      <Dialog open={linkDialogOpen} onOpenChange={setLinkDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <Link2 className="h-5 w-5 text-[var(--primary)]" />
+              <h2 className="text-sm font-medium text-[var(--text)]">Link de briefing gerado</h2>
+            </div>
+            <p className="text-xs text-[var(--text-muted)]">
+              Compartilhe este link com o cliente. Ele poderá preencher o briefing sem precisar de login. O link expira em 7 dias.
+            </p>
+            <div className="flex items-center gap-2">
+              <Input value={generatedLink} readOnly className="flex-1 text-xs font-mono h-9" />
+              <Button size="sm" onClick={handleCopyLink}>
+                <Copy className="mr-1.5 h-3.5 w-3.5" /> Copiar
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

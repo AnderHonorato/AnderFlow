@@ -16,6 +16,7 @@ import {
   IconPlus, IconSearch, IconClient, IconProject, IconFinancial,
   IconLoader, IconArrowLeft,
 } from '@/components/icons'
+import { Link2, Copy } from 'lucide-react'
 
 export default function ClientsPage() {
   const { data: session } = useSession()
@@ -27,6 +28,9 @@ export default function ClientsPage() {
   const [saving, setSaving] = useState(false)
   const [channel, setChannel] = useState<any>(null)
   const [form, setForm] = useState({ name: '', email: '', password: '', company: '', phone: '' })
+  const [linkDialogOpen, setLinkDialogOpen] = useState(false)
+  const [generatedLink, setGeneratedLink] = useState('')
+  const [generatingLink, setGeneratingLink] = useState(false)
 
   useEffect(() => {
     fetch('/api/clients')
@@ -66,6 +70,34 @@ export default function ClientsPage() {
       })
       .catch(() => {})
   }, [selectedClientId, clients])
+
+  const handleGenerateLink = async () => {
+    if (!selectedClientId) return
+    setGeneratingLink(true)
+    try {
+      const res = await fetch('/api/briefing/generate-link', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ clientId: selectedClientId }),
+      })
+      const json = await res.json()
+      if (json.data?.link) {
+        const fullLink = `${window.location.origin}${json.data.link}`
+        setGeneratedLink(fullLink)
+        setLinkDialogOpen(true)
+      } else {
+        toast.error(json.error || 'Erro ao gerar link')
+      }
+    } catch {
+      toast.error('Erro ao gerar link')
+    }
+    setGeneratingLink(false)
+  }
+
+  const handleCopyLink = () => {
+    navigator.clipboard.writeText(generatedLink)
+    toast.success('Link copiado!')
+  }
 
   const handleCreateClient = async () => {
     if (!form.name.trim() || !form.email.trim() || !form.password.trim()) return
@@ -181,6 +213,10 @@ export default function ClientsPage() {
                   {selectedClient.company}{selectedClient.company ? ' · ' : ''}{selectedClient.email}
                 </p>
               </div>
+              <Button variant="outline" size="sm" onClick={handleGenerateLink} disabled={generatingLink} className="h-7 text-[11px]">
+                <Link2 className="mr-1 h-3 w-3" />
+                {generatingLink ? 'Gerando...' : 'Link de briefing'}
+              </Button>
             </div>
             <div className="flex-1 flex min-h-0">
               <div className="flex-1">
@@ -231,6 +267,25 @@ export default function ClientsPage() {
               Criar cliente
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={linkDialogOpen} onOpenChange={setLinkDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Link de briefing gerado</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <p className="text-[12px] text-[var(--text-3)]">
+              Compartilhe este link com o cliente. Ele poderá preencher o briefing sem precisar de login. O link expira em 7 dias.
+            </p>
+            <div className="flex items-center gap-2">
+              <Input value={generatedLink} readOnly className="flex-1 text-[11px] font-mono h-8" />
+              <Button size="sm" onClick={handleCopyLink} className="h-8 text-[11px]">
+                <Copy className="mr-1 h-3 w-3" /> Copiar
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

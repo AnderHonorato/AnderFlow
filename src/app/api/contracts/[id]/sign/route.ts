@@ -18,14 +18,16 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     }
 
     const body = await request.json()
-    const { signatureUrl } = body
+    const { signature, signatureUrl } = body
 
     await prisma.contract.update({
       where: { id },
       data: {
         status: 'SIGNED',
         signedAt: new Date(),
+        signature: signature || null,
         signatureUrl: signatureUrl || null,
+        signerIp: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || '127.0.0.1',
       },
     })
 

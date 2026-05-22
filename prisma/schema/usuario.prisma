@@ -1,0 +1,147 @@
+// ============================================
+// USUÁRIO — Contas, sessões, autenticação e preferências
+// ============================================
+
+model User {
+  id               String    @id @default(cuid())
+  name             String
+  email            String    @unique
+  emailVerified    DateTime?
+  password         String?
+  image            String?
+  phone            String?
+  role             String    @default("CLIENT")
+  company          String?
+  position         String?
+  bio              String?
+  timezone         String    @default("America/Sao_Paulo")
+  language         String    @default("pt-BR")
+  twoFactorEnabled Boolean   @default(false)
+  twoFactorSecret  String?
+  isActive         Boolean   @default(true)
+  isAccountActive  Boolean   @default(false)
+  verificationCode String?
+  codeExpiresAt    DateTime?
+  verificationMethod String?
+  isOnline         Boolean   @default(false)
+  lastSeen         DateTime?
+  rememberUntil    DateTime?
+  theme            String    @default("system")
+  plan             String    @default("BASIC")
+  permissions      String    @default("[]")
+  deleteRequestedAt DateTime?
+  deleteScheduledAt DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  isBot            Boolean   @default(false)
+  botStatus        String?
+  botContext       String?
+  botActivatedBy   String?
+  botLastActionAt  DateTime?
+
+  accounts           Account[]
+  sessions           Session[]
+  projects           Project[]       @relation("ProjectOwner")
+  assignedTasks      Task[]          @relation("TaskAssignee")
+  createdTasks       Task[]          @relation("TaskCreator")
+  messages           Message[]
+  notifications      Notification[]
+  tickets            Ticket[]        @relation("TicketCreator")
+  assignedTickets    Ticket[]        @relation("TicketAssignee")
+  comments           Comment[]
+  files              File[]
+  contracts          Contract[]      @relation("ContractClient")
+  invoices           Invoice[]
+  payments           Payment[]
+  activities         Activity[]
+  leads              Lead[]          @relation("LeadOwner")
+  feedbacks          Feedback[]
+  preferences        UserPreference?
+  teamMembers        TeamMember[]
+  timeEntries        TimeEntry[]
+  projectUpdates     ProjectUpdate[]
+  aiConversations    AiConversation[]
+  clientChannels     Channel[]       @relation("ClientChannel")
+  pushSubscriptions  PushSubscription[]
+  permissionRequests PermissionRequest[]
+  bans               UserBan[]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  ipAddress    String?
+  userAgent    String?
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model UserPreference {
+  id                    String  @id @default(cuid())
+  userId                String  @unique
+  emailNotifications    Boolean @default(true)
+  pushNotifications     Boolean @default(true)
+  whatsappNotifications Boolean @default(false)
+  weeklyReport          Boolean @default(true)
+  marketingEmails       Boolean @default(false)
+  soundEnabled          Boolean @default(true)
+  compactMode           Boolean @default(false)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model PermissionRequest {
+  id           String   @id @default(cuid())
+  userId       String
+  permission   String
+  reason       String
+  status       String   @default("pending")
+  resolvedAt   DateTime?
+  resolvedBy   String?
+  isDefinitive Boolean  @default(false)
+  createdAt    DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model UserBan {
+  id        String    @id @default(cuid())
+  userId    String
+  bannedBy  String
+  reason    String?
+  type      String    @default("temp")
+  expiresAt DateTime?
+  isActive  Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}

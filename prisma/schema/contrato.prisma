@@ -1,0 +1,30 @@
+// ============================================
+// CONTRATO — Assinatura digital e gestão contratual
+// ============================================
+
+model Contract {
+  id             String    @id @default(cuid())
+  title          String
+  content        String
+  clientId       String
+  projectId      String?
+  organizationId String?
+  status         String    @default("DRAFT")
+  startDate      DateTime?
+  endDate        DateTime?
+  value          Float?
+  signedAt       DateTime?
+  signature      String?
+  signatureUrl   String?
+  signerIp       String?
+  pdfUrl         String?
+  autoRenew      Boolean   @default(false)
+  loyaltyMonths  Int?
+  metadata       String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  client       User          @relation("ContractClient", fields: [clientId], references: [id])
+  project      Project?      @relation(fields: [projectId], references: [id])
+  organization Organization? @relation(fields: [organizationId], references: [id])
+}

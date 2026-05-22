@@ -1,0 +1,53 @@
+// ============================================
+// ORGANIZAÇÃO — Empresas, times e membros
+// ============================================
+
+model Organization {
+  id           String   @id @default(cuid())
+  name         String
+  slug         String   @unique
+  logo         String?
+  favicon      String?
+  domain       String?
+  description  String?
+  website      String?
+  email        String?
+  phone        String?
+  address      String?
+  cnpj         String?
+  primaryColor String   @default("#0066FF")
+  plan         String   @default("BASIC")
+  isActive     Boolean  @default(true)
+  settings     String   @default("{}")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  teams     Team[]
+  projects  Project[]
+  contracts Contract[]
+  invoices  Invoice[] @relation("OrgInvoices")
+}
+
+model Team {
+  id             String   @id @default(cuid())
+  name           String
+  description    String?
+  organizationId String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  members      TeamMember[]
+}
+
+model TeamMember {
+  id     String @id @default(cuid())
+  teamId String
+  userId String
+  role   String @default("member")
+
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, userId])
+}

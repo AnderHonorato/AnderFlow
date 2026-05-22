@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getSessionUser, isAdmin } from '@/lib/auth-utils'
+import { sendWhatsApp } from '@/lib/whatsapp'
 
 export async function GET(request: NextRequest) {
   try {
@@ -93,6 +94,12 @@ export async function POST(request: NextRequest) {
           isRead: false,
         },
       })
+    }
+
+    // Notificar via WhatsApp
+    const client = await prisma.user.findUnique({ where: { id: clientId }, select: { phone: true } })
+    if (client?.phone) {
+      sendWhatsApp(client.phone, `Novo projeto criado: "${name}". Acompanhe pelo portal.`).catch(() => {})
     }
 
     return NextResponse.json({ data: project }, { status: 201 })

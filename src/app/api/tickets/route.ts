@@ -61,6 +61,12 @@ export async function POST(request: NextRequest) {
       },
     })
 
+    fetch(`${request.nextUrl.origin}/api/ai/analyze-ticket`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Cookie': request.headers.get('cookie') || '' },
+      body: JSON.stringify({ ticketId: ticket.id }),
+    }).catch(() => {})
+
     return NextResponse.json({ data: ticket }, { status: 201 })
   } catch (error) {
     return NextResponse.json({ error: 'Erro ao criar ticket' }, { status: 500 })

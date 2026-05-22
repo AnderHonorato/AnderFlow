@@ -21,6 +21,8 @@ export default function ChatPage() {
   const [newMessage, setNewMessage] = useState('')
   const [loading, setLoading] = useState(true)
   const [sending, setSending] = useState(false)
+  const [isOtherTyping, setIsOtherTyping] = useState(false)
+  const lastTypingRef = useRef(0)
 
   useEffect(() => {
     fetch('/api/channels')
@@ -52,6 +54,35 @@ export default function ChatPage() {
     const interval = setInterval(fetchMessages, 4000)
     return () => clearInterval(interval)
   }, [selectedChannel])
+
+  // ── Typing polling ──
+  useEffect(() => {
+    if (!selectedChannel) return
+    const checkTyping = () => {
+      fetch(`/api/typing?channelId=${selectedChannel}`)
+        .then(r => r.json())
+        .then(json => {
+          setIsOtherTyping(json.data?.typing || false)
+        })
+        .catch(() => {})
+    }
+    checkTyping()
+    const interval = setInterval(checkTyping, 2000)
+    return () => clearInterval(interval)
+  }, [selectedChannel])
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setNewMessage(e.target.value)
+    const now = Date.now()
+    if (now - lastTypingRef.current > 2000 && selectedChannel) {
+      lastTypingRef.current = now
+      fetch('/api/typing', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ channelId: selectedChannel }),
+      }).catch(() => {})
+    }
+  }
 
   const handleSend = async () => {
     if (!newMessage.trim() || !selectedChannel || sending) return
@@ -171,6 +202,18 @@ export default function ChatPage() {
                     </div>
                   )
                 })}
+                {isOtherTyping && (
+                  <div className="flex justify-start">
+                    <div className="bg-[var(--surface-2)] rounded-2xl rounded-bl-md px-4 py-2.5 flex items-center gap-1">
+                      <span className="flex gap-1">
+                        <span className="h-1.5 w-1.5 rounded-full bg-[var(--accent)] pulse-accent" style={{ animationDelay: '0ms' }} />
+                        <span className="h-1.5 w-1.5 rounded-full bg-[var(--accent)] pulse-accent" style={{ animationDelay: '300ms' }} />
+                        <span className="h-1.5 w-1.5 rounded-full bg-[var(--accent)] pulse-accent" style={{ animationDelay: '600ms' }} />
+                      </span>
+                      <span className="text-[11px] text-[var(--text-3)] ml-1">digitando...</span>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -179,7 +222,7 @@ export default function ChatPage() {
                 <Input
                   placeholder="Digite sua mensagem..."
                   value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
+                  onChange={handleInputChange}
                   className="flex-1 h-10"
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' && !e.shiftKey) {

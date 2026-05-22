@@ -71,6 +71,18 @@ const UNIVERSAL_STAGE: BriefingStage = {
     { id: 'competitors', label: 'Concorrentes ou Referências', type: 'textarea', required: false, placeholder: 'Cite concorrentes ou empresas que você considera referência' },
     { id: 'references', label: 'Referências Visuais (links)', type: 'textarea', required: false, placeholder: 'Cole links de sites ou apps que você gosta do visual' },
     { id: 'additional_notes', label: 'Observações Adicionais', type: 'textarea', required: false, placeholder: 'Algo mais que devemos saber?' },
+    {
+      id: 'ai_usage_permission',
+      label: 'Permitir uso de IA para acelerar seu projeto mantendo a qualidade?',
+      type: 'select',
+      required: true,
+      options: [
+        'Sim, permito o uso de IA — o projeto tera base acelerada por IA com validacoes e ajustes manuais do desenvolvedor',
+        'Nao, prefiro desenvolvimento 100% manual — feito do inicio ao fim pelo desenvolvedor (custo adicional consideravel)',
+      ],
+      helpText: 'Se optar pelo uso de IA, a ANDERFLOW criara a base do projeto com auxilio de inteligencia artificial e depois fara validacoes, correcoes e adicoes manualmente — mantendo qualidade com menor custo. Se optar por 100% manual, o projeto sera construido integralmente pelo desenvolvedor, o que aumenta o valor final de forma significativa.',
+      placeholder: 'Selecione uma opcao',
+    },
   ],
 }
 

@@ -1,0 +1,1 @@
+export { Badge, badgeVariants, statusConfig } from '@/components/ui/badge'

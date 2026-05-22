@@ -38,7 +38,7 @@ async function main() {
 
   const admin = await prisma.user.upsert({
     where: { email: 'admin@andero.com.br' },
-    update: { role: 'ADMIN', plan: 'ENTERPRISE' },
+    update: { role: 'ADMIN', plan: 'ENTERPRISE', isAccountActive: true, emailVerified: new Date() },
     create: {
       name: 'Anderson',
       email: 'admin@andero.com.br',
@@ -48,32 +48,62 @@ async function main() {
       phone: '(11) 99999-0000',
       plan: 'ENTERPRISE',
       isActive: true,
+      isAccountActive: true,
+      emailVerified: new Date(),
     },
   })
   console.log('Dev:', admin.email)
 
+  const botPassword = await bcrypt.hash('bot123456', 12)
+  const bots = [
+    { name: 'Bot Owner',     email: 'bot-owner@andero.com.br',     role: 'OWNER' },
+    { name: 'Bot Admin',     email: 'bot-admin@andero.com.br',     role: 'ADMIN' },
+    { name: 'Bot Moderador', email: 'bot-moderador@andero.com.br', role: 'MODERATOR' },
+    { name: 'Bot Dev',       email: 'bot-dev@andero.com.br',       role: 'DEVELOPER' },
+    { name: 'Bot Cliente',   email: 'bot-cliente@andero.com.br',   role: 'CLIENT' },
+  ]
+  for (const b of bots) {
+    await prisma.user.upsert({
+      where: { email: b.email },
+      update: { isBot: true, botStatus: 'IDLE', botContext: null, role: b.role, isAccountActive: true, emailVerified: new Date() },
+      create: {
+        name: b.name, email: b.email, password: botPassword, role: b.role,
+        isActive: true, isAccountActive: true, emailVerified: new Date(),
+        isBot: true, botStatus: 'IDLE', botContext: JSON.stringify({ startedAt: null, actions: [], pendingDependency: null, state: {} }),
+        permissions: '[]', plan: 'ENTERPRISE',
+      },
+    })
+  }
+  console.log('Bots criados: 5 (Owner, Admin, Moderador, Dev, Cliente)')
+
   const c1 = await prisma.user.upsert({
     where: { email: 'carlos@techstore.com' },
-    update: { role: 'CLIENT' },
-    create: { name: 'Carlos Silva', email: 'carlos@techstore.com', password: clientPassword, role: 'CLIENT', company: 'TechStore', phone: '(11) 99999-0001', plan: 'PRO', isActive: true },
+    update: { role: 'CLIENT', isAccountActive: true, emailVerified: new Date() },
+    create: { name: 'Carlos Silva', email: 'carlos@techstore.com', password: clientPassword, role: 'CLIENT', company: 'TechStore', phone: '(11) 99999-0001', plan: 'PRO', isActive: true, isAccountActive: true, emailVerified: new Date() },
   })
 
   const c2 = await prisma.user.upsert({
     where: { email: 'ana@fastfood.com' },
     update: { role: 'CLIENT' },
-    create: { name: 'Ana Oliveira', email: 'ana@fastfood.com', password: clientPassword, role: 'CLIENT', company: 'FastFood Co', phone: '(21) 99999-0002', plan: 'PRO', isActive: true },
+    create: { name: 'Ana Oliveira', email: 'ana@fastfood.com', password: clientPassword, role: 'CLIENT', company: 'FastFood Co', phone: '(21) 99999-0002', plan: 'PRO', isActive: true, isAccountActive: true, emailVerified: new Date() },
   })
 
   const c3 = await prisma.user.upsert({
     where: { email: 'roberto@vendasplus.com' },
     update: { role: 'CLIENT' },
-    create: { name: 'Roberto Santos', email: 'roberto@vendasplus.com', password: clientPassword, role: 'CLIENT', company: 'Vendas Plus', phone: '(11) 99999-0003', plan: 'BASIC', isActive: true },
+    create: { name: 'Roberto Santos', email: 'roberto@vendasplus.com', password: clientPassword, role: 'CLIENT', company: 'Vendas Plus', phone: '(11) 99999-0003', plan: 'BASIC', isActive: true, isAccountActive: true, emailVerified: new Date() },
   })
 
   const c4 = await prisma.user.upsert({
     where: { email: 'juliana@datacorp.com' },
     update: { role: 'CLIENT' },
-    create: { name: 'Juliana Costa', email: 'juliana@datacorp.com', password: clientPassword, role: 'CLIENT', company: 'DataCorp', phone: '(31) 99999-0004', plan: 'ENTERPRISE', isActive: true },
+    create: { name: 'Juliana Costa', email: 'juliana@datacorp.com', password: clientPassword, role: 'CLIENT', company: 'DataCorp', phone: '(31) 99999-0004', plan: 'ENTERPRISE', isActive: true, isAccountActive: true, emailVerified: new Date() },
+  })
+
+  const c5 = await prisma.user.upsert({
+    where: { email: 'joao@email.com' },
+    update: { role: 'CLIENT', isAccountActive: true, emailVerified: new Date() },
+    create: { name: 'João', email: 'joao@email.com', password: clientPassword, role: 'CLIENT', plan: 'BASIC', isActive: true, isAccountActive: true, emailVerified: new Date() },
   })
 
   const p1 = await prisma.project.create({

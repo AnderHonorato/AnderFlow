@@ -6,15 +6,18 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Skeleton } from '@/components/ui/skeleton'
 import { OnboardingTip } from '@/components/ui/onboarding-tip'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
+import { IconSparkles } from '@/components/icons'
 import {
   Plus, Search, TicketIcon, MessageSquare, MoreHorizontal, Loader2,
 } from 'lucide-react'
@@ -28,6 +31,9 @@ export default function TicketsPage() {
   const [showNew, setShowNew] = useState(false)
   const [saving, setSaving] = useState(false)
   const [form, setForm] = useState({ title: '', description: '', priority: 'MEDIUM', category: '' })
+  const [selectedTicket, setSelectedTicket] = useState<any>(null)
+  const [replyText, setReplyText] = useState('')
+  const [replying, setReplying] = useState(false)
 
   const loadTickets = () => {
     fetch('/api/tickets')
@@ -48,6 +54,35 @@ export default function TicketsPage() {
     if (res.ok) { toast.success('Ticket criado'); setShowNew(false); loadTickets(); setForm({ title: '', description: '', priority: 'MEDIUM', category: '' }) }
     else toast.error('Erro ao criar ticket')
     setSaving(false)
+  }
+
+  const handleUseAIReply = () => {
+    if (selectedTicket?.aiSuggestedReply) {
+      setReplyText(selectedTicket.aiSuggestedReply)
+    }
+  }
+
+  const handleUpdateTicket = async (ticketId: string, data: any) => {
+    const res = await fetch(`/api/tickets/${ticketId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    })
+    if (res.ok) {
+      toast.success('Ticket atualizado')
+      loadTickets()
+      setSelectedTicket(null)
+      setReplyText('')
+    } else {
+      toast.error('Erro ao atualizar ticket')
+    }
+  }
+
+  const handleSendReply = async () => {
+    if (!replyText.trim() || !selectedTicket) return
+    setReplying(true)
+    await handleUpdateTicket(selectedTicket.id, { status: 'IN_PROGRESS' })
+    setReplying(false)
   }
 
   const filtered = tickets.filter(t => !search || t.title.toLowerCase().includes(search.toLowerCase()))
@@ -85,9 +120,18 @@ export default function TicketsPage() {
         <CardContent className="p-0">
           <div className="divide-y">
             {filtered.map(t => (
-              <div key={t.id} className="flex items-center gap-4 p-4 hover:bg-muted/50 transition-colors cursor-pointer">
+              <div key={t.id} className="flex items-center gap-4 p-4 hover:bg-muted/50 transition-colors cursor-pointer" onClick={() => { setSelectedTicket(t); setReplyText('') }}>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2"><span className="text-xs font-mono text-muted-foreground">#{t.number || t.id.slice(-4)}</span><p className="text-sm font-medium truncate">{t.title}</p></div>
+                  <div className="flex items-center gap-2"><span className="text-xs font-mono text-muted-foreground">#{t.number || t.id.slice(-4)}</span><p className="text-sm font-medium truncate">{t.title}</p>
+                    {t.aiSuggestedReply && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className="shrink-0 cursor-help"><IconSparkles className="w-3.5 h-3.5 text-[var(--accent)]" /></span>
+                        </TooltipTrigger>
+                        <TooltipContent>IA analisou este ticket</TooltipContent>
+                      </Tooltip>
+                    )}
+                  </div>
                   <div className="flex items-center gap-3 mt-1"><span className="text-xs text-muted-foreground">{t.creator?.name || 'Cliente'}</span>{t.category && <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">{t.category}</span>}</div>
                 </div>
                 <div className="flex items-center gap-3">
@@ -130,6 +174,78 @@ export default function TicketsPage() {
             <Button variant="outline" onClick={() => setShowNew(false)}>Cancelar</Button>
             <Button onClick={handleCreate} disabled={saving || !form.title}>{saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Criar</Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!selectedTicket} onOpenChange={(open) => { if (!open) setSelectedTicket(null) }}>
+        <DialogContent className="sm:max-w-[520px]">
+          <DialogHeader>
+            <DialogTitle>
+              #{selectedTicket?.number || selectedTicket?.id?.slice(-4)} {selectedTicket?.title}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-[13px] text-[var(--text-2)]">{selectedTicket?.description}</p>
+
+            <div className="flex items-center gap-3">
+              <Badge variant={selectedTicket?.priority === 'URGENT' ? 'destructive' : selectedTicket?.priority === 'HIGH' ? 'warning' : selectedTicket?.priority === 'MEDIUM' ? 'info' : 'secondary'}>
+                Prioridade: {selectedTicket?.priority}
+              </Badge>
+              <Badge variant={selectedTicket?.status === 'OPEN' ? 'info' : selectedTicket?.status === 'IN_PROGRESS' ? 'warning' : selectedTicket?.status === 'RESOLVED' ? 'success' : 'secondary'}>
+                {selectedTicket?.status === 'OPEN' ? 'Aberto' : selectedTicket?.status === 'IN_PROGRESS' ? 'Em Progresso' : selectedTicket?.status === 'RESOLVED' ? 'Resolvido' : selectedTicket?.status}
+              </Badge>
+              {selectedTicket?.category && <span className="text-xs text-muted-foreground">{selectedTicket.category}</span>}
+            </div>
+
+            {selectedTicket?.aiSuggestedReply && (
+              <Card className="bg-[var(--info-subtle)] border-[var(--border)]">
+                <CardContent className="p-3 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <IconSparkles className="w-4 h-4 text-[var(--accent)]" />
+                    <p className="text-[12px] font-[500] text-[var(--text)]">Sugestoes da IA</p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-[11px]">
+                    <div>
+                      <span className="text-[var(--text-3)]">Categoria:</span>
+                      <span className="ml-1 text-[var(--text)]">{selectedTicket.aiCategory || '-'}</span>
+                    </div>
+                    <div>
+                      <span className="text-[var(--text-3)]">Prioridade:</span>
+                      <span className="ml-1 text-[var(--text)]">{selectedTicket.aiPriority || '-'}</span>
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-[11px] text-[var(--text-3)] mb-1">Resposta sugerida:</p>
+                    <p className="text-[12px] text-[var(--text)] bg-[var(--surface)] rounded-md p-2 border border-[var(--border)]">{selectedTicket.aiSuggestedReply}</p>
+                    <Button variant="outline" size="sm" className="mt-2 text-[11px] h-7" onClick={handleUseAIReply}>
+                      <IconSparkles className="w-3 h-3 mr-1" /> Usar esta resposta
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {selectedTicket?.status !== 'RESOLVED' && selectedTicket?.status !== 'CLOSED' && (
+              <div className="space-y-2">
+                <p className="text-[12px] font-[500] text-[var(--text)]">Responder</p>
+                <Textarea
+                  placeholder="Digite sua resposta..."
+                  value={replyText}
+                  onChange={e => setReplyText(e.target.value)}
+                  className="min-h-[80px] text-[13px]"
+                />
+                <div className="flex justify-end gap-2">
+                  <Button variant="outline" size="sm" onClick={() => handleUpdateTicket(selectedTicket.id, { status: 'RESOLVED' })}>
+                    Marcar Resolvido
+                  </Button>
+                  <Button size="sm" onClick={handleSendReply} disabled={replying || !replyText.trim()}>
+                    {replying ? <Loader2 className="mr-2 h-3 w-3 animate-spin" /> : null}
+                    Enviar
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
         </DialogContent>
       </Dialog>
     </div>

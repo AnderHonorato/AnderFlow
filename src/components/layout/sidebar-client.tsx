@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useSession, signOut } from 'next-auth/react'
@@ -11,6 +11,7 @@ import {
   IconFinancial, IconAnalytics, IconKnowledge, IconNotification,
   IconSettings, IconChevronLeft, IconChevronRight, IconMenu,
   IconLogout, IconProfile, IconTicket, IconFile,
+  IconAutomation,
 } from '@/components/icons'
 
 const adminNavSections = [
@@ -36,6 +37,7 @@ const adminNavSections = [
       { name: 'Analytics', href: '/analytics', icon: IconAnalytics },
       { name: 'Tickets', href: '/tickets', icon: IconTicket },
       { name: 'Conhecimento', href: '/knowledge', icon: IconKnowledge },
+      { name: 'Feedbacks IA', href: '/feedbacks-ia', icon: IconNotification },
     ]
   },
 ]
@@ -47,12 +49,6 @@ const clientNavItems = [
   { name: 'Meus Projetos', href: '/projects', icon: IconProject },
   { name: 'Chat', href: '/clients', icon: IconChat },
   { name: 'Financeiro', href: '/financial', icon: IconFinancial },
-]
-
-const adminBottomNav = [
-  { name: 'Usuarios', href: '/users', icon: IconClient },
-  { name: 'Notificacoes', href: '/notifications', icon: IconNotification },
-  { name: 'Configuracoes', href: '/settings', icon: IconSettings },
 ]
 
 const clientBottomNav = [
@@ -69,21 +65,34 @@ export function SidebarClient() {
   const [collapsed, setCollapsed] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
 
-  const role = session?.user?.role as string || 'CLIENT'
-  const isAdmin = role === 'ADMIN'
-  const topNav = isAdmin ? adminNavItems : clientNavItems
-  const bottomNav = isAdmin ? adminBottomNav : clientBottomNav
+  const role = (session?.user as any)?.role || 'USER'
+  const roleLevel = (session?.user as any)?.roleLevel || 0
+  const isAdminOrAbove = roleLevel >= 80
+  const isModOrAbove = roleLevel >= 60
+  const isOwner = roleLevel >= 100
+  const topNav = isModOrAbove ? adminNavItems : clientNavItems
+
+  const bottomNav = useMemo(() => {
+    if (!isModOrAbove) return clientBottomNav
+    return [
+      ...(isOwner ? [{ name: 'Chaves API', href: '/settings/api-keys', icon: IconSettings }] : []),
+      ...(isAdminOrAbove ? [{ name: 'Integrações', href: '/settings/integrations', icon: IconAutomation }] : []),
+      ...(isOwner ? [{ name: 'Usuários', href: '/users', icon: IconClient }] : []),
+      { name: 'Notificações', href: '/notifications', icon: IconNotification },
+      { name: 'Configurações', href: '/settings', icon: IconSettings },
+    ]
+  }, [isModOrAbove, isAdminOrAbove, isOwner])
 
   const initials = (session?.user?.name || 'AD')
     .split(' ').slice(0, 2).map((n: string) => n[0]).join('').toUpperCase()
 
   useEffect(() => {
-    if (!isAdmin) return
+    if (!isModOrAbove) return
     const fetchStats = () => fetch('/api/analytics/online').then(r => r.json()).then(setStats)
     fetchStats()
     const interval = setInterval(fetchStats, 30000)
     return () => clearInterval(interval)
-  }, [setStats, isAdmin])
+  }, [setStats, isModOrAbove])
 
   const isActive = (href: string) => {
     if (href === '/dashboard') return pathname === '/dashboard'
@@ -139,7 +148,7 @@ export function SidebarClient() {
         </div>
 
         <nav className="flex-1 overflow-y-auto py-2 px-2 space-y-0.5 scroll-area">
-          {isAdmin ? adminNavSections.map((section, si) => (
+          {isModOrAbove ? adminNavSections.map((section, si) => (
             <div key={si} className="mb-1">
               {!collapsed && (
                 <div className="px-3 py-1.5 text-[10px] font-[500] text-[var(--text-3)] uppercase tracking-wider">
@@ -186,7 +195,7 @@ export function SidebarClient() {
         </nav>
 
         <div className="border-t border-[var(--border)] py-2 px-2 space-y-0.5">
-          {isAdmin && (
+          {isModOrAbove && (
             <div className={cn(
               'flex items-center gap-2 px-3 py-1.5 rounded-md text-[11px] text-[var(--text-3)]',
               collapsed && 'justify-center'

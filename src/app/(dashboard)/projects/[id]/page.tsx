@@ -14,21 +14,22 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { toast } from 'sonner'
 import { ProjectTimeline, type NodeStatus } from '@/components/projects/project-timeline'
-import { IconArrowLeft, IconThumbsUp, IconThumbsDown, IconCheck, IconClose, IconLoader, IconFile } from '@/components/icons'
+import { TimeTracker } from '@/components/ui/time-tracker'
+import { IconArrowLeft, IconThumbsUp, IconThumbsDown, IconCheck, IconClose, IconLoader, IconFile, IconClock, IconSparkles } from '@/components/icons'
 
 const DEFAULT_STEPS = [
   { id: 1, label: 'Briefing', description: 'Coleta de requisitos e entendimento do projeto' },
-  { id: 2, label: 'Proposta / Orcamento', description: 'Gerar valor, prazo e escopo formal para o cliente' },
-  { id: 3, label: 'Contrato', description: 'Cliente assina o contrato de prestacao de servicos' },
-  { id: 4, label: 'Planejamento', description: 'Definicao de escopo, cronograma e recursos' },
-  { id: 5, label: 'Design', description: 'Criacao de wireframes, UI/UX e prototipos' },
-  { id: 6, label: 'Aprovacao do Design', description: 'Cliente aprova o layout antes do desenvolvimento' },
-  { id: 7, label: 'Desenvolvimento', description: 'Codificacao e implementacao das funcionalidades' },
-  { id: 8, label: 'Testes', description: 'Testes internos de qualidade, correcoes e ajustes' },
-  { id: 9, label: 'Homologacao', description: 'Cliente testa no ambiente de staging antes do deploy' },
-  { id: 10, label: 'Deploy', description: 'Publicacao e configuracao do ambiente de producao' },
-  { id: 11, label: 'Entrega', description: 'Apresentacao final, documentacao e homologacao do cliente' },
-  { id: 12, label: 'Garantia', description: 'Periodo de suporte pos-entrega (30 dias)' },
+  { id: 2, label: 'Proposta / Orçamento', description: 'Gerar valor, prazo e escopo formal para o cliente' },
+  { id: 3, label: 'Contrato', description: 'Cliente assina o contrato de prestação de serviços' },
+  { id: 4, label: 'Planejamento', description: 'Definição de escopo, cronograma e recursos' },
+  { id: 5, label: 'Design', description: 'Criação de wireframes, UI/UX e protótipos' },
+  { id: 6, label: 'Aprovação do Design', description: 'Cliente aprova o layout antes do desenvolvimento' },
+  { id: 7, label: 'Desenvolvimento', description: 'Codificação e implementação das funcionalidades' },
+  { id: 8, label: 'Testes', description: 'Testes internos de qualidade, correções e ajustes' },
+  { id: 9, label: 'Homologação', description: 'Cliente testa no ambiente de staging antes do deploy' },
+  { id: 10, label: 'Deploy', description: 'Publicação e configuração do ambiente de produção' },
+  { id: 11, label: 'Entrega', description: 'Apresentação final, documentação e homologação do cliente' },
+  { id: 12, label: 'Garantia', description: 'Período de suporte pós-entrega (30 dias)' },
 ]
 
 interface StepState {
@@ -65,6 +66,7 @@ export default function ProjectDetailPage() {
   const [clientReplyLoading, setClientReplyLoading] = useState(false)
   const [proposalViewOpen, setProposalViewOpen] = useState(false)
   const [proposalHistory, setProposalHistory] = useState<{ value: string; date: string; author: string }[]>([])
+  const [aiLoading, setAiLoading] = useState(false)
 
   const handlePrintModal = (modalSelector: string) => {
     const modal = document.querySelector(modalSelector)
@@ -99,7 +101,7 @@ export default function ProjectDetailPage() {
     if (hasBriefing) {
       const initHistory = [{
         time: new Date(projectData.createdAt).toLocaleString('pt-BR'),
-        action: '"Briefing" → Concluido (preenchido pelo cliente)',
+        action: '"Briefing" → Concluído (preenchido pelo cliente)',
         author: projectData.client?.name || 'Cliente',
       }]
       setHistory(initHistory)
@@ -199,7 +201,7 @@ export default function ProjectDetailPage() {
     if (!currentStep) return
 
     if (currentStep.status === 'completed') {
-      toast.error('Etapas concluidas nao podem ser alteradas')
+      toast.error('Etapas concluídas não podem ser alteradas')
       return
     }
 
@@ -214,7 +216,7 @@ export default function ProjectDetailPage() {
 
     const newSteps = steps.map(s => s.id === stepId ? { ...s, status } : s)
     const step = DEFAULT_STEPS.find(s => s.id === stepId)
-    const labels: Record<NodeStatus, string> = { waiting: 'Aguardando', in_progress: 'Em andamento', paused: 'Pausado', completed: 'Concluido' }
+    const labels: Record<NodeStatus, string> = { waiting: 'Aguardando', in_progress: 'Em andamento', paused: 'Pausado', completed: 'Concluído' }
     const newEntry = { time: new Date().toLocaleString('pt-BR'), action: `"${step?.label}" → ${labels[status]}`, author: session?.user?.name || 'Admin' }
     persistProject(newSteps, [newEntry, ...history])
     toast.success(`Etapa "${step?.label}" atualizada`)
@@ -237,7 +239,7 @@ export default function ProjectDetailPage() {
 
   const updateTimeEstimate = (stepId: number, time: string) => {
     const step = DEFAULT_STEPS.find(s => s.id === stepId)
-    const oldValue = steps.find(s => s.id === stepId)?.timeEstimate || 'nao definido'
+    const oldValue = steps.find(s => s.id === stepId)?.timeEstimate || 'não definido'
     const newSteps = steps.map(s => s.id === stepId ? { ...s, timeEstimate: time } : s)
     const entry = {
       time: new Date().toLocaleString('pt-BR'),
@@ -267,7 +269,7 @@ export default function ProjectDetailPage() {
       const isUpdate = !!project.proposalMessage
       const actionText = isUpdate
         ? `Proposta alterada: R$ ${proposalValue}. "${proposalMsg.slice(0, 80)}${proposalMsg.length > 80 ? '...' : ''}"`
-        : '"Proposta / Orcamento" → Concluido (enviada ao cliente)'
+        : '"Proposta / Orçamento" → Concluído (enviada ao cliente)'
       const newSteps = steps.map(s => s.id === 2 ? { ...s, status: 'completed' as NodeStatus } : s)
       const entry = { time: new Date().toLocaleString('pt-BR'), action: actionText, author: session?.user?.name || 'Admin' }
       if (isUpdate) {
@@ -297,6 +299,28 @@ export default function ProjectDetailPage() {
     } else {
       toast.error('Erro ao recusar projeto')
     }
+  }
+
+  const handleAiGenerate = async () => {
+    setAiLoading(true)
+    try {
+      const res = await fetch('/api/ai/generate-proposal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ projectId: id }),
+      })
+      const json = await res.json()
+      if (res.ok) {
+        if (json.proposal) setProposalMsg(json.proposal)
+        if (json.suggestedValue) setProposalValue(json.suggestedValue)
+        toast.success('Proposta gerada com IA! Revise antes de enviar.')
+      } else {
+        toast.error(json.error || 'Erro ao gerar proposta')
+      }
+    } catch {
+      toast.error('Erro ao gerar proposta com IA')
+    }
+    setAiLoading(false)
   }
 
   const handleInfoRequest = async () => {
@@ -467,28 +491,44 @@ export default function ProjectDetailPage() {
   if (!project) return <div className="p-6"><p className="text-[var(--text-3)]">Projeto nao encontrado</p></div>
 
   const renderStepActions = (nodeId: number) => {
+    const trackerEl = (
+      <div className="flex items-center gap-2 pt-1.5 mt-1.5 border-t border-[var(--border)]">
+        <TimeTracker taskId={`step-${nodeId}-${id}`} projectId={id} />
+        <span className="text-[10px] text-[var(--text-3)]">Tempo na etapa</span>
+      </div>
+    )
+
     if (nodeId === 1) {
       const hasBriefing = (() => { try { JSON.parse(project.briefing || ''); return true } catch { return false } })()
       return (
-        <div className="flex items-center gap-2 flex-wrap">
-          {hasBriefing && <Button variant="outline" size="sm" onClick={() => setBriefingOpen(true)} className="h-7 text-[11px]"><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" className="mr-1"><path d="M3 2h6l4 4v8a1 1 0 01-1 1H4a1 1 0 01-1-1V3a1 1 0 011-1z"/><path d="M9 2v4h4"/></svg>Ver Briefing</Button>}
-          {isAdmin && isPending && briefingStep?.status !== 'in_progress' && (
-            <Button variant="outline" size="sm" onClick={() => { setInfoRequestMsg(''); setInfoRequestOpen(true) }} className="h-7 text-[11px] text-[var(--info)] border-[var(--info)]/30">Sol. mais dados</Button>
-          )}
+        <div className="space-y-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            {hasBriefing && <Button variant="outline" size="sm" onClick={() => setBriefingOpen(true)} className="h-7 text-[11px]"><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" className="mr-1"><path d="M3 2h6l4 4v8a1 1 0 01-1 1H4a1 1 0 01-1-1V3a1 1 0 011-1z"/><path d="M9 2v4h4"/></svg>Ver Briefing</Button>}
+            {isAdmin && isPending && briefingStep?.status !== 'in_progress' && (
+              <Button variant="outline" size="sm" onClick={() => { setInfoRequestMsg(''); setInfoRequestOpen(true) }} className="h-7 text-[11px] text-[var(--info)] border-[var(--info)]/30">Sol. mais dados</Button>
+            )}
+          </div>
+          {trackerEl}
         </div>
       )
     }
     if (nodeId === 2) {
       if (isAdmin && (isDraft || isPending)) return (
-        <div className="flex items-center gap-2">
-          <Button size="sm" onClick={() => setApproveOpen(true)} className="h-7 text-[11px]"><IconThumbsUp className="w-3 h-3" /> Enviar proposta</Button>
-          <Button size="sm" variant="outline" onClick={handleReject} className="h-7 text-[11px]"><IconThumbsDown className="w-3 h-3" /> Recusar</Button>
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <Button size="sm" onClick={() => setApproveOpen(true)} className="h-7 text-[11px]"><IconThumbsUp className="w-3 h-3" /> Enviar proposta</Button>
+            <Button size="sm" variant="outline" onClick={handleReject} className="h-7 text-[11px]"><IconThumbsDown className="w-3 h-3" /> Recusar</Button>
+          </div>
+          {trackerEl}
         </div>
       )
       if (isClient && isReview) return (
-        <div className="flex items-center gap-2">
-          <Button size="sm" onClick={() => handleClientResponse('accept')} disabled={responseLoading} className="h-7 text-[11px]">{responseLoading && <IconLoader className="w-3 h-3 animate-spin" />}<IconCheck className="w-3 h-3" /> Aceitar</Button>
-          <Button size="sm" variant="outline" onClick={() => handleClientResponse('reject')} disabled={responseLoading} className="h-7 text-[11px]"><IconClose className="w-3 h-3" /> Recusar</Button>
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <Button size="sm" onClick={() => handleClientResponse('accept')} disabled={responseLoading} className="h-7 text-[11px]">{responseLoading && <IconLoader className="w-3 h-3 animate-spin" />}<IconCheck className="w-3 h-3" /> Aceitar</Button>
+            <Button size="sm" variant="outline" onClick={() => handleClientResponse('reject')} disabled={responseLoading} className="h-7 text-[11px]"><IconClose className="w-3 h-3" /> Recusar</Button>
+          </div>
+          {trackerEl}
         </div>
       )
       if (project.proposalMessage) return (
@@ -503,20 +543,28 @@ export default function ProjectDetailPage() {
               <Button variant="outline" size="sm" onClick={() => setApproveOpen(true)} className="h-7 text-[11px] text-[var(--warning)]">Alterar Proposta</Button>
             )}
           </div>
+          {trackerEl}
         </div>
       )
+      return trackerEl
     }
     if (nodeId === 3 && isReview) {
       if (isClient && !project.contractSignedAt) return (
-        <Button size="sm" onClick={() => setContractOpen(true)} className="h-7 text-[11px]"><IconFile className="w-[12px] h-[12px]" /> Ver Contrato & Assinar</Button>
+        <div className="space-y-2">
+          <Button size="sm" onClick={() => setContractOpen(true)} className="h-7 text-[11px]"><IconFile className="w-[12px] h-[12px]" /> Ver Contrato & Assinar</Button>
+          {trackerEl}
+        </div>
       )
       if (project.contractSignedAt) return (
-        <div className="p-2 rounded-lg bg-[var(--success-subtle)] border border-[var(--success)]/20">
-          <p className="text-[11px] text-[var(--success)]">Contrato assinado em {new Date(project.contractSignedAt).toLocaleDateString('pt-BR')}</p>
+        <div className="space-y-2">
+          <div className="p-2 rounded-lg bg-[var(--success-subtle)] border border-[var(--success)]/20">
+            <p className="text-[11px] text-[var(--success)]">Contrato assinado em {new Date(project.contractSignedAt).toLocaleDateString('pt-BR')}</p>
+          </div>
+          {trackerEl}
         </div>
       )
     }
-    return null
+    return trackerEl
   }
 
   return (
@@ -542,7 +590,7 @@ export default function ProjectDetailPage() {
             <div className="text-right shrink-0">
               <div className="flex items-center gap-1.5 justify-end">
                 <Badge status={isCancelled ? 'CANCELLED' : (isPending ? 'PENDING' : (isDraft ? 'DRAFT' : (isReview ? 'REVIEW' : (project.status === 'COMPLETED' ? 'COMPLETED' : 'IN_PROGRESS'))))}>
-                  {isCancelled ? 'Cancelado' : (isPending ? 'Solicitacao' : (isDraft ? 'Rascunho' : (isReview ? 'Aguardando cliente' : (project.status === 'COMPLETED' ? 'Concluido' : 'Em andamento'))))}
+                  {isCancelled ? 'Cancelado' : (isPending ? 'Solicitação' : (isDraft ? 'Rascunho' : (isReview ? 'Aguardando cliente' : (project.status === 'COMPLETED' ? 'Concluído' : 'Em andamento'))))}
                 </Badge>
                 {isPending && (() => {
                   const createdDate = project.createdAt ? new Date(project.createdAt) : null
@@ -581,7 +629,7 @@ export default function ProjectDetailPage() {
                   <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" className="text-[var(--accent)]"><rect x="2" y="2" width="12" height="12" rx="1.5"/><path d="M6 8l2 2 4-4"/></svg>
                 )}
                 <span className={`text-[11px] font-[600] ${isReview ? 'text-[var(--warning)]' : 'text-[var(--accent)]'}`}>
-                  {isReview ? 'Aguardando resposta do cliente' : project.proposalMessage ? 'Proposta enviada — aguardando cliente' : 'Em analise pelo desenvolvedor'}
+                  {isReview ? 'Aguardando resposta do cliente' : project.proposalMessage ? 'Proposta enviada — aguardando cliente' : 'Em análise pelo desenvolvedor'}
                 </span>
               </div>
               {project.proposalMessage ? (
@@ -675,6 +723,11 @@ export default function ProjectDetailPage() {
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
                   </Button>
                 )}
+                <Button variant="ghost" size="sm" asChild className="h-6 text-[10px] gap-1 px-1.5" title="Relatorio de horas">
+                  <Link href={`/projects/${id}/time-report`}>
+                    <IconClock className="w-[12px] h-[12px]" />
+                  </Link>
+                </Button>
               </div>
             </div>
           </div>
@@ -782,7 +835,23 @@ export default function ProjectDetailPage() {
           </DialogHeader>
           <div className="space-y-4 py-2 max-h-[60vh] overflow-y-auto">
             <div className="space-y-2">
-              <label>Mensagem para o cliente</label>
+              <div className="flex items-center justify-between">
+                <label>Mensagem para o cliente</label>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleAiGenerate}
+                  disabled={aiLoading}
+                  className="h-7 text-[11px] gap-1"
+                >
+                  {aiLoading ? (
+                    <IconLoader className="w-[12px] h-[12px] animate-spin" />
+                  ) : (
+                    <IconSparkles className="w-[12px] h-[12px]" />
+                  )}
+                  Gerar com IA
+                </Button>
+              </div>
               <textarea
                 className="w-full min-h-[80px] rounded-lg bg-[var(--surface-2)] border border-[var(--border)] px-3 py-2 text-[13px] text-[var(--text)] placeholder:text-[var(--text-3)] focus:outline-none focus:border-[var(--accent)] resize-vertical"
                 placeholder="Descreva o escopo, prazo e expectativas..."
