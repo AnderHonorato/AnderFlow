@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -61,8 +61,8 @@ export default function CRMPage() {
 
   const filtered = leads.filter(l => !search || l.name.toLowerCase().includes(search.toLowerCase()) || (l.company || '').toLowerCase().includes(search.toLowerCase()))
 
-  const totalValue = leads.reduce((s, l) => s + (l.value || 0), 0)
-  const wonValue = leads.filter(l => l.status === 'WON').reduce((s, l) => s + (l.value || 0), 0)
+  const totalValue = useMemo(() => leads.reduce((s, l) => s + (l.value || 0), 0), [leads])
+  const wonValue = useMemo(() => leads.filter(l => l.status === 'WON').reduce((s, l) => s + (l.value || 0), 0), [leads])
 
   if (loading) return <div className="p-6 space-y-6"><Skeleton className="h-8 w-48" /><div className="grid grid-cols-4 gap-4">{[1,2,3,4].map(i => <Skeleton key={i} className="h-20" />)}</div><div className="flex gap-4">{[1,2,3].map(i => <Skeleton key={i} className="h-96 w-[280px]" />)}</div></div>
 

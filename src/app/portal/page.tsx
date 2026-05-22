@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { IconProject, IconCheck, IconAnalytics, IconPlus, IconFinancial, IconNotification, IconArrowRight } from '@/components/icons'
+import { IconProject, IconCheck, IconAnalytics, IconPlus, IconFinancial, IconNotification, IconArrowRight, IconArrowUpRight } from '@/components/icons'
 
 function getGreeting() {
   const hour = new Date().getHours()
@@ -17,6 +17,31 @@ function getGreeting() {
   if (hour < 12) return 'Bom dia'
   if (hour < 18) return 'Boa tarde'
   return 'Boa noite'
+}
+
+function AnimatedCounter({ value, formatter }: { value: number; formatter?: (v: number) => string }) {
+  const [display, setDisplay] = useState(0)
+  const frameRef = useRef<number | null>(null)
+
+  useEffect(() => {
+    const start = performance.now()
+    const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3)
+
+    const animate = (now: number) => {
+      const elapsed = now - start
+      const progress = Math.min(elapsed / 1200, 1)
+      setDisplay(Math.round(value * easeOutCubic(progress)))
+      if (progress < 1) {
+        frameRef.current = requestAnimationFrame(animate)
+      }
+    }
+
+    frameRef.current = requestAnimationFrame(animate)
+    return () => { if (frameRef.current) cancelAnimationFrame(frameRef.current) }
+  }, [value])
+
+  const text = formatter ? formatter(display) : String(display)
+  return <>{text}</>
 }
 
 export default function PortalDashboard() {
@@ -91,32 +116,48 @@ export default function PortalDashboard() {
       </div>
 
       <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
-        <Card><CardContent className="p-4 flex items-center gap-3">
+        <Card className="animate-card-pop stagger-1"><CardContent className="p-4 flex items-center gap-3">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--accent-subtle)]"><IconProject className="w-[16px] h-[16px] text-[var(--accent)]" /></div>
-          <div><p className="text-[17px] font-[500]">{active}</p><p className="text-[11px] text-[var(--text-3)]">Projetos ativos</p></div>
+          <div><p className="text-[17px] font-[500]"><AnimatedCounter value={active} /></p><p className="text-[11px] text-[var(--text-3)]">Projetos ativos</p></div>
         </CardContent></Card>
-        <Card><CardContent className="p-4 flex items-center gap-3">
+        <Card className="animate-card-pop stagger-2"><CardContent className="p-4 flex items-center gap-3">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--success-subtle)]"><IconCheck className="w-[16px] h-[16px] text-[var(--success)]" /></div>
-          <div><p className="text-[17px] font-[500]">{completed}</p><p className="text-[11px] text-[var(--text-3)]">Concluidos</p></div>
+          <div><p className="text-[17px] font-[500]"><AnimatedCounter value={completed} /></p><p className="text-[11px] text-[var(--text-3)]">Concluidos</p></div>
         </CardContent></Card>
-        <Card><CardContent className="p-4 flex items-center gap-3">
+        <Card className="animate-card-pop stagger-3"><CardContent className="p-4 flex items-center gap-3">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--warning-subtle)]"><IconFinancial className="w-[16px] h-[16px] text-[var(--warning)]" /></div>
           <div>
-            <p className="text-[17px] font-[500]">{pendingInvoices.length > 0 ? `R$ ${pendingTotal.toLocaleString('pt-BR')}` : '-'}</p>
+            <p className="text-[17px] font-[500]">{pendingInvoices.length > 0 ? <>R$ <AnimatedCounter value={pendingTotal} formatter={v => v.toLocaleString('pt-BR')} /></> : '-'}</p>
             <p className="text-[11px] text-[var(--text-3)]">
               Financeiro pendente
               {overdueCount > 0 && <span className="text-[var(--destructive)]"> ({overdueCount} venc.)</span>}
             </p>
           </div>
         </CardContent></Card>
-        <Card><CardContent className="p-4 flex items-center gap-3">
+        <Card className="animate-card-pop stagger-4"><CardContent className="p-4 flex items-center gap-3">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--info-subtle)]"><IconAnalytics className="w-[16px] h-[16px] text-[var(--info)]" /></div>
-          <div><p className="text-[17px] font-[500]">{projects.length ? `${avgProgress}%` : '-'}</p><p className="text-[11px] text-[var(--text-3)]">Media progresso</p></div>
+          <div><p className="text-[17px] font-[500]">{projects.length ? <><AnimatedCounter value={avgProgress} />%</> : '-'}</p><p className="text-[11px] text-[var(--text-3)]">Media progresso</p></div>
         </CardContent></Card>
       </div>
 
       <div className="grid gap-5 lg:grid-cols-3 items-start">
         <div className="lg:col-span-2 space-y-5">
+          {projects.length === 0 && (
+            <Card className="bg-[var(--accent-subtle)] border-[var(--accent)]/20 animate-card-pop">
+              <CardContent className="p-5 flex items-center gap-4">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--accent)]/10">
+                  <IconArrowUpRight className="w-5 h-5 text-[var(--accent)]" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-[14px] font-[500]">Solicite seu primeiro projeto</p>
+                  <p className="text-[11px] text-[var(--text-2)] mt-0.5">Comece sua jornada conosco preenchendo um briefing detalhado.</p>
+                </div>
+                <Button size="sm" asChild>
+                  <a href="/portal/briefing">Comecar</a>
+                </Button>
+              </CardContent>
+            </Card>
+          )}
           <Card>
             <CardHeader className="pb-2 flex flex-row items-center justify-between">
               <CardTitle className="text-[12px] font-[500] text-[var(--text-3)] uppercase tracking-wider">Meus Projetos</CardTitle>
@@ -129,7 +170,7 @@ export default function PortalDashboard() {
                 <p className="text-[13px] text-[var(--text-3)] text-center py-6">Nenhum projeto. Clique em Solicitar Projeto!</p>
               )}
               {projects.map((p: any) => (
-                <div key={p.id} className="flex items-center gap-4 p-2.5 rounded-lg hover:bg-[var(--surface-hover)] transition-colors cursor-pointer" onClick={() => router.push(`/projects/${p.id}`)}>
+                <div key={p.id} className="flex items-center gap-4 p-2.5 rounded-lg hover:bg-[var(--surface-hover)] transition-all cursor-pointer hover:scale-[1.01]" onClick={() => router.push(`/projects/${p.id}`)}>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       {p.number && <span className="text-[10px] font-[500] text-[var(--text-3)]">{p.number}</span>}

@@ -25,6 +25,19 @@ export default function RegisterPage() {
     setIsLoading(true)
     setError('')
 
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(email)) {
+      setError('Formato de email invalido')
+      setIsLoading(false)
+      return
+    }
+
+    if (password.length < 8) {
+      setError('A senha deve ter pelo menos 8 caracteres')
+      setIsLoading(false)
+      return
+    }
+
     try {
       const res = await fetch('/api/auth/register', {
         method: 'POST',
@@ -154,7 +167,7 @@ export default function RegisterPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              className="h-11 pr-10"
+              className={`h-11 pr-10 ${password.length > 0 && password.length < 8 ? 'border-destructive' : ''}`}
             />
             <button
               type="button"
@@ -164,6 +177,9 @@ export default function RegisterPage() {
               {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
             </button>
           </div>
+          {password.length > 0 && password.length < 8 && (
+            <p className="text-xs text-destructive">Minimo 8 caracteres ({password.length}/8)</p>
+          )}
         </div>
 
         <Button type="submit" className="w-full h-11" disabled={isLoading}>

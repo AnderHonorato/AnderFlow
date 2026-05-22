@@ -1,28 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
+let stripe: any = null
+let Stripe: any = null
+if (process.env.STRIPE_SECRET_KEY) {
+  Stripe = require('stripe')
+  stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.text()
     const signature = request.headers.get('stripe-signature')
 
-    if (!signature) {
-      return NextResponse.json({ error: 'Stripe signature missing' }, { status: 400 })
+    if (!signature || !stripe) {
+      return NextResponse.json({ error: 'Stripe signature missing or not configured' }, { status: 400 })
     }
 
     let event: any
-    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET
-
-    if (webhookSecret && process.env.STRIPE_SECRET_KEY) {
-      try {
-        const Stripe = require('stripe')
-        const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
-        event = stripe.webhooks.constructEvent(body, signature, webhookSecret)
-      } catch {
-        return NextResponse.json({ error: 'Webhook signature verification failed' }, { status: 400 })
-      }
-    } else {
-      event = JSON.parse(body)
+    try {
+      event = stripe.webhooks.constructEvent(body, signature, process.env.STRIPE_WEBHOOK_SECRET!)
+    } catch {
+      return NextResponse.json({ error: 'Webhook signature verification failed' }, { status: 400 })
     }
 
     switch (event.type) {

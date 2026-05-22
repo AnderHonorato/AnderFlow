@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { usePathname } from 'next/navigation'
 import { X, Lightbulb, ChevronRight } from 'lucide-react'
 
 interface Tip {
@@ -140,9 +141,10 @@ export function PageTip() {
   const [currentTip, setCurrentTip] = useState<Tip | null>(null)
   const [step, setStep] = useState(0)
 
+  const path = usePathname()
+
   useEffect(() => {
-    const path = window.location.pathname
-    // Encontra a dica mais específica para a rota atual
+    if (!path) return
     const matched = tipsArray
       .filter(([key]) => path === key || path.startsWith(key + '/'))
       .sort((a, b) => b[0].length - a[0].length)
@@ -155,7 +157,7 @@ export function PageTip() {
         setTimeout(() => setVisible(true), 600)
       }
     }
-  }, [])
+  }, [path])
 
   const dismiss = () => {
     setVisible(false)

@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
     const clientId = isAdmin(user) ? (body.clientId || user.id) : user.id
     const status = isAdmin(user) ? (body.status || undefined) : 'PENDING'
 
-    const slug = name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') + '-' + Date.now()
+    const slug = name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') + '-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6)
 
     const project = await prisma.project.create({
       data: {

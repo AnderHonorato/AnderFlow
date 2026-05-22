@@ -38,15 +38,17 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       },
     })
 
-    await prisma.activity.create({
-      data: {
-        type: 'APPROVAL',
-        action: 'Proposta enviada ao cliente',
-        details: `Valor: R$ ${proposalValue}. Mensagem: ${proposalMessage.slice(0, 200)}`,
-        userId: user.id,
-        projectId: id,
-      },
-    })
+    try {
+      await prisma.activity.create({
+        data: {
+          type: 'APPROVAL',
+          action: 'Proposta enviada ao cliente',
+          details: `Valor: R$ ${proposalValue}`,
+          userId: user.id,
+          projectId: id,
+        },
+      })
+    } catch { /* activity log is non-critical */ }
 
     return NextResponse.json({ data: project, message: 'Proposta enviada ao cliente' })
   } catch (error: any) {

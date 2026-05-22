@@ -1,14 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { getSessionUser, isAdmin, unauthorizedResponse } from '@/lib/auth-utils'
 
 export async function GET(request: NextRequest) {
+  const user = await getSessionUser(request)
+  if (!user) return unauthorizedResponse()
   try {
     const { searchParams } = new URL(request.url)
     const projectId = searchParams.get('projectId')
     const status = searchParams.get('status')
     const assigneeId = searchParams.get('assigneeId')
 
-    const where: any = {}
+    const where: Record<string, unknown> = {}
     if (projectId) where.projectId = projectId
     if (status) where.status = status
     if (assigneeId) where.assigneeId = assigneeId
@@ -30,6 +33,8 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const user = await getSessionUser(request)
+  if (!user || !isAdmin(user)) return unauthorizedResponse()
   try {
     const body = await request.json()
     const { title, description, projectId, assigneeId, creatorId, priority, dueDate, parentId, milestoneId, sprintId } = body

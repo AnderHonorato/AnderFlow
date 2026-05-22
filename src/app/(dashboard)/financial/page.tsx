@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -30,12 +30,12 @@ export default function FinancialPage() {
   const [saving, setSaving] = useState(false)
   const [form, setForm] = useState({ clientName: '', projectName: '', amount: '', dueDate: '', notes: '', clientId: '' })
 
-  const loadInvoices = () => {
+  const loadInvoices = useCallback(() => {
     fetch('/api/invoices')
       .then(r => r.json())
       .then(json => { setInvoices(json.data || []); setLoading(false) })
       .catch(() => setLoading(false))
-  }
+  }, [])
 
   useEffect(() => {
     loadInvoices()
@@ -43,7 +43,7 @@ export default function FinancialPage() {
       .then(r => r.json())
       .then(json => setClients(json.data || []))
       .catch(() => {})
-  }, [])
+  }, [loadInvoices])
 
   const handleCreate = async () => {
     setSaving(true)
@@ -54,7 +54,7 @@ export default function FinancialPage() {
         items: [{ description: form.notes || 'Serviço', quantity: 1, price: parseFloat(form.amount) }],
         dueDate: form.dueDate || new Date().toISOString(),
         notes: form.notes,
-        clientId: form.clientId || session?.user?.id,
+        clientId: form.clientId,
         projectId: null,
       }),
     })
@@ -142,7 +142,7 @@ export default function FinancialPage() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowNew(false)}>Cancelar</Button>
-            <Button onClick={handleCreate} disabled={saving || !form.amount}>{saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Criar</Button>
+            <Button onClick={handleCreate} disabled={saving || !form.amount || !form.clientId}>{saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Criar</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

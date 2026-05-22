@@ -26,3 +26,27 @@ prisma/*.db
 
 # Uploaded files (dev)
 public/uploads/
+
+# Prompt reference files
+prompts salvos*/
+
+# IDE / Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Temp
+*.tmp
+*.temp
+*.log
+*.rar
+*.zip
+*.7z
+

@@ -56,6 +56,17 @@ function BriefingWizardContent() {
   const autoSaveTimer = useRef<NodeJS.Timeout | null>(null)
 
   const userId = session?.user?.id
+  const mountedRef = useRef(true)
+
+  useEffect(() => {
+    return () => {
+      mountedRef.current = false
+      if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current)
+      Object.values(files).flat().forEach(f => {
+        if (f.preview) URL.revokeObjectURL(f.preview)
+      })
+    }
+  }, [files])
 
   useEffect(() => {
     if (!categoryParam) return
@@ -99,13 +110,14 @@ function BriefingWizardContent() {
 
   // ── Autosave with debounce + visual feedback ──
   const saveDraft = useCallback(async () => {
-    if (!userId || !selectedCategory) return
+    if (!userId || !selectedCategory || !mountedRef.current) return
     setSaving(true)
     const res = await fetch('/api/briefing', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'save', userId, categoryId: selectedCategory, draftId, currentStage: stageIndex, currentStep: 0, answers }),
     })
+    if (!mountedRef.current) return
     const json = await res.json()
     if (json.data?.id) {
       setDraftId(json.data.id)

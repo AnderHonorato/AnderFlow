@@ -1,14 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { getSessionUser, isAdmin, unauthorizedResponse } from '@/lib/auth-utils'
 
 export async function GET(request: NextRequest) {
+  const user = await getSessionUser(request)
+  if (!user) return unauthorizedResponse()
   try {
     const { searchParams } = new URL(request.url)
     const clientId = searchParams.get('clientId')
     const status = searchParams.get('status')
 
-    const where: any = {}
-    if (clientId) where.clientId = clientId
+    const where: Record<string, unknown> = {}
+    if (!isAdmin(user)) where.clientId = user.id
+    if (clientId && isAdmin(user)) where.clientId = clientId
     if (status) where.status = status
 
     const payments = await prisma.payment.findMany({
@@ -27,6 +31,8 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const user = await getSessionUser(request)
+  if (!user || !isAdmin(user)) return unauthorizedResponse()
   try {
     const body = await request.json()
     const { invoiceId, clientId, amount, method, gateway, installments } = body

@@ -37,18 +37,23 @@ export async function POST(request: NextRequest) {
     }
 
     if (action === 'save') {
-      const draft = await prisma.briefingDraft.upsert({
-        where: { id: draftId || 'new' },
-        update: { currentStage, currentStep, answers: JSON.stringify(answers) },
-        create: {
-          id: draftId || undefined,
-          userId,
-          categoryId: categoryId || 'OTHER',
-          currentStage: currentStage || 0,
-          currentStep: currentStep || 0,
-          answers: JSON.stringify(answers || {}),
-        },
-      })
+      let draft
+      if (draftId) {
+        draft = await prisma.briefingDraft.update({
+          where: { id: draftId },
+          data: { currentStage, currentStep, answers: JSON.stringify(answers) },
+        })
+      } else {
+        draft = await prisma.briefingDraft.create({
+          data: {
+            userId,
+            categoryId: categoryId || 'OTHER',
+            currentStage: currentStage || 0,
+            currentStep: currentStep || 0,
+            answers: JSON.stringify(answers || {}),
+          },
+        })
+      }
       return NextResponse.json({ data: draft })
     }
 
@@ -66,7 +71,7 @@ export async function POST(request: NextRequest) {
         data: {
           number: projectNumber,
           name: answers?.project_name || 'Novo Projeto',
-          slug: (answers?.project_name || 'projeto').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') + '-' + Date.now(),
+          slug: (answers?.project_name || 'projeto').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') + '-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
           description: answers?.description || summary,
           type: categoryId || 'CUSTOM',
           clientId: userId,
@@ -83,12 +88,17 @@ export async function POST(request: NextRequest) {
       // Create default milestones (timeline)
       const defaultMilestones = [
         { name: 'Briefing', description: 'Coleta de requisitos e entendimento do projeto', order: 0, dueDate: addDays(new Date(), 7) },
-        { name: 'Planejamento', description: 'Definição de escopo, cronograma e recursos', order: 1, dueDate: addDays(new Date(), 14) },
-        { name: 'Design', description: 'Criação de wireframes, UI/UX e protótipos', order: 2, dueDate: addDays(new Date(), 28) },
-        { name: 'Desenvolvimento', description: 'Codificação e implementação', order: 3, dueDate: addDays(new Date(), 56) },
-        { name: 'Testes', description: 'Testes de qualidade e ajustes finos', order: 4, dueDate: addDays(new Date(), 70) },
-        { name: 'Deploy', description: 'Publicação e configuração do ambiente', order: 5, dueDate: addDays(new Date(), 77) },
-        { name: 'Entrega', description: 'Apresentação final e documentação', order: 6, dueDate: addDays(new Date(), 84) },
+        { name: 'Proposta / Orcamento', description: 'Gerar valor, prazo e escopo formal', order: 1, dueDate: addDays(new Date(), 10) },
+        { name: 'Contrato', description: 'Cliente assina o contrato de prestacao de servicos', order: 2, dueDate: addDays(new Date(), 14) },
+        { name: 'Planejamento', description: 'Definicao de escopo, cronograma e recursos', order: 3, dueDate: addDays(new Date(), 21) },
+        { name: 'Design', description: 'Criacao de wireframes, UI/UX e prototipos', order: 4, dueDate: addDays(new Date(), 35) },
+        { name: 'Aprovacao do Design', description: 'Cliente aprova layout antes do desenvolvimento', order: 5, dueDate: addDays(new Date(), 38) },
+        { name: 'Desenvolvimento', description: 'Codificacao e implementacao', order: 6, dueDate: addDays(new Date(), 63) },
+        { name: 'Testes', description: 'Testes de qualidade e ajustes finos', order: 7, dueDate: addDays(new Date(), 77) },
+        { name: 'Homologacao', description: 'Cliente testa no ambiente de staging', order: 8, dueDate: addDays(new Date(), 84) },
+        { name: 'Deploy', description: 'Publicacao e configuracao do ambiente de producao', order: 9, dueDate: addDays(new Date(), 87) },
+        { name: 'Entrega', description: 'Apresentacao final e documentacao', order: 10, dueDate: addDays(new Date(), 91) },
+        { name: 'Garantia', description: 'Periodo de suporte pos-entrega (30 dias)', order: 11, dueDate: addDays(new Date(), 121) },
       ]
       await prisma.milestone.createMany({
         data: defaultMilestones.map(m => ({ ...m, projectId: project.id })),
@@ -150,7 +160,8 @@ function parseBudget(str: string): number | null {
 
 function parseDeadline(str: string): Date | null {
   if (!str) return null
-  const days = str.includes('15') ? 15 : str.includes('30') ? 30 : str.includes('60') ? 60 : str.includes('90') ? 90 : 45
+  const match = str.match(/\b(\d+)\s*dias?\b/i)
+  const days = match ? parseInt(match[1], 10) : 45
   const date = new Date()
   date.setDate(date.getDate() + days)
   return date

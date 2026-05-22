@@ -10,7 +10,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { PageHeader } from '@/components/ui/page-header'
 import { StatCard } from '@/components/ui/stat-card'
 import { OnboardingTip } from '@/components/ui/onboarding-tip'
-import { IconProject, IconFinancial, IconClient, IconAnalytics, IconPlus } from '@/components/icons'
+import { IconProject, IconFinancial, IconClient, IconAnalytics, IconPlus, IconChat, IconFile, IconCheck, IconArrowRight, IconKnowledge } from '@/components/icons'
 import { cn } from '@/lib/utils'
 
 export default function DashboardPage() {
@@ -86,6 +86,91 @@ export default function DashboardPage() {
             <StatCard key={stat.label} {...stat} />
           ))}
         </div>
+      )}
+
+      {!isAdmin && (
+        <>
+          <div className="grid gap-3 md:grid-cols-3">
+            <Card className="bg-[var(--accent-subtle)] border-[var(--accent)]/20">
+              <CardContent className="p-4 flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--accent)]/15">
+                  <IconProject className="w-[18px] h-[18px] text-[var(--accent)]" />
+                </div>
+                <div>
+                  <p className="text-xl font-[500] text-[var(--text)]">{recentProjects.length}</p>
+                  <p className="text-[11px] text-[var(--text-3)]">Projetos</p>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="bg-[var(--success-subtle)] border-[var(--success)]/20">
+              <CardContent className="p-4 flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--success)]/15">
+                  <IconCheck className="w-[18px] h-[18px] text-[var(--success)]" />
+                </div>
+                <div>
+                  <p className="text-xl font-[500] text-[var(--text)]">{recentProjects.filter((p: any) => p.status === 'COMPLETED').length}</p>
+                  <p className="text-[11px] text-[var(--text-3)]">Concluidos</p>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="bg-[var(--info-subtle)] border-[var(--info)]/20">
+              <CardContent className="p-4 flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--info)]/15">
+                  <IconKnowledge className="w-[18px] h-[18px] text-[var(--info)]" />
+                </div>
+                <div>
+                  <p className="text-xl font-[500] text-[var(--text)]">{recentProjects.filter((p: any) => p.status === 'IN_PROGRESS').length}</p>
+                  <p className="text-[11px] text-[var(--text-3)]">Em andamento</p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <Card className="bg-[var(--surface-2)] border-[var(--border)]">
+            <CardContent className="p-4">
+              <div className="flex items-start gap-4">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--accent)]/10 shrink-0">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-[var(--accent)]">
+                    <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+                  </svg>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-[14px] font-[500] text-[var(--text)]">Como funciona?</h3>
+                  <div className="mt-2 space-y-1.5">
+                    <p className="text-[12px] text-[var(--text-2)] flex items-center gap-2">
+                      <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-[var(--accent)]/15 text-[10px] font-[600] text-[var(--accent)] shrink-0">1</span>
+                      Solicite um projeto preenchendo o briefing
+                    </p>
+                    <p className="text-[12px] text-[var(--text-2)] flex items-center gap-2">
+                      <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-[var(--accent)]/15 text-[10px] font-[600] text-[var(--accent)] shrink-0">2</span>
+                      O desenvolvedor analisa e envia uma proposta
+                    </p>
+                    <p className="text-[12px] text-[var(--text-2)] flex items-center gap-2">
+                      <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-[var(--accent)]/15 text-[10px] font-[600] text-[var(--accent)] shrink-0">3</span>
+                      Voce aceita, assina o contrato e o projeto inicia
+                    </p>
+                    <p className="text-[12px] text-[var(--text-2)] flex items-center gap-2">
+                      <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-[var(--accent)]/15 text-[10px] font-[600] text-[var(--accent)] shrink-0">4</span>
+                      Acompanhe cada etapa em tempo real pelo portal
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <div className="flex gap-2">
+            <Button size="sm" asChild>
+              <a href="/portal/briefing"><IconPlus className="w-[14px] h-[14px]" /> Novo Projeto</a>
+            </Button>
+            <Button size="sm" variant="outline" asChild>
+              <a href="/portal/chat"><IconChat className="w-[14px] h-[14px]" /> Falar com Desenvolvedor</a>
+            </Button>
+            <Button size="sm" variant="outline" asChild>
+              <a href="/knowledge"><IconKnowledge className="w-[14px] h-[14px]" /> Meu Conhecimento</a>
+            </Button>
+          </div>
+        </>
       )}
 
       {activeProject && (

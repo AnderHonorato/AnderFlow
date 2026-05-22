@@ -57,11 +57,41 @@ export interface BadgeProps
   status?: string
 }
 
+const statusToVariant: Record<string, string> = {
+  'COMPLETED': 'success',
+  'IN_PROGRESS': 'info',
+  'PENDING': 'warning',
+  'DRAFT': 'default',
+  'REVIEW': 'warning',
+  'CANCELLED': 'destructive',
+  'PAID': 'success',
+  'SENT': 'warning',
+  'OVERDUE': 'destructive',
+  'OPEN': 'info',
+  'CLOSED': 'default',
+  'RESOLVED': 'success',
+  'NEW': 'info',
+  'QUALIFIED': 'success',
+  'PROPOSAL': 'info',
+  'CONTACTED': 'warning',
+  'LOST': 'default',
+  'WON': 'success',
+  'NEGOTIATION': 'info',
+  'ACTIVE': 'success',
+  'EXPIRED': 'default',
+  'WAITING_CLIENT': 'warning',
+  'WAITING_TEAM': 'info',
+  'PENDING_SIGNATURE': 'warning',
+  'SIGNED': 'success',
+  'TODO': 'info',
+}
+
 function Badge({ className, variant, status, children, ...props }: BadgeProps) {
   const config = status ? statusConfig[status] : null
+  const resolvedVariant = variant ?? (status ? (statusToVariant[status] as any) ?? 'default' : undefined)
   const displayContent = children ?? config?.label
   return (
-    <div className={cn(badgeVariants({ variant }), className)} {...props}>
+    <div className={cn(badgeVariants({ variant: resolvedVariant }), className)} {...props}>
       {config && (
         <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: config.color }} />
       )}

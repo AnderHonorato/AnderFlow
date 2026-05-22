@@ -1,7 +1,8 @@
 'use client'
 
-import { useEffect, useState, use } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { useParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -17,23 +18,28 @@ import { IconArrowLeft, IconThumbsUp, IconThumbsDown, IconCheck, IconClose, Icon
 
 const DEFAULT_STEPS = [
   { id: 1, label: 'Briefing', description: 'Coleta de requisitos e entendimento do projeto' },
-  { id: 2, label: 'Planejamento', description: 'Definicao de escopo, cronograma e recursos' },
-  { id: 3, label: 'Design', description: 'Criacao de wireframes, UI/UX e prototipos' },
-  { id: 4, label: 'Desenvolvimento', description: 'Codificacao e implementacao das funcionalidades' },
-  { id: 5, label: 'Testes', description: 'Testes de qualidade, correcoes e ajustes finos' },
-  { id: 6, label: 'Deploy', description: 'Publicacao e configuracao do ambiente de producao' },
-  { id: 7, label: 'Entrega', description: 'Apresentacao final e documentacao para o cliente' },
+  { id: 2, label: 'Proposta / Orcamento', description: 'Gerar valor, prazo e escopo formal para o cliente' },
+  { id: 3, label: 'Contrato', description: 'Cliente assina o contrato de prestacao de servicos' },
+  { id: 4, label: 'Planejamento', description: 'Definicao de escopo, cronograma e recursos' },
+  { id: 5, label: 'Design', description: 'Criacao de wireframes, UI/UX e prototipos' },
+  { id: 6, label: 'Aprovacao do Design', description: 'Cliente aprova o layout antes do desenvolvimento' },
+  { id: 7, label: 'Desenvolvimento', description: 'Codificacao e implementacao das funcionalidades' },
+  { id: 8, label: 'Testes', description: 'Testes internos de qualidade, correcoes e ajustes' },
+  { id: 9, label: 'Homologacao', description: 'Cliente testa no ambiente de staging antes do deploy' },
+  { id: 10, label: 'Deploy', description: 'Publicacao e configuracao do ambiente de producao' },
+  { id: 11, label: 'Entrega', description: 'Apresentacao final, documentacao e homologacao do cliente' },
+  { id: 12, label: 'Garantia', description: 'Periodo de suporte pos-entrega (30 dias)' },
 ]
 
 interface StepState {
   id: number
   status: NodeStatus
   timeEstimate: string
-  comments: { text: string; author: string; time: string; type: 'text' | 'image' | 'video' }[]
+  comments: { text: string; author: string; time: string; type: 'text' | 'image' | 'video'; files?: { name: string; size: number; type: string; url: string }[] }[]
 }
 
-export default function ProjectDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params)
+export default function ProjectDetailPage() {
+  const { id } = useParams<{ id: string }>()
   const { data: session } = useSession()
   const [project, setProject] = useState<any>(null)
   const [loading, setLoading] = useState(true)
@@ -57,6 +63,27 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
   const [infoRequestLoading, setInfoRequestLoading] = useState(false)
   const [clientReplyMsg, setClientReplyMsg] = useState('')
   const [clientReplyLoading, setClientReplyLoading] = useState(false)
+  const [proposalViewOpen, setProposalViewOpen] = useState(false)
+  const [proposalHistory, setProposalHistory] = useState<{ value: string; date: string; author: string }[]>([])
+
+  const handlePrintModal = (modalSelector: string) => {
+    const modal = document.querySelector(modalSelector)
+    if (!modal) { window.print(); return }
+    const scrollables = modal.querySelectorAll('[class*="overflow"]')
+    const originals: { el: Element; overflow: string; maxHeight: string }[] = []
+    scrollables.forEach(el => {
+      const htmlEl = el as HTMLElement
+      originals.push({ el, overflow: htmlEl.style.overflow || '', maxHeight: htmlEl.style.maxHeight || '' })
+      htmlEl.style.overflow = 'visible'
+      htmlEl.style.maxHeight = 'none'
+    })
+    window.print()
+    originals.forEach(({ el, overflow, maxHeight }) => {
+      const htmlEl = el as HTMLElement
+      htmlEl.style.overflow = overflow
+      htmlEl.style.maxHeight = maxHeight
+    })
+  }
 
   const setDefaultSteps = (projectData: any) => {
     const hasBriefing = !!projectData.briefing
@@ -98,33 +125,73 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
           const projectData = json.data
           setProject(projectData)
           const savedSteps = localStorage.getItem(`anderflow_project_steps_${id}`)
-          // Prioridade: DB > localStorage > default
           if (projectData.stepsData) {
-            try { setSteps(JSON.parse(projectData.stepsData)) } catch { setDefaultSteps(projectData) }
+            try {
+              const parsed = JSON.parse(projectData.stepsData)
+              if (Array.isArray(parsed)) { setSteps(parsed) }
+              else { setSteps(parsed.steps || []); if (parsed.history) setHistory(parsed.history) }
+            } catch { setDefaultSteps(projectData) }
           } else if (savedSteps) {
-            setSteps(JSON.parse(savedSteps))
+            try {
+              const parsed = JSON.parse(savedSteps)
+              if (Array.isArray(parsed)) { setSteps(parsed) }
+              else { setSteps(parsed.steps || []); if (parsed.history) setHistory(parsed.history) }
+            } catch { setDefaultSteps(projectData) }
           } else {
             setDefaultSteps(projectData)
           }
-          try {
-            const savedHistory = localStorage.getItem(`project_history_${id}`)
-            if (savedHistory) setHistory(JSON.parse(savedHistory))
-          } catch {}
         }
         setLoading(false)
       })
       .catch(() => setLoading(false))
   }, [id])
 
-  const saveSteps = (newSteps: StepState[]) => {
+  // Polling para atualizacao em tempo real
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetch(`/api/projects/${id}`).then(r => r.json()).then(json => {
+        if (json.data) {
+          setProject(json.data)
+          if (json.data.stepsData) {
+            try {
+              const parsed = JSON.parse(json.data.stepsData)
+              if (!Array.isArray(parsed)) {
+                if (parsed.steps) setSteps(parsed.steps)
+                if (parsed.history) setHistory(parsed.history)
+              }
+            } catch {}
+          }
+        }
+      }).catch(() => {})
+    }, 7000)
+    return () => clearInterval(interval)
+  }, [id])
+
+  const persistProject = (newSteps: StepState[], newHistory?: any[]) => {
     setSteps(newSteps)
-    localStorage.setItem(`anderflow_project_steps_${id}`, JSON.stringify(newSteps))
-    // Salvar no banco para compartilhar entre admin e cliente
-    fetch(`/api/projects/${id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ stepsData: JSON.stringify(newSteps) }),
-    }).catch(() => {})
+    const effectiveHistory = newHistory ?? history
+    if (newHistory) setHistory(newHistory)
+    const payload = JSON.stringify({ steps: newSteps, history: effectiveHistory })
+    localStorage.setItem(`anderflow_project_steps_${id}`, payload)
+    fetch(`/api/projects/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ stepsData: payload }) }).catch(() => {})
+  }
+
+  const saveSteps = (newSteps: StepState[]) => { persistProject(newSteps) }
+
+  const formatSmartTime = (dateTimeStr: string) => {
+    const parts = dateTimeStr.split(', ')
+    if (parts.length < 2) return dateTimeStr
+    const [datePart, timePart] = parts
+    const [day, month, year] = datePart.split('/').map(Number)
+    if (!day || !month || !year) return dateTimeStr
+    const entryDate = new Date(year, month - 1, day)
+    const today = new Date(); today.setHours(0, 0, 0, 0)
+    const yesterday = new Date(today); yesterday.setDate(yesterday.getDate() - 1)
+    entryDate.setHours(0, 0, 0, 0)
+    const timeShort = timePart.split(':').slice(0, 2).join(':')
+    if (entryDate.getTime() === today.getTime()) return `Hoje ${timeShort}`
+    if (entryDate.getTime() === yesterday.getTime()) return `Ontem ${timeShort}`
+    return `${day.toString().padStart(2, '0')}/${month.toString().padStart(2, '0')} ${timeShort}`
   }
 
   const updateStepStatus = (stepId: number, status: NodeStatus) => {
@@ -137,52 +204,51 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
     }
 
     if (status === 'in_progress') {
-      const hasActive = steps.some(s => s.id !== stepId && s.status === 'in_progress')
-      if (hasActive) {
-        toast.error('Apenas uma etapa pode estar em andamento por vez')
+      if (stepId > 3 && project?.status !== 'IN_PROGRESS') {
+        toast.error('Envie a proposta e aguarde o cliente assinar o contrato para liberar esta etapa')
         return
       }
+      const hasActive = steps.some(s => s.id !== stepId && s.status === 'in_progress')
+      if (hasActive) { toast.error('Apenas uma etapa pode estar em andamento por vez'); return }
     }
 
     const newSteps = steps.map(s => s.id === stepId ? { ...s, status } : s)
     const step = DEFAULT_STEPS.find(s => s.id === stepId)
     const labels: Record<NodeStatus, string> = { waiting: 'Aguardando', in_progress: 'Em andamento', paused: 'Pausado', completed: 'Concluido' }
     const newEntry = { time: new Date().toLocaleString('pt-BR'), action: `"${step?.label}" → ${labels[status]}`, author: session?.user?.name || 'Admin' }
-    const newHistory = [newEntry, ...history]
-    setHistory(newHistory)
-    try { localStorage.setItem(`project_history_${id}`, JSON.stringify(newHistory)) } catch {}
-    saveSteps(newSteps)
+    persistProject(newSteps, [newEntry, ...history])
     toast.success(`Etapa "${step?.label}" atualizada`)
   }
 
-  const addComment = (stepId: number, text: string) => {
+  const addComment = (stepId: number, text: string, files?: { name: string; size: number; type: string; url: string }[]) => {
     const newSteps = steps.map(s => {
       if (s.id !== stepId) return s
-      return { ...s, comments: [...s.comments, { text, author: 'Voce', time: new Date().toLocaleTimeString('pt-BR'), type: 'text' as const }] }
+      const comment: any = { text, author: session?.user?.name || 'Admin', time: new Date().toLocaleString('pt-BR'), type: 'text' as const }
+      if (files && files.length > 0) comment.files = files
+      return { ...s, comments: [...s.comments, comment] }
     })
-    const newEntry = { time: new Date().toLocaleString('pt-BR'), action: `Comentario em "${DEFAULT_STEPS.find(s => s.id === stepId)?.label}"`, author: session?.user?.name || 'Admin' }
-    const newHistory = [newEntry, ...history]
-    setHistory(newHistory)
-    try { localStorage.setItem(`project_history_${id}`, JSON.stringify(newHistory)) } catch {}
-    saveSteps(newSteps)
+    const roleLabel = isAdmin ? 'Admin' : 'Cliente'
+    const preview = text.length > 60 ? text.slice(0, 60) + '...' : text
+    const fileInfo = files && files.length > 0 ? ` [${files.length} arquivo(s)]` : ''
+    const newEntry = { time: new Date().toLocaleString('pt-BR'), action: `Mensagem em "${DEFAULT_STEPS.find(s => s.id === stepId)?.label}": "${preview}"${fileInfo}`, author: session?.user?.name || roleLabel }
+    persistProject(newSteps, [newEntry, ...history])
     setNewComment('')
   }
 
   const updateTimeEstimate = (stepId: number, time: string) => {
     const step = DEFAULT_STEPS.find(s => s.id === stepId)
     const oldValue = steps.find(s => s.id === stepId)?.timeEstimate || 'nao definido'
-    saveSteps(steps.map(s => s.id === stepId ? { ...s, timeEstimate: time } : s))
+    const newSteps = steps.map(s => s.id === stepId ? { ...s, timeEstimate: time } : s)
     const entry = {
       time: new Date().toLocaleString('pt-BR'),
       action: `Prazo de "${step?.label}" estendido: ${oldValue} → ${new Date(time + 'T00:00:00').toLocaleDateString('pt-BR')}`,
       author: session?.user?.name || 'Admin',
     }
-    const newHistory = [entry, ...history]
-    setHistory(newHistory)
-    try { localStorage.setItem(`project_history_${id}`, JSON.stringify(newHistory)) } catch {}
+    persistProject(newSteps, [entry, ...history])
   }
 
   const handleApprove = async () => {
+    if (!isAdmin) { toast.error('Acesso negado'); return }
     if (!proposalMsg.trim() || !proposalValue.trim()) return
     setApproveLoading(true)
 
@@ -198,9 +264,20 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
       body: JSON.stringify({ proposalMessage: fullMessage, proposalValue }),
     })
     if (res.ok) {
-      toast.success('Proposta enviada ao cliente!')
+      const isUpdate = !!project.proposalMessage
+      const actionText = isUpdate
+        ? `Proposta alterada: R$ ${proposalValue}. "${proposalMsg.slice(0, 80)}${proposalMsg.length > 80 ? '...' : ''}"`
+        : '"Proposta / Orcamento" → Concluido (enviada ao cliente)'
+      const newSteps = steps.map(s => s.id === 2 ? { ...s, status: 'completed' as NodeStatus } : s)
+      const entry = { time: new Date().toLocaleString('pt-BR'), action: actionText, author: session?.user?.name || 'Admin' }
+      if (isUpdate) {
+        setProposalHistory((prev: any) => [{ value: project.proposalValue, date: new Date().toLocaleString('pt-BR'), author: session?.user?.name || 'Admin' }, ...prev])
+      }
+      persistProject(newSteps, [entry, ...history])
+      toast.success(isUpdate ? 'Proposta atualizada!' : 'Proposta enviada ao cliente!')
       setApproveOpen(false)
-      location.reload()
+      setProposalMsg('')
+      setProposalValue('')
     } else {
       toast.error('Erro ao enviar proposta')
     }
@@ -208,14 +285,15 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
   }
 
   const handleReject = async () => {
+    if (!isAdmin) { toast.error('Acesso negado'); return }
     const res = await fetch(`/api/projects/${id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status: 'CANCELLED', cancelledReason: 'Recusado pelo administrador', cancelledAt: new Date().toISOString() }),
     })
     if (res.ok) {
-      toast.success('Projeto recusado.')
-      window.location.href = '/projects'
+      setProject((prev: any) => ({ ...prev, status: 'CANCELLED' }))
+      toast.success('Projeto recusado. O projeto permanece no historico.')
     } else {
       toast.error('Erro ao recusar projeto')
     }
@@ -255,17 +333,9 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
           }
           return s
         })
-        saveSteps(newSteps)
-
-        // Historico
-        const entry = {
-          time: new Date().toLocaleString('pt-BR'),
-          action: 'Solicitacao de dados extras enviada ao cliente',
-          author: session?.user?.name || 'Admin',
-        }
-        const newHistory = [entry, ...history]
-        setHistory(newHistory)
-        try { localStorage.setItem(`project_history_${id}`, JSON.stringify(newHistory)) } catch {}
+        const preview = infoRequestMsg.length > 60 ? infoRequestMsg.slice(0, 60) + '...' : infoRequestMsg
+        const entry = { time: new Date().toLocaleString('pt-BR'), action: `Solicitacao de dados: "${preview}"`, author: session?.user?.name || 'Admin' }
+        persistProject(newSteps, [entry, ...history])
 
         setInfoRequestOpen(false)
         setInfoRequestMsg('')
@@ -287,7 +357,6 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
         if (s.id === 1) {
           return {
             ...s,
-            status: 'completed' as NodeStatus,
             comments: [...s.comments, {
               text: `[RESPOSTA] ${clientReplyMsg}`,
               author: session?.user?.name || 'Cliente',
@@ -298,17 +367,10 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
         }
         return s
       })
-      saveSteps(newSteps)
 
-      // Historico
-      const entry = {
-        time: new Date().toLocaleString('pt-BR'),
-        action: 'Cliente respondeu a solicitacao de dados',
-        author: session?.user?.name || 'Cliente',
-      }
-      const newHistory = [entry, ...history]
-      setHistory(newHistory)
-      try { localStorage.setItem(`project_history_${id}`, JSON.stringify(newHistory)) } catch {}
+      const preview = clientReplyMsg.length > 60 ? clientReplyMsg.slice(0, 60) + '...' : clientReplyMsg
+      const entry = { time: new Date().toLocaleString('pt-BR'), action: `Resposta do cliente: "${preview}"`, author: session?.user?.name || 'Cliente' }
+      persistProject(newSteps, [entry, ...history])
 
       // Notificar admins
       const adminsRes = await fetch('/api/admins')
@@ -345,12 +407,18 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
     })
     const json = await res.json()
     if (res.ok) {
-      toast.success(json.message)
       if (action === 'accept') {
+        const newSteps = steps.map(s => s.id === 3 ? { ...s, status: 'completed' as NodeStatus } : s)
+        const entry = { time: new Date().toLocaleString('pt-BR'), action: 'Cliente aceitou a proposta — contrato pendente de assinatura', author: session?.user?.name || 'Cliente' }
+        persistProject(newSteps, [entry, ...history])
+        toast.success(json.message)
         setContract(json)
         setContractOpen(true)
       } else {
-        location.reload()
+        const entry = { time: new Date().toLocaleString('pt-BR'), action: 'Proposta recusada pelo cliente', author: session?.user?.name || 'Cliente' }
+        persistProject(steps, [entry, ...history])
+        setProject((prev: any) => ({ ...prev, status: 'CANCELLED' }))
+        toast.success('Proposta recusada')
       }
     } else {
       toast.error(json.error || 'Erro ao processar resposta')
@@ -366,9 +434,12 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
       body: JSON.stringify({ signatureUrl: '' }),
     })
     if (res.ok) {
+      const newSteps = steps.map(s => s.id === 3 ? { ...s, status: 'completed' as NodeStatus } : s)
+      const entry = { time: new Date().toLocaleString('pt-BR'), action: 'Contrato assinado — projeto iniciado', author: session?.user?.name || 'Cliente' }
+      persistProject(newSteps, [entry, ...history])
+      setProject((prev: any) => ({ ...prev, contractSignedAt: new Date().toISOString(), status: 'IN_PROGRESS' }))
       toast.success('Contrato assinado! Projeto iniciado.')
       setContractOpen(false)
-      location.reload()
     } else {
       toast.error('Erro ao assinar contrato')
     }
@@ -385,11 +456,68 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
 
   const briefingStep = steps.find(s => s.id === 1)
   const infoRequestComments = briefingStep?.comments?.filter(c => c.text.startsWith('[SOL. DADOS]')) || []
-  const hasClientReplied = briefingStep?.comments?.some(c => c.text.startsWith('[RESPOSTA]'))
+  const replyComments = briefingStep?.comments?.filter(c => c.text.startsWith('[RESPOSTA]')) || []
   const lastInfoRequest = infoRequestComments[infoRequestComments.length - 1]
+  const lastReply = replyComments[replyComments.length - 1]
+  const hasClientRepliedAfterLastRequest = lastInfoRequest && lastReply
+    ? replyComments.some(c => c.time >= lastInfoRequest.time)
+    : false
 
   if (loading) return <div className="p-6 space-y-4"><Skeleton className="h-8 w-64" /><Skeleton className="h-96" /></div>
   if (!project) return <div className="p-6"><p className="text-[var(--text-3)]">Projeto nao encontrado</p></div>
+
+  const renderStepActions = (nodeId: number) => {
+    if (nodeId === 1) {
+      const hasBriefing = (() => { try { JSON.parse(project.briefing || ''); return true } catch { return false } })()
+      return (
+        <div className="flex items-center gap-2 flex-wrap">
+          {hasBriefing && <Button variant="outline" size="sm" onClick={() => setBriefingOpen(true)} className="h-7 text-[11px]"><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" className="mr-1"><path d="M3 2h6l4 4v8a1 1 0 01-1 1H4a1 1 0 01-1-1V3a1 1 0 011-1z"/><path d="M9 2v4h4"/></svg>Ver Briefing</Button>}
+          {isAdmin && isPending && briefingStep?.status !== 'in_progress' && (
+            <Button variant="outline" size="sm" onClick={() => { setInfoRequestMsg(''); setInfoRequestOpen(true) }} className="h-7 text-[11px] text-[var(--info)] border-[var(--info)]/30">Sol. mais dados</Button>
+          )}
+        </div>
+      )
+    }
+    if (nodeId === 2) {
+      if (isAdmin && (isDraft || isPending)) return (
+        <div className="flex items-center gap-2">
+          <Button size="sm" onClick={() => setApproveOpen(true)} className="h-7 text-[11px]"><IconThumbsUp className="w-3 h-3" /> Enviar proposta</Button>
+          <Button size="sm" variant="outline" onClick={handleReject} className="h-7 text-[11px]"><IconThumbsDown className="w-3 h-3" /> Recusar</Button>
+        </div>
+      )
+      if (isClient && isReview) return (
+        <div className="flex items-center gap-2">
+          <Button size="sm" onClick={() => handleClientResponse('accept')} disabled={responseLoading} className="h-7 text-[11px]">{responseLoading && <IconLoader className="w-3 h-3 animate-spin" />}<IconCheck className="w-3 h-3" /> Aceitar</Button>
+          <Button size="sm" variant="outline" onClick={() => handleClientResponse('reject')} disabled={responseLoading} className="h-7 text-[11px]"><IconClose className="w-3 h-3" /> Recusar</Button>
+        </div>
+      )
+      if (project.proposalMessage) return (
+        <div className="space-y-2">
+          <div className="p-2 rounded-lg bg-[var(--surface-2)] border border-[var(--border)]">
+            <p className="text-[11px] text-[var(--text-2)] mb-1">Proposta enviada</p>
+            {project.proposalValue && <p className="text-[12px] font-[500] text-[var(--accent)]">R$ {project.proposalValue?.toLocaleString?.('pt-BR') || project.proposalValue}</p>}
+          </div>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => setProposalViewOpen(true)} className="h-7 text-[11px]">Ver Detalhes</Button>
+            {isAdmin && isReview && (
+              <Button variant="outline" size="sm" onClick={() => setApproveOpen(true)} className="h-7 text-[11px] text-[var(--warning)]">Alterar Proposta</Button>
+            )}
+          </div>
+        </div>
+      )
+    }
+    if (nodeId === 3 && isReview) {
+      if (isClient && !project.contractSignedAt) return (
+        <Button size="sm" onClick={() => setContractOpen(true)} className="h-7 text-[11px]"><IconFile className="w-[12px] h-[12px]" /> Ver Contrato & Assinar</Button>
+      )
+      if (project.contractSignedAt) return (
+        <div className="p-2 rounded-lg bg-[var(--success-subtle)] border border-[var(--success)]/20">
+          <p className="text-[11px] text-[var(--success)]">Contrato assinado em {new Date(project.contractSignedAt).toLocaleDateString('pt-BR')}</p>
+        </div>
+      )
+    }
+    return null
+  }
 
   return (
     <div className="p-6 space-y-6 max-w-4xl mx-auto animate-page-enter">
@@ -399,135 +527,161 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
 
       <Card>
         <CardContent className="p-4">
-          <div className="flex items-start justify-between">
-            <div>
+          <div className="flex items-start justify-between gap-4 mb-3">
+            <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
                 <h1 className="text-[17px] font-[500] tracking-[-0.015em]">{project.name}</h1>
                 {project.number && (
-                  <span className="text-[11px] font-[500] text-[var(--text-3)] bg-[var(--surface-2)] px-2 py-0.5 rounded">
+                  <span className="text-[11px] font-[500] text-[var(--text-3)] bg-[var(--surface-2)] px-2 py-0.5 rounded shrink-0">
                     {project.number}
                   </span>
                 )}
               </div>
-              <p className="text-[12px] text-[var(--text-3)] mt-1">{project.description}</p>
-              <div className="flex items-center gap-3 mt-3">
+              <p className="text-[12px] text-[var(--text-3)] mt-0.5">{project.description}</p>
+            </div>
+            <div className="text-right shrink-0">
+              <div className="flex items-center gap-1.5 justify-end">
                 <Badge status={isCancelled ? 'CANCELLED' : (isPending ? 'PENDING' : (isDraft ? 'DRAFT' : (isReview ? 'REVIEW' : (project.status === 'COMPLETED' ? 'COMPLETED' : 'IN_PROGRESS'))))}>
                   {isCancelled ? 'Cancelado' : (isPending ? 'Solicitacao' : (isDraft ? 'Rascunho' : (isReview ? 'Aguardando cliente' : (project.status === 'COMPLETED' ? 'Concluido' : 'Em andamento'))))}
                 </Badge>
                 {isPending && (() => {
                   const createdDate = project.createdAt ? new Date(project.createdAt) : null
                   const isNew = createdDate && (Date.now() - createdDate.getTime()) < 48 * 60 * 60 * 1000
-                  return isNew ? <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-[500] bg-[var(--warning-subtle)] text-[var(--warning)] badge-new">NOVO</span> : null
+                  return isNew ? <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-[500] bg-[var(--warning-subtle)] text-[var(--warning)]">NOVO</span> : null
                 })()}
-                <span className="text-[12px] text-[var(--text-3)]">
-                  Cliente: {project.client?.name} ({project.client?.company})
+              </div>
+              <p className="text-[11px] text-[var(--text-3)] mt-1">
+                {project.client?.name} {project.client?.company ? `· ${project.client.company}` : ''}
+              </p>
+            </div>
+          </div>
+
+          {isCancelled && (
+            <div className="rounded-lg bg-[var(--destructive-subtle)] border border-[var(--destructive)]/20 p-3 mb-3">
+              <div className="flex items-center gap-2 mb-1">
+                <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" className="text-[var(--destructive)]"><path d="M3 3l10 10M13 3L3 13"/></svg>
+                <span className="text-[11px] font-[600] text-[var(--destructive)]">Projeto Cancelado</span>
+              </div>
+              <p className="text-[12px] text-[var(--text-2)]">{project.cancelledReason || 'Sem motivo informado'}</p>
+              {project.cancelledAt && <p className="text-[10px] text-[var(--text-3)] mt-0.5">{new Date(project.cancelledAt).toLocaleDateString('pt-BR')}</p>}
+            </div>
+          )}
+
+          {!isCancelled && (isPending || isReview || project.proposalMessage) && (
+            <div className={`rounded-lg border p-3 mb-3 ${
+              isReview ? 'bg-[var(--warning-subtle)] border-[var(--warning)]/20' :
+              'bg-[var(--surface-2)] border-[var(--accent)]/15'
+            }`}>
+              <div className="flex items-center gap-2 mb-1.5">
+                {isReview ? (
+                  <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" className="text-[var(--warning)]"><circle cx="8" cy="8" r="6"/><path d="M8 5v3"/><circle cx="8" cy="11" r="0.5" fill="currentColor"/></svg>
+                ) : isPending && !project.proposalMessage ? (
+                  <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" className="text-[var(--warning)]"><circle cx="8" cy="8" r="6"/><path d="M8 5v3M8 11h0"/></svg>
+                ) : (
+                  <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" className="text-[var(--accent)]"><rect x="2" y="2" width="12" height="12" rx="1.5"/><path d="M6 8l2 2 4-4"/></svg>
+                )}
+                <span className={`text-[11px] font-[600] ${isReview ? 'text-[var(--warning)]' : 'text-[var(--accent)]'}`}>
+                  {isReview ? 'Aguardando resposta do cliente' : project.proposalMessage ? 'Proposta enviada — aguardando cliente' : 'Em analise pelo desenvolvedor'}
                 </span>
               </div>
-
-              {isCancelled && (
-                <div className="mt-3 p-3 rounded-lg bg-[var(--surface-2)] border border-[var(--border)]">
-                  <p className="text-[13px] text-[var(--text-2)]">{project.cancelledReason || 'Projeto cancelado'}</p>
-                  {project.cancelledAt && <p className="text-[11px] text-[var(--text-3)] mt-1">{new Date(project.cancelledAt).toLocaleDateString('pt-BR')}</p>}
-                </div>
-              )}
-
-              {isClient && isPending && (
-                <div className="mt-3 p-3 rounded-lg bg-[var(--warning-subtle)] border border-[var(--warning)]/20">
-                  <p className="text-[13px] text-[var(--warning)]">Sua solicitacao esta em analise pelo desenvolvedor.</p>
-                  <p className="text-[11px] text-[var(--text-3)] mt-1">Aguarde ate 24 horas que retornamos com uma resposta.</p>
-                </div>
-              )}
-
-              {project.proposalMessage && (
-                <div className="mt-3 p-3 rounded-lg bg-[var(--surface-2)] border border-[var(--border)]">
-                  <p className="text-[13px] text-[var(--text)]">{project.proposalMessage}</p>
-                  {project.proposalValue && (
-                    <p className="text-[14px] font-[500] text-[var(--accent)] mt-1">R$ {project.proposalValue?.toLocaleString?.('pt-BR') || project.proposalValue}</p>
+              {project.proposalMessage ? (
+                <div>
+                  {(() => {
+                    const parts = project.proposalMessage.split('---')
+                    const msg = parts[0]?.trim()
+                    const rest = parts.slice(1).join('---').trim()
+                    return (
+                      <>
+                        {msg && <p className="text-[12px] text-[var(--text)] leading-relaxed whitespace-pre-wrap line-clamp-3">{msg}</p>}
+                        {project.proposalValue && (
+                          <p className="text-[14px] font-[600] text-[var(--accent)] mt-1">R$ {project.proposalValue?.toLocaleString?.('pt-BR') || project.proposalValue}</p>
+                        )}
+                        {rest && <p className="text-[10px] text-[var(--text-3)] mt-1 whitespace-pre-wrap line-clamp-2">{rest}</p>}
+                      </>
+                    )
+                  })()}
+                  {isReview && isAdmin && (
+                    <div className="flex items-center gap-2 mt-2 pt-2 border-t border-[var(--border)]">
+                      <Button size="sm" variant="outline" onClick={() => setProposalViewOpen(true)} className="h-7 text-[11px]">Ver proposta</Button>
+                      <Button size="sm" variant="outline" onClick={() => setApproveOpen(true)} className="h-7 text-[11px] text-[var(--warning)]">Alterar</Button>
+                    </div>
                   )}
                 </div>
+              ) : (
+                <p className="text-[12px] text-[var(--text)]">
+                  {isClient ? 'Sua solicitacao esta em analise. Aguarde o retorno em ate 24h.' : 'Envie a proposta para o cliente revisar e aceitar.'}
+                </p>
               )}
+            </div>
+          )}
 
-              {project.briefing && (() => {
-                try {
-                  JSON.parse(project.briefing)
-                  return (
-                    <div className="flex items-center gap-2">
-                      <Button variant="outline" size="sm" onClick={() => setBriefingOpen(true)} className="h-7 text-[11px]">Ver Briefing</Button>
-                      {isAdmin && isPending && (
-                        <Button variant="outline" size="sm" onClick={() => { setInfoRequestMsg(''); setInfoRequestOpen(true) }} className="h-7 text-[11px] text-[var(--info)] border-[var(--info)]/30">
-                          Sol. mais dados
-                        </Button>
-                      )}
-                    </div>
-                  )
-                } catch { return null }
-              })()}
-
-              {isAdmin && (isDraft || isPending) && (
-                <div className="flex items-center gap-2 mt-3">
-                  <Button size="sm" onClick={() => setApproveOpen(true)} className="h-7 text-[11px]">
-                    <IconThumbsUp className="w-3 h-3" /> Aprovar com proposta
-                  </Button>
-                  <Button size="sm" variant="outline" onClick={handleReject} className="h-7 text-[11px]">
-                    <IconThumbsDown className="w-3 h-3" /> Recusar
-                  </Button>
-                </div>
-              )}
-
-              {isClient && isReview && (
-                <div className="flex items-center gap-2 mt-3">
-                  <Button size="sm" onClick={() => handleClientResponse('accept')} disabled={responseLoading} className="h-7 text-[11px]">
-                    {responseLoading && <IconLoader className="w-3 h-3 animate-spin" />}
-                    <IconCheck className="w-3 h-3" /> Aceitar proposta
-                  </Button>
-                  <Button size="sm" variant="outline" onClick={() => handleClientResponse('reject')} disabled={responseLoading} className="h-7 text-[11px]">
-                    <IconClose className="w-3 h-3" /> Recusar
-                  </Button>
-                </div>
-              )}
-
+          <div className="flex items-stretch justify-between gap-6 pt-2 border-t border-[var(--border)]">
+            <div className="flex-1 min-w-0">
               {isClient && project.contractSignedAt && (
-                <div className="mt-3 p-3 rounded-lg bg-[var(--success-subtle)] border border-[var(--success)]/20">
-                  <p className="text-[13px] text-[var(--success)]">Contrato assinado em {new Date(project.contractSignedAt).toLocaleDateString('pt-BR')}</p>
+                <div className="flex items-center gap-2 text-[11px] text-[var(--success)] mb-2">
+                  <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M2 8l4 4 8-8"/></svg>
+                  Contrato assinado em {new Date(project.contractSignedAt).toLocaleDateString('pt-BR')}
                 </div>
               )}
 
-              {isClient && isPending && lastInfoRequest && !hasClientReplied && (
-                <div className="mt-3 p-3 rounded-lg bg-[var(--info-subtle)] border border-[var(--info)]/20">
-                  <p className="text-[13px] font-[500] text-[var(--info)] mb-1">Desenvolvedor solicita dados extras:</p>
-                  <p className="text-[12px] text-[var(--text)] whitespace-pre-wrap">{lastInfoRequest.text.replace('[SOL. DADOS] ', '')}</p>
-                  <div className="mt-3 flex items-start gap-2">
+              {isClient && isPending && lastInfoRequest && !hasClientRepliedAfterLastRequest && (
+                <div className="rounded-lg bg-[var(--info-subtle)] border border-[var(--info)]/20 p-3 mb-2">
+                  <div className="flex items-center gap-2 mb-1">
+                    <svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" className="text-[var(--info)]"><circle cx="8" cy="8" r="6"/><path d="M8 5v3M8 11h0"/></svg>
+                    <span className="text-[10px] font-[600] text-[var(--info)] uppercase">Dados Solicitados</span>
+                  </div>
+                  <p className="text-[12px] text-[var(--text)] whitespace-pre-wrap mb-2">{lastInfoRequest.text.replace('[SOL. DADOS] ', '')}</p>
+                  <div className="flex items-start gap-2">
                     <textarea
-                      className="flex-1 min-h-[60px] rounded-lg bg-[var(--surface-2)] border border-[var(--border)] px-3 py-2 text-[12px] text-[var(--text)] placeholder:text-[var(--text-3)] focus:outline-none focus:border-[var(--accent)] resize-vertical"
-                      placeholder="Digite sua resposta com as informacoes solicitadas..."
+                      className="flex-1 min-h-[50px] rounded-md bg-[var(--surface-2)] border border-[var(--border)] px-2.5 py-1.5 text-[12px] text-[var(--text)] placeholder:text-[var(--text-3)] focus:outline-none focus:border-[var(--accent)] resize-vertical"
+                      placeholder="Digite sua resposta..."
                       value={clientReplyMsg}
                       onChange={e => setClientReplyMsg(e.target.value)}
                     />
                     <Button size="sm" onClick={handleClientReply} disabled={clientReplyLoading || !clientReplyMsg.trim()} className="h-8 text-[11px]">
-                      {clientReplyLoading && <IconLoader className="w-[12px] h-[12px] animate-spin" />}
-                      Responder
+                      {clientReplyLoading && <IconLoader className="w-[12px] h-[12px] animate-spin" />}Responder
                     </Button>
                   </div>
                 </div>
               )}
 
-              {isClient && isPending && hasClientReplied && (
-                <div className="mt-3 p-3 rounded-lg bg-[var(--success-subtle)] border border-[var(--success)]/20">
-                  <p className="text-[12px] text-[var(--success)]">Voce ja respondeu a solicitacao de dados. Aguarde a analise do desenvolvedor.</p>
+              {isClient && isPending && hasClientRepliedAfterLastRequest && (
+                <div className="flex items-center gap-2 text-[11px] text-[var(--success)] mb-2">
+                  <svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M2 8l4 4 8-8"/></svg>
+                  Voce ja respondeu. Aguarde a analise do desenvolvedor.
                 </div>
               )}
             </div>
-            <div className="text-right">
-              <p className="text-[24px] font-[500] text-[var(--accent)]">{progress}%</p>
-              <p className="text-[11px] text-[var(--text-3)]">{completedCount}/{totalSteps} etapas</p>
-              <Progress value={progress} className="h-[2px] w-32 mt-2" />
+
+            <div className="flex flex-col items-end justify-between text-right shrink-0">
+              <div>
+                {totalDays > 0 && (
+                  <p className="text-[10px] text-[var(--text-3)] mb-0.5">
+                    ~{Math.max(0, totalWithMargin - (project.createdAt ? Math.floor((Date.now() - new Date(project.createdAt).getTime()) / 86400000) : 0))}d restantes
+                  </p>
+                )}
+                <p className="text-[24px] font-[500] text-[var(--accent)]">{progress}%</p>
+                <p className="text-[11px] text-[var(--text-3)]">{completedCount}/{totalSteps} etapas</p>
+                <Progress value={progress} className="h-[2px] w-28 mt-1.5" />
+              </div>
+              <div className="flex items-center gap-1 justify-end pt-1.5 mt-2 border-t border-[var(--border)]">
+                {project.briefing && (() => { try { JSON.parse(project.briefing); return (
+                  <Button variant="ghost" size="sm" onClick={() => setBriefingOpen(true)} className="h-6 text-[10px] gap-1 px-1.5" title="Briefing">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                  </Button>
+                ) } catch { return null } })()}
+                {project.proposalMessage && (
+                  <Button variant="ghost" size="sm" onClick={() => setProposalViewOpen(true)} className="h-6 text-[10px] gap-1 px-1.5" title="Proposta">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {!isCancelled && (
-        <div className="grid gap-6 lg:grid-cols-[1fr_300px] items-start">
+      <div className="grid gap-6 lg:grid-cols-[1fr_300px] items-start">
           <div>
             <h3 className="text-[11px] font-[500] text-[var(--text-3)] uppercase tracking-wider mb-4">Fluxo do Projeto</h3>
             <ProjectTimeline
@@ -551,6 +705,8 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
               newComment={newComment}
               onNewCommentChange={setNewComment}
               session={session}
+              projectStatus={project?.status}
+              stepActions={renderStepActions}
             />
           </div>
           <div>
@@ -560,26 +716,64 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
               </CardHeader>
               <CardContent>
                 <ScrollArea className="h-[400px]">
-                  <div className="space-y-3">
-                    {history.length === 0 && (
-                      <p className="text-[12px] text-[var(--text-3)] text-center py-4">Nenhuma alteracao registrada</p>
-                    )}
-                    {history.map((h: any, i: number) => (
-                      <div key={i} className="flex items-start gap-2 text-[11px] border-b border-[var(--border)] pb-2 last:border-0">
-                        <span className="text-[var(--text-3)] shrink-0">{h.time}</span>
-                        <div className="min-w-0">
-                          <span className="text-[var(--text)]">{h.action}</span>
-                          {h.author && <span className="text-[var(--text-3)] ml-1">— {h.author}</span>}
+                  {history.length === 0 && (
+                    <p className="text-[12px] text-[var(--text-3)] text-center py-4">Nenhuma alteracao registrada</p>
+                  )}
+                  <div className="relative pl-5">
+                    {history.map((h: any, i: number) => {
+                      const isLast = i === history.length - 1
+                      const isBriefing = h.action.includes('Briefing')
+                      const isRequest = h.action.includes('Solicitacao')
+                      const isComment = h.action.includes('Mensagem')
+                      const isReply = h.action.includes('Resposta')
+                      const isStatus = h.action.includes('→')
+                      const isContract = h.action.includes('Contrato') || h.action.includes('contrato')
+                      const isProposal = h.action.includes('Proposta') || h.action.includes('proposta')
+
+                      const badge = isBriefing ? { label: 'Briefing', color: 'var(--success)', bg: 'var(--success-subtle)' } :
+                                    isRequest ? { label: 'Solicitacao', color: 'var(--info)', bg: 'var(--info-subtle)' } :
+                                    isReply ? { label: 'Resposta', color: 'var(--accent)', bg: 'var(--accent-subtle)' } :
+                                    isStatus ? { label: 'Status', color: 'var(--warning)', bg: 'var(--warning-subtle)' } :
+                                    isProposal ? { label: 'Proposta', color: '#8b5cf6', bg: 'rgba(139,92,246,0.1)' } :
+                                    isContract ? { label: 'Contrato', color: '#06b6d4', bg: 'rgba(6,182,212,0.1)' } :
+                                    isComment ? { label: 'Mensagem', color: 'var(--text-3)', bg: 'var(--surface-2)' } :
+                                    { label: 'Info', color: 'var(--text-3)', bg: 'var(--surface-2)' }
+
+                      return (
+                        <div key={i} className="relative pb-4 last:pb-0">
+                          {!isLast && <div className="absolute left-[9px] top-5 bottom-0 w-px bg-[var(--border)]" />}
+                          <div className="flex items-start gap-3">
+                            <div className="relative shrink-0 mt-0.5">
+                              <div className="flex h-[18px] w-[18px] items-center justify-center rounded-full border" style={{ borderColor: badge.color, background: badge.bg }}>
+                                {isBriefing ? <svg width="9" height="9" viewBox="0 0 16 16" fill="none" stroke={badge.color} strokeWidth="2"><path d="M2 4h4l3-3 3 3h4v10a2 2 0 01-2 2H4a2 2 0 01-2-2V4z"/></svg> :
+                                 isRequest ? <svg width="9" height="9" viewBox="0 0 16 16" fill="none" stroke={badge.color} strokeWidth="2"><circle cx="8" cy="8" r="6"/><path d="M8 5v3M8 11h0"/></svg> :
+                                 isReply ? <svg width="9" height="9" viewBox="0 0 16 16" fill="none" stroke={badge.color} strokeWidth="2"><path d="M14 10l-4 4-4-4M10 14V4a2 2 0 00-2-2H4"/></svg> :
+                                 isStatus ? <svg width="9" height="9" viewBox="0 0 16 16" fill="none" stroke={badge.color} strokeWidth="2"><path d="M2 8l4 4 8-8"/></svg> :
+                                 isProposal ? <svg width="9" height="9" viewBox="0 0 16 16" fill="none" stroke={badge.color} strokeWidth="2"><rect x="2" y="2" width="12" height="12" rx="1.5"/><path d="M6 8l2 2 4-4"/></svg> :
+                                 isContract ? <svg width="9" height="9" viewBox="0 0 16 16" fill="none" stroke={badge.color} strokeWidth="2"><path d="M3 2h6l4 4v8a1 1 0 01-1 1H4a1 1 0 01-1-1V3a1 1 0 011-1z"/><path d="M9 2v4h4"/></svg> :
+                                 <svg width="9" height="9" viewBox="0 0 16 16" fill="none" stroke={badge.color} strokeWidth="2"><path d="M2 3h12M2 8h12M2 13h8"/></svg>}
+                              </div>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-0.5 flex-wrap">
+                                <span className="inline-flex items-center px-1.5 py-px rounded text-[9px] font-[600] tracking-wide" style={{ color: badge.color, background: badge.bg }}>{badge.label}</span>
+                                <span className="text-[10px] text-[var(--text-3)]">{formatSmartTime(h.time)}</span>
+                              </div>
+                              <p className="text-[12px] text-[var(--text)] leading-relaxed">{h.action.replace(/"/g, '')}</p>
+                              {h.author && (
+                                <p className="text-[10px] font-[500] text-[var(--text-2)] mt-0.5">{h.author}</p>
+                              )}
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      )
+                    })}
                   </div>
                 </ScrollArea>
               </CardContent>
             </Card>
           </div>
         </div>
-      )}
 
       <Dialog open={approveOpen} onOpenChange={(v) => { if (!v) setApproveOpen(false) }}>
         <DialogContent className="max-w-md">
@@ -671,48 +865,58 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
       <Dialog open={contractOpen} onOpenChange={setContractOpen}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>Assinar Contrato</DialogTitle>
+            <DialogTitle>Contrato de Prestacao de Servicos</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
-            <div className="p-4 rounded-lg bg-[var(--surface-2)] border border-[var(--border)] max-h-[300px] overflow-y-auto">
-              <h3 className="text-[14px] font-[500] mb-2">Termos de Uso e Contrato de Prestacao de Servicos</h3>
-              <p className="text-[12px] text-[var(--text-2)] leading-relaxed">
-                Este contrato estabelece os termos e condicoes para a prestacao de servicos entre ANDERFLOW Sistemas e o cliente.
-              </p>
-              <div className="mt-3 space-y-2 text-[12px] text-[var(--text-2)]">
-                <p><strong>1. Escopo:</strong> {project.name} — {project.description || 'Conforme briefing aprovado'}</p>
-                <p><strong>2. Valor:</strong> R$ {project.proposalValue?.toLocaleString?.('pt-BR') || project.proposalValue}</p>
-                <p><strong>3. Prazo:</strong> A ser definido conforme cronograma do projeto</p>
-                <p><strong>4. Pagamento:</strong> Conforme acordado entre as partes</p>
-                <p><strong>5. Confidencialidade:</strong> Ambas as partes se comprometem a manter sigilo sobre informacoes trocadas</p>
-                <p><strong>6. Rescisao:</strong> Qualquer parte pode rescindir mediante aviso previo de 15 dias</p>
+            <div className="p-4 rounded-lg bg-[var(--surface-2)] border border-[var(--accent)]/15 max-h-[350px] overflow-y-auto text-[12px] leading-relaxed">
+              <p className="text-[14px] font-[600] text-[var(--accent)] mb-3">CONTRATO DE PRESTACAO DE SERVICOS DE DESENVOLVIMENTO</p>
+
+              <p className="text-[11px] font-[600] text-[var(--text)] uppercase tracking-wider mb-1">1. Partes</p>
+              <p className="text-[var(--text-2)] mb-2"><strong>Contratado:</strong> ANDERFLOW Sistemas — CNPJ: 00.000.000/0001-00</p>
+              <p className="text-[var(--text-2)] mb-3"><strong>Contratante:</strong> {project.client?.name} {project.client?.company ? `(${project.client.company})` : ''} — CPF/CNPJ: 000.000.000-00</p>
+
+              <p className="text-[11px] font-[600] text-[var(--text)] uppercase tracking-wider mb-1">2. Objeto</p>
+              <p className="text-[var(--text-2)] mb-3">Prestacao de servicos de desenvolvimento para o projeto <strong>{project.name}</strong>: {project.description || 'Conforme briefing aprovado'}</p>
+
+              <p className="text-[11px] font-[600] text-[var(--text)] uppercase tracking-wider mb-1">3. Valor</p>
+              <p className="text-[var(--text-2)] mb-3">Valor total: <strong className="text-[var(--accent)] text-[14px]">R$ {project.proposalValue?.toLocaleString?.('pt-BR') || project.proposalValue}</strong></p>
+
+              <p className="text-[11px] font-[600] text-[var(--text)] uppercase tracking-wider mb-1">4. Vigencia</p>
+              <p className="text-[var(--text-2)] mb-3">Inicio: {new Date().toLocaleDateString('pt-BR')} — Conforme cronograma do projeto</p>
+
+              <p className="text-[11px] font-[600] text-[var(--text)] uppercase tracking-wider mb-1">5. Condicoes Gerais</p>
+              <p className="text-[var(--text-2)] mb-2">O contratante declara ter lido e aceito integralmente os <a href="/termos" target="_blank" className="text-[var(--accent)] underline">Termos e Condicoes</a> da plataforma, incluindo disposicoes sobre pagamento, propriedade intelectual, confidencialidade, garantia, e LGPD.</p>
+              <p className="text-[var(--text-2)] mb-2">Apos assinatura digital ou upload do contrato assinado, o projeto avanca para a etapa de Planejamento.</p>
+
+              <div className="mt-3 p-2 rounded bg-[var(--surface)] border border-[var(--border)] text-[11px] text-[var(--text-3)]">
+                <strong className="text-[var(--text-2)]">Instrucoes:</strong> Baixe o PDF, leia com atencao, assine digitalmente ou imprima e assine a mao. Depois faca upload do arquivo assinado no campo abaixo.
               </div>
             </div>
-            <div className="space-y-3">
-              <Button variant="outline" className="w-full" asChild>
-                <a href="#" onClick={(e) => { e.preventDefault(); toast.info('Download do PDF em breve') }}>
-                  <IconFile className="w-[14px] h-[14px]" /> Baixar contrato em PDF
-                </a>
-              </Button>
-              <div className="p-3 rounded-lg bg-[var(--surface-2)] border border-[var(--border)]">
-                <p className="text-[12px] text-[var(--text-2)] mb-2">Assine digitalmente usando sua conta Gov.br</p>
-                <Button variant="outline" size="sm" className="w-full" onClick={() => toast.info('Integracao Gov.br em breve')}>
-                  Assinar com Gov.br
+            <div className="space-y-2">
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => handlePrintModal('[role="dialog"]')} size="sm" className="flex-1 h-8 text-[11px]">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="mr-1"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+                  Baixar PDF
+                </Button>
+                <Button variant="outline" size="sm" className="flex-1 h-8 text-[11px]" asChild>
+                  <a href="/termos" target="_blank">Ler Termos Completos</a>
                 </Button>
               </div>
               <div className="p-3 rounded-lg bg-[var(--surface-2)] border border-[var(--border)]">
-                <p className="text-[12px] text-[var(--text-2)] mb-2">Ou faca upload do contrato assinado</p>
-                <Button variant="outline" size="sm" className="w-full" onClick={() => toast.info('Upload em breve')}>
-                  Upload do arquivo assinado
-                </Button>
+                <label className="text-[11px] font-[500] text-[var(--text-2)] block mb-2">Upload do Contrato Assinado</label>
+                <Input type="file" accept=".pdf,.jpg,.png,.doc,.docx" className="h-8 text-[11px]" />
               </div>
+              <label className="flex items-center gap-2 text-[11px] text-[var(--text-2)] cursor-pointer">
+                <input type="checkbox" className="rounded" />
+                Li e aceito os <a href="/termos" target="_blank" className="text-[var(--accent)] underline">Termos e Condicoes</a>
+              </label>
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setContractOpen(false)}>Fechar</Button>
             <Button onClick={handleSignContract} disabled={signLoading}>
               {signLoading && <IconLoader className="w-[14px] h-[14px] animate-spin" />}
-              <IconCheck className="w-[14px] h-[14px]" /> Confirmar assinatura
+              <IconCheck className="w-[14px] h-[14px]" /> Confirmar Assinatura
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -779,7 +983,37 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setBriefingOpen(false)}>Fechar</Button>
-            <Button onClick={() => window.print()} size="sm">Baixar PDF</Button>
+            <Button onClick={() => handlePrintModal('[role="dialog"]')} size="sm"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" className="mr-1"><path d="M14 10v3a1 1 0 01-1 1H3a1 1 0 01-1-1v-3M4 6l4 4 4-4M8 10V2"/></svg>Baixar PDF</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={proposalViewOpen} onOpenChange={setProposalViewOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Proposta do Projeto</DialogTitle>
+          </DialogHeader>
+          <div className="max-h-[60vh] overflow-y-auto space-y-4">
+            <div className="p-4 rounded-lg bg-[var(--surface-2)] border border-[var(--border)]">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-[14px] font-[500] text-[var(--text)]">{project.name}</h3>
+                {project.proposalValue && (
+                  <span className="text-[18px] font-[600] text-[var(--accent)]">R$ {project.proposalValue?.toLocaleString?.('pt-BR') || project.proposalValue}</span>
+                )}
+              </div>
+              <div className="p-3 rounded-lg bg-[var(--surface)] border border-[var(--border)] mb-3">
+                <p className="text-[12px] text-[var(--text)] whitespace-pre-wrap leading-relaxed">{project.proposalMessage}</p>
+              </div>
+              <div className="space-y-1 text-[11px] text-[var(--text-3)]">
+                <p><strong className="text-[var(--text-2)]">Cliente:</strong> {project.client?.name}</p>
+                <p><strong className="text-[var(--text-2)]">Empresa:</strong> {project.client?.company || '-'}</p>
+                <p><strong className="text-[var(--text-2)]">Data da proposta:</strong> {new Date(project.updatedAt).toLocaleDateString('pt-BR')}</p>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setProposalViewOpen(false)}>Fechar</Button>
+            <Button onClick={() => handlePrintModal('[role="dialog"]')} size="sm"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" className="mr-1"><path d="M14 10v3a1 1 0 01-1 1H3a1 1 0 01-1-1v-3M4 6l4 4 4-4M8 10V2"/></svg>Baixar PDF</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

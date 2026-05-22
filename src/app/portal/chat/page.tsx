@@ -26,8 +26,22 @@ export default function PortalChat() {
       .catch(() => setLoading(false))
   }
 
-  useEffect(() => { loadMessages() }, [channelId])
-  useEffect(() => { loadMessages() }, [])
+  useEffect(() => {
+    fetch('/api/channels')
+      .then(r => r.json())
+      .then(json => {
+        const channels = json.data || []
+        if (channels.length > 0) {
+          setChannelId(channels[0].id)
+        }
+        setLoading(false)
+      })
+      .catch(() => setLoading(false))
+  }, [])
+
+  useEffect(() => {
+    if (channelId) loadMessages()
+  }, [channelId])
 
   const send = async () => {
     if (!text.trim() || sending) return
@@ -37,7 +51,7 @@ export default function PortalChat() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         content: text,
-        channelId: channelId || 'portal-channel',
+        channelId,
       }),
     })
     if (res.ok) {

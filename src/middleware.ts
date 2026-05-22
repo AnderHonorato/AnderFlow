@@ -4,14 +4,14 @@ import { NextResponse } from 'next/server'
 const adminOnlyRoutes = [
   '/users', '/audit-logs', '/clients', '/crm', '/analytics',
   '/automations', '/files', '/tickets', '/calendar', '/onboarding', '/settings',
-  '/knowledge', '/ai', '/contracts',
+  '/ai', '/contracts',
 ]
 
 const clientAllowedRoutes = [
   '/dashboard', '/profile', '/notifications', '/help',
   '/plans', '/changelog', '/feedback',
   '/projects', '/chat', '/financial',
-  '/portal',
+  '/portal', '/knowledge',
 ]
 
 export default withAuth(
@@ -50,6 +50,7 @@ export default withAuth(
           path.startsWith('/login') ||
           path.startsWith('/register') ||
           path.startsWith('/forgot-password') ||
+          path.startsWith('/termos') ||
           path.startsWith('/api/auth')
         ) {
           return true

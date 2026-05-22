@@ -41,9 +41,22 @@ export async function PATCH(
   try {
     const body = await request.json()
 
+    const allowedFields = [
+      'name', 'slug', 'description', 'status', 'priority', 'type',
+      'progress', 'budget', 'deadline', 'tags', 'briefing',
+      'completedSummary', 'completedLink', 'headerImage',
+      'stepsData', 'cancelledReason', 'cancelledAt',
+      'proposalMessage', 'proposalValue', 'isArchived',
+      'contractSignedAt', 'completedAt',
+    ]
+    const data: Record<string, unknown> = {}
+    for (const key of allowedFields) {
+      if (key in body) data[key] = body[key]
+    }
+
     const project = await prisma.project.update({
       where: { id },
-      data: body,
+      data,
     })
 
     return NextResponse.json({ data: project })

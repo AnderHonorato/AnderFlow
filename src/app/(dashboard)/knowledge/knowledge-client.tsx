@@ -9,14 +9,22 @@ import { toast } from 'sonner'
 import { IconCheck, IconEdit, IconSearch, IconFile, IconClose, IconLoader } from '@/components/icons'
 
 export function KnowledgeClient({ projects: initialProjects }: { projects: any[] }) {
-  const [projects] = useState(initialProjects)
+  const [projects, setProjects] = useState(initialProjects)
   const [search, setSearch] = useState('')
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [editValues, setEditValues] = useState({ image: '', link: '', summary: '' })
+
+  const startEditing = (project: any) => {
+    setEditValues({
+      image: project.headerImage || '',
+      link: project.completedLink || '',
+      summary: project.completedSummary || '',
+    })
+    setEditingId(project.id)
+  }
 
   const saveChanges = async (projectId: string) => {
-    const summary = (document.getElementById(`summary-${projectId}`) as HTMLTextAreaElement)?.value
-    const link = (document.getElementById(`link-${projectId}`) as HTMLInputElement)?.value
-    const image = (document.getElementById(`image-${projectId}`) as HTMLInputElement)?.value
+    const { summary, link, image } = editValues
 
     await fetch(`/api/projects/${projectId}`, {
       method: 'PATCH',
@@ -24,8 +32,9 @@ export function KnowledgeClient({ projects: initialProjects }: { projects: any[]
       body: JSON.stringify({ completedSummary: summary, completedLink: link, headerImage: image }),
     })
 
-    const p = projects.find(pr => pr.id === projectId)
-    if (p) { p.completedSummary = summary; p.completedLink = link; p.headerImage = image }
+    setProjects(prev => prev.map(pr =>
+      pr.id === projectId ? { ...pr, completedSummary: summary, completedLink: link, headerImage: image } : pr
+    ))
     setEditingId(null)
     toast.success('Informacoes salvas!')
   }
@@ -96,29 +105,29 @@ export function KnowledgeClient({ projects: initialProjects }: { projects: any[]
                                 <p className="text-[12px] text-[var(--text-3)] italic">Sem resumo. Clique em editar para adicionar.</p>
                               )}
                               {meta.link && <a href={meta.link} target="_blank" rel="noopener" className="inline-flex items-center gap-1 text-[12px] text-[var(--accent)] hover:opacity-80"><IconFile className="w-[12px] h-[12px]" />{meta.link}</a>}
-                              <Button variant="ghost" size="sm" onClick={() => setEditingId(project.id)} className="mt-1">
-                                <IconEdit className="w-[12px] h-[12px]" /> Editar informacoes
-                              </Button>
+                               <Button variant="ghost" size="sm" onClick={() => startEditing(project)} className="mt-1">
+                                 <IconEdit className="w-[12px] h-[12px]" /> Editar informacoes
+                               </Button>
                             </div>
-                          ) : (
-                            <div className="space-y-3 animate-fade-in">
-                              <div>
-                                <label className="text-[11px] text-[var(--text-3)] block mb-1">URL da imagem de capa</label>
-                                <Input id={`image-${project.id}`} placeholder="https://..." defaultValue={meta.image} />
-                              </div>
-                              <div>
-                                <label className="text-[11px] text-[var(--text-3)] block mb-1">Link do projeto</label>
-                                <Input id={`link-${project.id}`} placeholder="https://..." defaultValue={meta.link} />
-                              </div>
-                              <div>
-                                <label className="text-[11px] text-[var(--text-3)] block mb-1">Resumo do conhecimento</label>
-                                <textarea id={`summary-${project.id}`} placeholder="O que voce aprendeu? Quais tecnologias?" defaultValue={meta.summary} className="w-full min-h-[80px] rounded-lg bg-[var(--surface-2)] border border-[var(--border)] px-3 py-2 text-[13px] text-[var(--text)] placeholder:text-[var(--text-3)] focus:outline-none focus:border-[var(--accent)] resize-vertical" />
-                              </div>
-                              <div className="flex gap-2">
-                                <Button size="sm" onClick={() => saveChanges(project.id)}><IconCheck className="w-[12px] h-[12px]" /> Salvar</Button>
-                                <Button size="sm" variant="ghost" onClick={() => setEditingId(null)}><IconClose className="w-[12px] h-[12px]" /> Cancelar</Button>
-                              </div>
-                            </div>
+                           ) : (
+                             <div className="space-y-3 animate-fade-in">
+                               <div>
+                                 <label className="text-[11px] text-[var(--text-3)] block mb-1">URL da imagem de capa</label>
+                                 <Input placeholder="https://..." value={editValues.image} onChange={e => setEditValues(p => ({ ...p, image: e.target.value }))} />
+                               </div>
+                               <div>
+                                 <label className="text-[11px] text-[var(--text-3)] block mb-1">Link do projeto</label>
+                                 <Input placeholder="https://..." value={editValues.link} onChange={e => setEditValues(p => ({ ...p, link: e.target.value }))} />
+                               </div>
+                               <div>
+                                 <label className="text-[11px] text-[var(--text-3)] block mb-1">Resumo do conhecimento</label>
+                                 <textarea placeholder="O que voce aprendeu? Quais tecnologias?" value={editValues.summary} onChange={e => setEditValues(p => ({ ...p, summary: e.target.value }))} className="w-full min-h-[80px] rounded-lg bg-[var(--surface-2)] border border-[var(--border)] px-3 py-2 text-[13px] text-[var(--text)] placeholder:text-[var(--text-3)] focus:outline-none focus:border-[var(--accent)] resize-vertical" />
+                               </div>
+                               <div className="flex gap-2">
+                                 <Button size="sm" onClick={() => saveChanges(project.id)}><IconCheck className="w-[12px] h-[12px]" /> Salvar</Button>
+                                 <Button size="sm" variant="ghost" onClick={() => setEditingId(null)}><IconClose className="w-[12px] h-[12px]" /> Cancelar</Button>
+                               </div>
+                             </div>
                           )}
                         </div>
                       </CardContent>

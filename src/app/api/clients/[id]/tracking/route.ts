@@ -1,12 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getToken } from 'next-auth/jwt'
 
 const clientActivity = new Map<string, { page: string; lastClick: string; lastUpdate: number }>()
 
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params
+  const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET })
+  if (!token || (token.role !== 'ADMIN' && token.role !== 'DEVELOPER')) {
+    return NextResponse.json({ error: 'Nao autorizado' }, { status: 403 })
+  }
   const activity = clientActivity.get(id)
   if (!activity) {
     return NextResponse.json({ online: false, page: null, lastClick: null })
@@ -25,6 +30,11 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params
+  const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET })
+  const isAdminUser = token?.role === 'ADMIN' || token?.role === 'DEVELOPER'
+  if (!token || (token.id !== id && !isAdminUser)) {
+    return NextResponse.json({ error: 'Nao autorizado' }, { status: 403 })
+  }
   try {
     const body = await request.json().catch(() => ({}))
     const { page, click } = body

@@ -2,7 +2,19 @@ import { io, Socket } from 'socket.io-client'
 
 let socket: Socket | null = null
 
-const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, '') + ':3001' || 'http://localhost:3001'
+function getSocketUrl(): string {
+  if (process.env.NEXT_PUBLIC_SOCKET_URL) return process.env.NEXT_PUBLIC_SOCKET_URL
+  const base = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+  try {
+    const url = new URL(base)
+    url.port = '3001'
+    return url.toString()
+  } catch {
+    return 'http://localhost:3001'
+  }
+}
+
+const SOCKET_URL = getSocketUrl()
 
 export function getSocket(): Socket {
   if (!socket) {

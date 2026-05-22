@@ -1,7 +1,0 @@
-O servidor sobe em http://localhost:3000.
-
-Credenciais padrão do admin:
-
-Email: admin@andero.com
-admin@andero.com.br
-Senha: admin123
