@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTheme } from 'next-themes'
 import { useSession } from 'next-auth/react'
@@ -27,6 +27,7 @@ const categories = [
   { id: 'appearance', label: 'Aparência', icon: IconProject },
   { id: 'security', label: 'Segurança', icon: IconLogout },
   { id: 'modules', label: 'Módulos', icon: IconAutomation },
+  { id: 'funcionalidades', label: 'Funcionalidades', icon: IconAutomation },
   { id: 'integrations', label: 'Integrações', icon: IconAutomation, href: '/settings/integrations' },
   { id: 'api-keys', label: 'Chaves de API', icon: IconSettings, href: '/settings/api-keys' },
   { id: 'templates', label: 'Templates', icon: IconFile, href: '/settings/templates' },
@@ -56,6 +57,21 @@ const supportItems = [
   { key: 'weeklyReport', label: 'Relatório semanal', desc: 'Resumo semanal por email' },
 ]
 
+type EstadoConfig = {
+  moduleToggles: Record<string, boolean>
+  notifPrefs: typeof notifPrefsDefault
+  orgName: string
+  chatIaMensagemAutomatica: boolean
+  modoFoco: boolean
+}
+
+const notifPrefsDefault = {
+  emailNotifications: true,
+  pushNotifications: true,
+  soundEnabled: true,
+  weeklyReport: true,
+}
+
 export default function SettingsPage() {
   const router = useRouter()
   const { theme, setTheme, resolvedTheme } = useTheme()
@@ -65,14 +81,13 @@ export default function SettingsPage() {
   const [moduleToggles, setModuleToggles] = useState<Record<string, boolean>>(
     Object.fromEntries(modules.map(m => [m.id, m.enabled]))
   )
-  const [notifPrefs, setNotifPrefs] = useState({
-    emailNotifications: true,
-    pushNotifications: true,
-    soundEnabled: true,
-    weeklyReport: true,
-  })
+  const [notifPrefs, setNotifPrefs] = useState(notifPrefsDefault)
   const [orgName, setOrgName] = useState('ANDERFLOW Sistemas')
+  const [chatIaMensagemAutomatica, setChatIaMensagemAutomatica] = useState(true)
+  const [modoFoco, setModoFoco] = useState(false)
+  const [configCarregadas, setConfigCarregadas] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [saving, setSaving] = useState(false)
   const [exportEntities, setExportEntities] = useState<string[]>([
     'clients', 'projects', 'tasks', 'tickets', 'invoices', 'contracts',
   ])
@@ -80,10 +95,106 @@ export default function SettingsPage() {
 
   useEffect(() => { setMounted(true) }, [])
 
+  useEffect(() => {
+    if (!mounted) return
+    fetch('/api/configuracoes')
+      .then(r => r.json())
+      .then(json => {
+        if (json.data) {
+          const d = json.data
+          setNotifPrefs({
+            emailNotifications: d.emailNotifications ?? true,
+            pushNotifications: d.pushNotifications ?? true,
+            soundEnabled: d.soundEnabled ?? true,
+            weeklyReport: d.weeklyReport ?? true,
+          })
+          const prefs = (d.preferences || {}) as Record<string, any>
+          if (prefs.moduleToggles && typeof prefs.moduleToggles === 'object') {
+            const toggles: Record<string, boolean> = {}
+            for (const mod of modules) {
+              toggles[mod.id] = prefs.moduleToggles[mod.id] ?? mod.enabled
+            }
+            setModuleToggles(toggles)
+          }
+          if (typeof prefs.orgName === 'string') setOrgName(prefs.orgName)
+          if (typeof prefs.chatIaMensagemAutomatica === 'boolean') setChatIaMensagemAutomatica(prefs.chatIaMensagemAutomatica)
+          if (typeof prefs.modoFoco === 'boolean') setModoFoco(prefs.modoFoco)
+        }
+        setConfigCarregadas(true)
+      })
+      .catch(() => setConfigCarregadas(true))
+  }, [mounted])
+
+  const salvarNoBanco = useCallback(async (estado: EstadoConfig) => {
+    setSaving(true)
+    try {
+      const res = await fetch('/api/configuracoes', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          notifPrefs: estado.notifPrefs,
+          preferences: {
+            moduleToggles: estado.moduleToggles,
+            orgName: estado.orgName,
+            chatIaMensagemAutomatica: estado.chatIaMensagemAutomatica,
+            modoFoco: estado.modoFoco,
+          },
+        }),
+      })
+      if (res.ok) {
+        setSaved(true)
+        toast.success('Configurações salvas')
+        setTimeout(() => setSaved(false), 2000)
+      } else {
+        const json = await res.json().catch(() => ({}))
+        toast.error(json.error || 'Erro ao salvar configurações')
+      }
+    } catch {
+      toast.error('Erro ao salvar configurações')
+    } finally {
+      setSaving(false)
+    }
+  }, [])
+
   const saveSettings = () => {
-    setSaved(true)
-    toast.success('Configurações salvas')
-    setTimeout(() => setSaved(false), 2000)
+    salvarNoBanco({ moduleToggles, notifPrefs, orgName, chatIaMensagemAutomatica, modoFoco })
+  }
+
+  const toggleModule = (modId: string, valor: boolean) => {
+    const novosToggles = { ...moduleToggles, [modId]: valor }
+    setModuleToggles(novosToggles)
+    salvarNoBanco({ moduleToggles: novosToggles, notifPrefs, orgName, chatIaMensagemAutomatica, modoFoco })
+  }
+
+  const toggleNotif = (chave: string, valor: boolean) => {
+    const novosPrefs = { ...notifPrefs, [chave]: valor }
+    setNotifPrefs(novosPrefs)
+    salvarNoBanco({ moduleToggles, notifPrefs: novosPrefs, orgName, chatIaMensagemAutomatica, modoFoco })
+  }
+
+  const toggleFuncionalidade = (chave: string, valor: boolean) => {
+    let novoChatIa = chatIaMensagemAutomatica
+    let novoModoFoco = modoFoco
+    let novosNotifPrefs = notifPrefs
+
+    if (chave === 'chatIaMensagemAutomatica') {
+      novoChatIa = valor
+      setChatIaMensagemAutomatica(valor)
+    } else if (chave === 'modoFoco') {
+      novoModoFoco = valor
+      setModoFoco(valor)
+    } else if (chave === 'notificacoesSom') {
+      novosNotifPrefs = { ...notifPrefs, soundEnabled: valor }
+      setNotifPrefs(novosNotifPrefs)
+    }
+
+    salvarNoBanco({
+      moduleToggles,
+      notifPrefs: novosNotifPrefs,
+      orgName,
+      chatIaMensagemAutomatica: novoChatIa,
+      modoFoco: novoModoFoco,
+    })
   }
 
   const toggleExportEntity = (entity: string) => {
@@ -124,16 +235,8 @@ export default function SettingsPage() {
                   <button
                     key={cat.id}
                     onClick={() => {
-                      if (cat.id === 'integrations') {
-                        router.push('/settings/integrations')
-                      } else if (cat.id === 'api-keys') {
-                        router.push('/settings/api-keys')
-                      } else if (cat.id === 'templates') {
-                        router.push('/settings/templates')
-                      } else if (cat.id === 'webhooks') {
-                        router.push('/settings/webhooks')
-                      } else if (cat.id === 'status') {
-                        router.push('/settings/status-page')
+                      if ('href' in cat && cat.href) {
+                        router.push(cat.href)
                       } else {
                         setActiveCategory(cat.id)
                       }
@@ -214,9 +317,9 @@ export default function SettingsPage() {
                 </div>
                 <Separator />
                 <div className="flex justify-end">
-                  <Button onClick={saveSettings} size="sm">
-                    {saved ? <IconCheck className="w-[14px] h-[14px]" /> : null}
-                    {saved ? 'Salvo' : 'Salvar Alterações'}
+                  <Button onClick={saveSettings} size="sm" disabled={saving}>
+                    {saving ? <span className="w-[14px] h-[14px] border-2 border-current border-t-transparent rounded-full animate-spin" /> : saved ? <IconCheck className="w-[14px] h-[14px]" /> : null}
+                    {saving ? 'Salvando...' : saved ? 'Salvo' : 'Salvar Alterações'}
                   </Button>
                 </div>
               </CardContent>
@@ -237,10 +340,7 @@ export default function SettingsPage() {
                     </div>
                     <Switch
                       checked={notifPrefs[item.key as keyof typeof notifPrefs]}
-                      onCheckedChange={(v) => {
-                        setNotifPrefs(prev => ({ ...prev, [item.key]: v }))
-                        saveSettings()
-                      }}
+                      onCheckedChange={(v) => toggleNotif(item.key, v)}
                     />
                   </div>
                 ))}
@@ -257,7 +357,7 @@ export default function SettingsPage() {
                 <TwoFactorSetup />
                 <div className="border-t border-[var(--border)] pt-3" />
                 {[
-                  { label: 'Sessoes Ativas', desc: 'Gerencie dispositivos conectados', action: 'Ver Sessoes', href: '/settings/sessions' },
+                  { label: 'Sessões Ativas', desc: 'Gerencie dispositivos conectados', action: 'Ver Sessões', href: '/settings/sessions' },
                   { label: 'Alterar Senha', desc: 'Atualize sua senha de acesso', action: 'Alterar' },
                 ].map((item) => (
                   <div key={item.label} className="flex items-center justify-between py-2.5 px-2 rounded-lg hover:bg-[var(--surface-hover)]">
@@ -291,96 +391,126 @@ export default function SettingsPage() {
                     </div>
                     <Switch
                       checked={moduleToggles[mod.id]}
-                      onCheckedChange={(v) => {
-                        setModuleToggles(prev => ({ ...prev, [mod.id]: v }))
-                        saveSettings()
-                      }}
+                      onCheckedChange={(v) => toggleModule(mod.id, v)}
                     />
                   </div>
                 ))}
-                  </CardContent>
-                </Card>
-              )}
+              </CardContent>
+            </Card>
+          )}
 
-              {process.env.NODE_ENV === 'development' && (
-                <Card className="border-[var(--warning)]/30">
-                  <CardHeader>
-                    <CardTitle>Dev Tools</CardTitle>
-                    <CardDescription>Ferramentas de desenvolvimento e teste</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="flex items-center justify-between">
+          {activeCategory === 'funcionalidades' && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Funcionalidades</CardTitle>
+                <CardDescription>Configure funcionalidades da plataforma</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-1">
+                {[
+                  { key: 'chatIaMensagemAutomatica', label: 'Mensagem automática da IA', desc: 'Saudação automática do chat flutuante ao abrir' },
+                  { key: 'modoFoco', label: 'Modo Foco', desc: 'Silenciar notificações por período determinado' },
+                  { key: 'notificacoesSom', label: 'Som das notificações', desc: 'Reproduzir som ao receber notificações' },
+                ].map((item) => {
+                  const ativo =
+                    item.key === 'chatIaMensagemAutomatica' ? chatIaMensagemAutomatica
+                    : item.key === 'modoFoco' ? modoFoco
+                    : notifPrefs.soundEnabled
+                  return (
+                    <div key={item.key} className="flex items-center justify-between py-2.5 px-2 rounded-lg hover:bg-[var(--surface-hover)]">
                       <div>
-                        <p className="text-[13px] font-[500]">Relatorio Mensal</p>
-                        <p className="text-[11px] text-[var(--text-3)]">Simula o envio do relatorio mensal do cron</p>
+                        <p className="text-[13px] font-[500]">{item.label}</p>
+                        <p className="text-[11px] text-[var(--text-3)] mt-0.5">{item.desc}</p>
                       </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={async () => {
-                          const res = await fetch('/api/cron/monthly-report', {
-                            headers: { Authorization: 'Bearer dev-secret' },
-                          })
-                          const json = await res.json()
-                          if (json.sent !== undefined) {
-                            toast.success(`Relatorio enviado para ${json.sent} clientes`)
-                          } else {
-                            toast.error(json.error || 'Erro ao enviar')
-                          }
-                        }}
-                      >
-                        <Send className="h-3.5 w-3.5" /> Simular envio
-                      </Button>
+                      <Switch
+                        checked={ativo}
+                        onCheckedChange={(v) => toggleFuncionalidade(item.key, v)}
+                      />
                     </div>
-                  </CardContent>
-                </Card>
-              )}
+                  )
+                })}
+              </CardContent>
+            </Card>
+          )}
 
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Download className="h-4 w-4" /> Exportar Dados
-                  </CardTitle>
-                  <CardDescription>Exporte os dados da plataforma em arquivo ZIP</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="grid grid-cols-3 gap-2">
-                    {[
-                      { id: 'clients', label: 'Clientes' },
-                      { id: 'projects', label: 'Projetos' },
-                      { id: 'tasks', label: 'Tarefas' },
-                      { id: 'tickets', label: 'Tickets' },
-                      { id: 'invoices', label: 'Faturas' },
-                      { id: 'contracts', label: 'Contratos' },
-                    ].map((entity) => (
-                      <label
-                        key={entity.id}
-                        className={`flex items-center gap-2 px-3 py-2 rounded-lg border cursor-pointer transition-colors text-xs ${
-                          exportEntities.includes(entity.id)
-                            ? 'border-[var(--accent)] bg-[var(--accent)]/5 text-[var(--text)]'
-                            : 'border-[var(--border)] text-[var(--text-3)] hover:border-[var(--text-3)]'
-                        }`}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={exportEntities.includes(entity.id)}
-                          onChange={() => toggleExportEntity(entity.id)}
-                          className="sr-only"
-                        />
-                        {entity.label}
-                      </label>
-                    ))}
+          {process.env.NODE_ENV === 'development' && (
+            <Card className="border-[var(--warning)]/30">
+              <CardHeader>
+                <CardTitle>Dev Tools</CardTitle>
+                <CardDescription>Ferramentas de desenvolvimento e teste</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-[13px] font-[500]">Relatório Mensal</p>
+                    <p className="text-[11px] text-[var(--text-3)]">Simula o envio do relatório mensal do cron</p>
                   </div>
-                  <div className="flex justify-end">
-                    <Button size="sm" onClick={handleExport} disabled={exporting || exportEntities.length === 0}>
-                      <Download className="h-3.5 w-3.5 mr-1.5" />
-                      {exporting ? 'Exportando...' : `Exportar selecionados (${exportEntities.length})`}
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-          </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={async () => {
+                      const res = await fetch('/api/cron/monthly-report', {
+                        headers: { Authorization: 'Bearer dev-secret' },
+                      })
+                      const json = await res.json()
+                      if (json.sent !== undefined) {
+                        toast.success(`Relatório enviado para ${json.sent} clientes`)
+                      } else {
+                        toast.error(json.error || 'Erro ao enviar')
+                      }
+                    }}
+                  >
+                    <Send className="h-3.5 w-3.5" /> Simular envio
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Download className="h-4 w-4" /> Exportar Dados
+              </CardTitle>
+              <CardDescription>Exporte os dados da plataforma em arquivo ZIP</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { id: 'clients', label: 'Clientes' },
+                  { id: 'projects', label: 'Projetos' },
+                  { id: 'tasks', label: 'Tarefas' },
+                  { id: 'tickets', label: 'Tickets' },
+                  { id: 'invoices', label: 'Faturas' },
+                  { id: 'contracts', label: 'Contratos' },
+                ].map((entity) => (
+                  <label
+                    key={entity.id}
+                    className={`flex items-center gap-2 px-3 py-2 rounded-lg border cursor-pointer transition-colors text-xs ${
+                      exportEntities.includes(entity.id)
+                        ? 'border-[var(--accent)] bg-[var(--accent)]/5 text-[var(--text)]'
+                        : 'border-[var(--border)] text-[var(--text-3)] hover:border-[var(--text-3)]'
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={exportEntities.includes(entity.id)}
+                      onChange={() => toggleExportEntity(entity.id)}
+                      className="sr-only"
+                    />
+                    {entity.label}
+                  </label>
+                ))}
+              </div>
+              <div className="flex justify-end">
+                <Button size="sm" onClick={handleExport} disabled={exporting || exportEntities.length === 0}>
+                  <Download className="h-3.5 w-3.5 mr-1.5" />
+                  {exporting ? 'Exportando...' : `Exportar selecionados (${exportEntities.length})`}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         </div>
+      </div>
     </div>
   )
 }

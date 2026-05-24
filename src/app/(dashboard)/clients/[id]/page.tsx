@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { useParams } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -272,7 +273,7 @@ export default function ClientDetailPage() {
               <div className="flex items-center gap-3">
                 {brandLogoUrl ? (
                   <div className="flex items-center gap-2">
-                    <img src={brandLogoUrl} alt="Logo" className="h-9 w-9 rounded object-contain bg-[var(--surface-2)]" />
+                    <Image src={brandLogoUrl} alt="Logo" width={36} height={36} className="rounded object-contain bg-[var(--surface-2)]" />
                     <Button variant="ghost" size="sm" onClick={() => setBrandLogoUrl('')} className="h-7 text-[10px]">Remover</Button>
                   </div>
                 ) : (
@@ -294,7 +295,7 @@ export default function ClientDetailPage() {
                 style={{ backgroundColor: brandColor || '#E8622A' }}
               >
                 {brandLogoUrl ? (
-                  <img src={brandLogoUrl} alt="" className="h-5 w-5 object-contain" />
+                  <Image src={brandLogoUrl} alt="" width={20} height={20} className="object-contain" />
                 ) : (
                   <span className="text-[8px] font-bold text-white">AF</span>
                 )}

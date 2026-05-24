@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -87,17 +87,17 @@ export default function UsersPage() {
     }
     if (activeTab === 'users') loadUsers()
     if (activeTab === 'requests') loadRequests()
-  }, [session, activeTab])
+  }, [actorIsOwner, loadRequests, loadUsers, router, session, activeTab])
 
   useEffect(() => {
     if (activeTab === 'users') loadUsers()
-  }, [search, roleFilter, statusFilter])
+  }, [activeTab, loadUsers, search, roleFilter, statusFilter])
 
   useEffect(() => {
     if (activeTab === 'requests') loadRequests()
-  }, [requestStatusFilter])
+  }, [activeTab, loadRequests, requestStatusFilter])
 
-  const loadUsers = () => {
+  const loadUsers = useCallback(() => {
     setLoading(true)
     const params = new URLSearchParams()
     if (search) params.set('search', search)
@@ -107,9 +107,9 @@ export default function UsersPage() {
       .then(r => { if (!r.ok) throw new Error('Erro'); return r.json() })
       .then(json => { setUsers(json.data || []); setTotal(json.total || 0); setLoading(false) })
       .catch(() => { setUsers([]); setTotal(0); setLoading(false) })
-  }
+  }, [search, roleFilter, statusFilter])
 
-  const loadRequests = () => {
+  const loadRequests = useCallback(() => {
     setRequestsLoading(true)
     const params = new URLSearchParams()
     if (requestStatusFilter) params.set('status', requestStatusFilter)
@@ -117,7 +117,7 @@ export default function UsersPage() {
       .then(r => { if (!r.ok) throw new Error('Erro'); return r.json() })
       .then(json => { setRequests(json.data || []); setRequestsLoading(false) })
       .catch(() => { setRequests([]); setRequestsLoading(false) })
-  }
+  }, [requestStatusFilter])
 
   const handleRequestAction = async (id: string, status: string, isDefinitive = false) => {
     const res = await fetch('/api/permission-requests', {

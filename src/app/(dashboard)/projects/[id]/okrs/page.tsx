@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -22,16 +22,16 @@ export default function ProjectOKRsPage() {
   const [krs, setKrs] = useState<{ title: string; targetValue: number; unit: string }[]>([{ title: '', targetValue: 100, unit: '%' }])
   const [saving, setSaving] = useState(false)
 
-  const loadOKRs = async () => {
+  const loadOKRs = useCallback(async () => {
     try {
       const res = await fetch(`/api/okrs?projectId=${id}`)
       const json = await res.json()
       setOkrs(json.data || [])
     } catch {}
     setLoading(false)
-  }
+  }, [id])
 
-  useEffect(() => { loadOKRs() }, [id])
+  useEffect(() => { loadOKRs() }, [id, loadOKRs])
 
   const handleCreate = async () => {
     if (!objective.trim() || krs.some(k => !k.title.trim())) {

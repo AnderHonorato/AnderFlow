@@ -105,9 +105,9 @@ export function DriveFilePicker({ onSelect, className, projectId }: DriveFilePic
     }
 
     createPicker(oauthToken)
-  }, [onSelect, loadGoogleApi])
+  }, [onSelect, loadGoogleApi, createPicker])
 
-  const createPicker = (token: string) => {
+  const createPicker = useCallback((token: string) => {
     const google = (window as any).google
     if (!google?.picker) {
       toast.error('Google Picker API nao carregada')
@@ -133,7 +133,7 @@ export function DriveFilePicker({ onSelect, className, projectId }: DriveFilePic
       .build()
 
     picker.setVisible(true)
-  }
+  }, [onSelect])
 
   return (
     <Button

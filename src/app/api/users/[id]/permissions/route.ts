@@ -2,11 +2,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getSessionUser, isAdmin, canManageRole, getRoleLevel, ROLES, unauthorizedResponse } from '@/lib/auth-utils'
 
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
   const editor = await getSessionUser()
   if (!editor || !isAdmin(editor)) return unauthorizedResponse()
 
-  const targetUser = await prisma.user.findUnique({ where: { id: params.id } })
+  const targetUser = await prisma.user.findUnique({ where: { id } })
   if (!targetUser) {
     return NextResponse.json({ error: 'Usuário não encontrado' }, { status: 404 })
   }
@@ -34,7 +35,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   if (permissions !== undefined) updateData.permissions = JSON.stringify(permissions)
 
   const updated = await prisma.user.update({
-    where: { id: params.id },
+    where: { id },
     data: updateData,
     select: { id: true, name: true, email: true, role: true, permissions: true },
   })

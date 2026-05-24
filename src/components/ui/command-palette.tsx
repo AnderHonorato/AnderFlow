@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -27,13 +27,13 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps) {
   const debounceRef = useRef<NodeJS.Timeout | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
 
-  const allItems = results
+  const allItems = useMemo(() => results
     ? [
         ...results.projects.map((p) => ({ type: 'project' as const, id: p.id, label: p.name, sub: p.client?.name || '', href: `/projects/${p.id}` })),
         ...results.clients.map((c) => ({ type: 'client' as const, id: c.id, label: c.name, sub: c.company || c.email, href: `/clients/${c.id}` })),
         ...results.tickets.map((t) => ({ type: 'ticket' as const, id: t.id, label: t.title, sub: t.creator?.name || '', href: `/tickets/${t.id}` })),
       ]
-    : []
+    : [], [results])
 
   useEffect(() => {
     if (open) {

@@ -1,7 +1,7 @@
 import { Resend } from 'resend'
 import { generateEmailHtml } from './templates'
 
-const resend = new Resend(process.env.RESEND_API_KEY || 're_6Hicwqst_MrnvM2kJsWgYAYjbsDgwDsb5')
+const resend = new Resend(process.env.RESEND_API_KEY || '')
 
 const SENDER = 'ANDERFLOW <noreply@anderflow.com.br>'
 

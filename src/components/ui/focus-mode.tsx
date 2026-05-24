@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { toast } from 'sonner'
@@ -30,7 +30,14 @@ export function FocusModeButton() {
   const [remaining, setRemaining] = useState('')
   const ref = useRef<HTMLDivElement>(null)
 
-  const update = () => {
+  const endFocus = useCallback(() => {
+    try { localStorage.removeItem(FOCUS_KEY) } catch {}
+    setActive(false)
+    setOpen(false)
+    toast.info('Modo foco encerrado')
+  }, [])
+
+  const update = useCallback(() => {
     const focusActive = isFocusActive()
     setActive(focusActive)
 
@@ -45,45 +52,7 @@ export function FocusModeButton() {
       const mins = Math.floor((diff % 3600000) / 60000)
       setRemaining(hours > 0 ? `${hours}h ${mins}min` : `${mins}min`)
     }
-  }
-
-  useEffect(() => {
-    update()
-    const interval = setInterval(update, 10000)
-    return () => clearInterval(interval)
-  }, [])
-
-  useEffect(() => {
-    if (!open) return
-    const close = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
-    }
-    document.addEventListener('click', close)
-    return () => document.removeEventListener('click', close)
-  }, [open])
-
-  const startFocus = (minutes: number | 'tomorrow') => {
-    let until: number
-    if (minutes === 'tomorrow') {
-      const tomorrow = new Date()
-      tomorrow.setDate(tomorrow.getDate() + 1)
-      tomorrow.setHours(9, 0, 0, 0)
-      until = tomorrow.getTime()
-    } else {
-      until = Date.now() + minutes * 60000
-    }
-    try { localStorage.setItem(FOCUS_KEY, String(until)) } catch {}
-    setActive(true)
-    setOpen(false)
-    toast.success('Modo foco ativado', { description: 'Notificacoes silenciadas ate ' + new Date(until).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) })
-  }
-
-  const endFocus = () => {
-    try { localStorage.removeItem(FOCUS_KEY) } catch {}
-    setActive(false)
-    setOpen(false)
-    toast.info('Modo foco encerrado')
-  }
+  }, [endFocus])
 
   return (
     <div ref={ref} className="relative">

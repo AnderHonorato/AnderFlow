@@ -7,9 +7,11 @@ import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Switch } from '@/components/ui/switch'
 import { Separator } from '@/components/ui/separator'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
 import { toast } from 'sonner'
-import { Eye, EyeOff, Plus, Trash2, Key, Shield, CheckCircle, XCircle, Loader2 } from 'lucide-react'
+import { Eye, EyeOff, Plus, Trash2, Key, Shield, CheckCircle, XCircle, Loader2, Calendar, Wrench, TrendingUp, Clock } from 'lucide-react'
 
 const PROVIDERS = [
   { key: 'deepseek', name: 'DeepSeek', icon: '🧠', color: '#4F46E5' },
@@ -39,6 +41,11 @@ export default function ApiKeysPage() {
   const [decryptedKeys, setDecryptedKeys] = useState<Record<string, string>>({})
   const [saveStatus, setSaveStatus] = useState<Record<string, 'saving' | 'saved' | 'error'>>({})
   const [verifyStatus, setVerifyStatus] = useState<Record<string, { status: 'checking' | 'ok' | 'error'; message: string }>>({})
+  const [newScopes, setNewScopes] = useState<Record<string, string[]>>({})
+  const [newRateLimit, setNewRateLimit] = useState<Record<string, string>>({})
+  const [newExpiration, setNewExpiration] = useState<Record<string, string>>({})
+  const [testStatus, setTestStatus] = useState<Record<string, 'testing' | 'ok' | 'error'>>({})
+  const [usageStats, setUsageStats] = useState<{ today: number; week: number; lastRequest: { endpoint: string; timestamp: string } | null } | null>(null)
   const saveTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({})
 
   const fetchKeys = useCallback(async () => {
@@ -53,6 +60,18 @@ export default function ApiKeysPage() {
   }, [])
 
   useEffect(() => { fetchKeys() }, [fetchKeys])
+
+  const fetchUsageStats = useCallback(async () => {
+    try {
+      const res = await fetch('/api/admin/api-keys/usage')
+      const json = await res.json()
+      if (json.data) setUsageStats(json.data)
+    } catch {
+      // silent fail - usage is supplementary info
+    }
+  }, [])
+
+  useEffect(() => { fetchUsageStats() }, [fetchUsageStats])
 
   const handleAddClick = (provider: string) => {
     setAddingProvider(prev => prev === provider ? null : provider)
@@ -74,13 +93,23 @@ export default function ApiKeysPage() {
         const res = await fetch('/api/admin/api-keys', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ provider, key: keyValue, label: labelValue || null }),
+          body: JSON.stringify({
+            provider,
+            key: keyValue,
+            label: labelValue || null,
+            scopes: newScopes[provider] || [],
+            rateLimit: newRateLimit[provider] || null,
+            expiresAt: newExpiration[provider] || null,
+          }),
         })
 
         if (res.ok) {
           setSaveStatus(prev => ({ ...prev, [provider]: 'saved' }))
           setNewInputs(prev => ({ ...prev, [provider]: '' }))
           setNewLabels(prev => ({ ...prev, [provider]: '' }))
+          setNewScopes(prev => ({ ...prev, [provider]: [] }))
+          setNewRateLimit(prev => ({ ...prev, [provider]: '' }))
+          setNewExpiration(prev => ({ ...prev, [provider]: '' }))
           setAddingProvider(null)
           await fetchKeys()
           toast.success('Chave salva com sucesso')
@@ -101,7 +130,7 @@ export default function ApiKeysPage() {
         setSaveStatus(prev => ({ ...prev, [provider]: 'error' }))
       }
     }, 800)
-  }, [newInputs, newLabels, fetchKeys])
+  }, [newInputs, newLabels, newExpiration, newRateLimit, newScopes, fetchKeys])
 
   const handleToggleActive = async (id: string, current: boolean) => {
     try {
@@ -156,6 +185,28 @@ export default function ApiKeysPage() {
       }
     } catch {
       setVerifyStatus(prev => ({ ...prev, [id]: { status: 'error', message: 'Erro de conexao ao verificar' } }))
+    }
+  }
+
+  const handleTestKey = async (id: string) => {
+    setTestStatus(prev => ({ ...prev, [id]: 'testing' }))
+    try {
+      const res = await fetch('/api/admin/api-keys/test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
+      })
+      const json = await res.json()
+      if (json.ok) {
+        setTestStatus(prev => ({ ...prev, [id]: 'ok' }))
+        toast.success(json.message || 'Chave testada com sucesso')
+      } else {
+        setTestStatus(prev => ({ ...prev, [id]: 'error' }))
+        toast.error(json.message || 'Falha ao testar chave')
+      }
+    } catch {
+      setTestStatus(prev => ({ ...prev, [id]: 'error' }))
+      toast.error('Erro de conexao ao testar chave')
     }
   }
 
@@ -334,6 +385,20 @@ export default function ApiKeysPage() {
                     <Button
                       variant="ghost"
                       size="icon-sm"
+                      onClick={() => handleTestKey(keyRow.id)}
+                      disabled={testStatus[keyRow.id] === 'testing'}
+                      className="text-[var(--text-3)] hover:text-[var(--success)]"
+                      title="Testar chave"
+                    >
+                      {testStatus[keyRow.id] === 'testing' ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <Wrench className="h-3.5 w-3.5" />
+                      )}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
                       onClick={() => handleDelete(keyRow.id)}
                       className="text-[var(--text-3)] hover:text-[var(--destructive)]"
                     >
@@ -382,6 +447,64 @@ export default function ApiKeysPage() {
                         }}
                       />
                     </div>
+
+                    <div className="space-y-2 mt-3">
+                      <Label className="text-[11px] font-medium text-[var(--text-2)]">Permissoes (scopes)</Label>
+                      <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
+                        {[
+                          { id: 'read:projects', label: 'Ler projetos' },
+                          { id: 'write:projects', label: 'Criar/editar projetos' },
+                          { id: 'read:invoices', label: 'Ler faturas' },
+                          { id: 'write:invoices', label: 'Criar/editar faturas' },
+                          { id: 'read:tickets', label: 'Ler tickets' },
+                          { id: 'write:tickets', label: 'Criar/editar tickets' },
+                        ].map((scope) => (
+                          <label key={scope.id} className="flex items-center gap-1.5 cursor-pointer">
+                            <Checkbox
+                              checked={(newScopes[provider.key] || []).includes(scope.id)}
+                              onCheckedChange={(checked) => {
+                                setNewScopes(prev => {
+                                  const current = prev[provider.key] || []
+                                  return {
+                                    ...prev,
+                                    [provider.key]: checked
+                                      ? [...current, scope.id]
+                                      : current.filter(s => s !== scope.id),
+                                  }
+                                })
+                              }}
+                            />
+                            <span className="text-[11px] text-[var(--text-2)]">{scope.label}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 mt-3">
+                      <div className="space-y-1">
+                        <Label className="text-[11px] font-medium text-[var(--text-2)]">Limite de requisicoes</Label>
+                        <select
+                          value={newRateLimit[provider.key] || ''}
+                          onChange={(e) => setNewRateLimit(prev => ({ ...prev, [provider.key]: e.target.value }))}
+                          className="w-full h-9 rounded-lg border border-[var(--border)] bg-[var(--surface-1)] px-3 text-[12px] text-[var(--text)] outline-none focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)]/20"
+                        >
+                          <option value="">Padrao do provedor</option>
+                          <option value="100/h">100/hora</option>
+                          <option value="1000/h">1000/hora</option>
+                          <option value="unlimited">sem limite (admin)</option>
+                        </select>
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-[11px] font-medium text-[var(--text-2)]">Data de expiracao</Label>
+                        <input
+                          type="date"
+                          value={newExpiration[provider.key] || ''}
+                          onChange={(e) => setNewExpiration(prev => ({ ...prev, [provider.key]: e.target.value }))}
+                          className="w-full h-9 rounded-lg border border-[var(--border)] bg-[var(--surface-1)] px-3 text-[12px] text-[var(--text)] outline-none focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)]/20 [color-scheme:dark]"
+                        />
+                      </div>
+                    </div>
+
                     <div className="flex items-center justify-between mt-2">
                       {renderSaveStatus(provider.key)}
                       <Button
@@ -391,6 +514,9 @@ export default function ApiKeysPage() {
                           setAddingProvider(null)
                           setNewInputs(prev => ({ ...prev, [provider.key]: '' }))
                           setNewLabels(prev => ({ ...prev, [provider.key]: '' }))
+                          setNewScopes(prev => ({ ...prev, [provider.key]: [] }))
+                          setNewRateLimit(prev => ({ ...prev, [provider.key]: '' }))
+                          setNewExpiration(prev => ({ ...prev, [provider.key]: '' }))
                         }}
                       >
                         Cancelar
@@ -403,6 +529,44 @@ export default function ApiKeysPage() {
           </Card>
         )
       })}
+
+      {usageStats && (
+        <Card className="rounded-xl">
+          <CardHeader>
+            <div className="flex items-center gap-2.5">
+              <TrendingUp className="h-4 w-4 text-[var(--accent)]" />
+              <CardTitle>Uso das chaves de API</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="p-3 rounded-xl border border-[var(--border)] bg-[var(--surface-2)]">
+                <p className="text-[11px] text-[var(--text-3)]">Requisicoes hoje</p>
+                <p className="text-lg font-semibold text-[var(--text)]">{usageStats.today}</p>
+              </div>
+              <div className="p-3 rounded-xl border border-[var(--border)] bg-[var(--surface-2)]">
+                <p className="text-[11px] text-[var(--text-3)]">Requisicoes esta semana</p>
+                <p className="text-lg font-semibold text-[var(--text)]">{usageStats.week}</p>
+              </div>
+            </div>
+            {usageStats.lastRequest ? (
+              <div className="flex items-center gap-2 p-2.5 rounded-lg bg-[var(--surface-2)]">
+                <Clock className="h-3.5 w-3.5 text-[var(--text-3)] shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-[11px] text-[var(--text-3)]">Ultima requisicao</p>
+                  <p className="text-[12px] font-mono text-[var(--text)] truncate">{usageStats.lastRequest.endpoint}</p>
+                  <p className="text-[10px] text-[var(--text-3)]">{new Date(usageStats.lastRequest.timestamp).toLocaleString('pt-BR')}</p>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 p-2.5 rounded-lg bg-[var(--surface-2)]">
+                <Clock className="h-3.5 w-3.5 text-[var(--text-3)] shrink-0" />
+                <p className="text-[11px] text-[var(--text-3)]">Nenhuma requisicao registrada ainda</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       <div className="text-center">
         <p className="text-[11px] text-[var(--text-3)]">

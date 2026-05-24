@@ -23,7 +23,7 @@ export function WelcomeOverlay() {
     if (!dismissed) {
       setVisible(true)
     }
-  }, [session?.user?.id])
+  }, [session?.user?.id, session?.user])
 
   const handleDismiss = () => {
     const key = `anderflow_welcome_dismissed_${session?.user?.id}`

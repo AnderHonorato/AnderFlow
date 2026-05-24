@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -51,16 +51,16 @@ export default function CustomReportsPage() {
 
   useEffect(() => {
     loadData()
-  }, [metric, groupBy, dateRange])
+  }, [metric, groupBy, dateRange, loadData])
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     setLoading(true)
     const params = new URLSearchParams({ metric, groupBy, dateRange })
     const res = await fetch(`/api/reports/custom?${params}`)
     const json = await res.json()
     setData(json.data || [])
     setLoading(false)
-  }
+  }, [metric, groupBy, dateRange])
 
   const loadSavedReport = (report: any) => {
     const cfg = report.config

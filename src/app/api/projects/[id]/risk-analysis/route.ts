@@ -2,24 +2,25 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getSessionUser, isDeveloperOrAbove, unauthorizedResponse } from '@/lib/auth-utils'
 
-export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
   const user = await getSessionUser()
   if (!user || !isDeveloperOrAbove(user)) return unauthorizedResponse()
 
   const project = await prisma.project.findUnique({
-    where: { id: params.id },
+    where: { id },
   })
 
   if (!project) {
     return NextResponse.json({ error: 'Projeto não encontrado' }, { status: 404 })
   }
 
-  const tasks = await prisma.task.findMany({ where: { projectId: params.id } })
+  const tasks = await prisma.task.findMany({ where: { projectId: id } })
   const tickets = await prisma.ticket.findMany({
     where: { status: 'OPEN' },
   })
   const payments = await prisma.payment.findMany({
-    where: { invoice: { projectId: params.id } },
+      where: { invoice: { projectId: id } },
     include: { invoice: true },
   })
 
@@ -83,7 +84,7 @@ Identifique os principais riscos e ações mitigadoras. Responda em JSON:
     metadata.riskAnalysisAt = new Date().toISOString()
 
     await prisma.project.update({
-      where: { id: params.id },
+      where: { id },
       data: { stepsData: JSON.stringify(metadata) },
     })
 

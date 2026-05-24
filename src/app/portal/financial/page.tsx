@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Image from 'next/image'
 import { useSession } from 'next-auth/react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -189,7 +190,7 @@ export default function PortalFinancial() {
               {pixData && (
                 <>
                   <div className="bg-white p-3 rounded-xl border border-[var(--border)]">
-                    <img src={pixData.qrCodeBase64} alt="QR Code PIX" className="w-56 h-56" />
+                    <Image src={pixData.qrCodeBase64} alt="QR Code PIX" width={224} height={224} unoptimized />
                   </div>
                   <div className="w-full space-y-1.5">
                     <p className="text-[11px] text-[var(--text-3)]">Código PIX (copie e cole no seu banco):</p>

@@ -12,12 +12,13 @@ function generateSlug(name: string): string {
     .slice(0, 80)
 }
 
-export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
   const user = await getSessionUser()
   if (!user || !isDeveloperOrAbove(user)) return unauthorizedResponse()
 
   const original = await prisma.project.findUnique({
-    where: { id: params.id },
+    where: { id },
     include: { tasks: true, milestones: true },
   })
 

@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useRef } from 'react'
+import Image from 'next/image'
 import { useSession } from 'next-auth/react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -256,7 +257,7 @@ export function AdvancedChat({ channelId, compact = false }: AdvancedChatProps) 
                 {uploadPreviews.map((p, i) => (
                   <div key={i} className="rounded-2xl rounded-br-md bg-[var(--accent)] text-white px-3.5 py-2.5 max-w-[75%]">
                     {p.type.startsWith('image/') ? (
-                      <img src={p.url} alt={p.name} className="max-h-[150px] rounded-lg" />
+                      <Image src={p.url} alt={p.name} width={150} height={150} className="max-h-[150px] w-auto rounded-lg" unoptimized />
                     ) : (
                       <div className="flex items-center gap-2">
                         <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M3 2h7l3 3v9a1 1 0 01-1 1H3a1 1 0 01-1-1V3a1 1 0 011-1z"/><path d="M10 2v3h3"/></svg>
@@ -329,7 +330,9 @@ export function AdvancedChat({ channelId, compact = false }: AdvancedChatProps) 
       {lightboxUrl && (
         <Dialog open={!!lightboxUrl} onOpenChange={() => setLightboxUrl(null)}>
           <DialogContent className="max-w-[90vw] max-h-[90vh] p-2 bg-transparent border-0 shadow-none" onClick={() => setLightboxUrl(null)}>
-            <img src={lightboxUrl} alt="Preview" className="max-w-full max-h-[85vh] rounded-lg object-contain" />
+            <div className="relative w-full h-[85vh]">
+              <Image src={lightboxUrl} alt="Preview" fill className="object-contain rounded-lg" sizes="90vw" unoptimized />
+            </div>
           </DialogContent>
         </Dialog>
       )}

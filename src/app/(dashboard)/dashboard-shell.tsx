@@ -1,15 +1,26 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
+import { usePathname } from 'next/navigation'
+import { useSession } from 'next-auth/react'
+import dynamic from 'next/dynamic'
 import { SessionProvider } from '@/providers/session-provider'
 import { FetchErrorSuppressor } from '@/providers/fetch-error-suppressor'
 import { Sidebar } from '@/components/layout/sidebar'
 import { Header } from '@/components/layout/header'
 import { PageTip } from '@/components/ui/page-tips'
-import { WelcomeOverlay } from '@/components/ui/welcome-overlay'
-import { AIFab } from '@/components/ui/ai-fab'
-import { BotEngineInit } from '@/components/bots/motor-inicializador'
-import { CommandPalette } from '@/components/ui/command-palette'
+import { ContextualAlert } from '@/components/ui/contextual-alert'
+import { LimiteErro } from '@/components/ui/limite-erro'
+import { usePerfilStore } from '@/stores/app-store'
+import { useConsentimentoCookies } from '@/hooks/useConsentimentoCookies'
+import { toast } from 'sonner'
+
+const AIFab = dynamic(() => import('@/components/ui/ai-fab').then(m => ({ default: m.AIFab })), { ssr: false, loading: () => null })
+const WelcomeOverlay = dynamic(() => import('@/components/ui/welcome-overlay').then(m => ({ default: m.WelcomeOverlay })), { ssr: false, loading: () => null })
+const GuiaPrimeiroAcesso = dynamic(() => import('@/components/ui/guia-primeiro-acesso').then(m => ({ default: m.GuiaPrimeiroAcesso })), { ssr: false, loading: () => null })
+const BotEngineInit = dynamic(() => import('@/components/bots/motor-inicializador').then(m => ({ default: m.BotEngineInit })), { ssr: false, loading: () => null })
+const CommandPalette = dynamic(() => import('@/components/ui/command-palette').then(m => ({ default: m.CommandPalette })), { ssr: false, loading: () => null })
+
 
 function BackgroundBlobs() {
   const [mounted, setMounted] = useState(false)
@@ -25,7 +36,36 @@ function BackgroundBlobs() {
 }
 
 export function DashboardShell({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname()
+  const { data: session } = useSession()
   const [paletteOpen, setPaletteOpen] = useState(false)
+  const { fotoPerfil, setFotoPerfil } = usePerfilStore()
+  const { analytics } = useConsentimentoCookies()
+
+  useEffect(() => {
+    if (session?.user?.image && session.user.image !== fotoPerfil) {
+      setFotoPerfil(session.user.image)
+    }
+  }, [session?.user?.image, fotoPerfil, setFotoPerfil])
+
+  useEffect(() => {
+    if (!analytics) return
+    if (!session?.user?.id) return
+    if (localStorage.getItem('anderflow-notif-requested')) return
+    if (!('Notification' in window)) return
+    if (Notification.permission !== 'default') return
+
+    const timer = setTimeout(() => {
+      localStorage.setItem('anderflow-notif-requested', '1')
+      Notification.requestPermission().then((perm) => {
+        if (perm === 'granted') {
+          toast.success('Notificacoes ativadas!')
+        }
+      })
+    }, 5000)
+
+    return () => clearTimeout(timer)
+  }, [analytics, session?.user?.id])
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -38,6 +78,28 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     return () => document.removeEventListener('keydown', handler)
   }, [])
 
+  const enviarHeartbeat = useCallback(() => {
+    const userId = (session?.user as any)?.id
+    fetch('/api/users/heartbeat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ page: pathname }),
+    }).catch(() => {})
+    if (userId) {
+      fetch('/api/analytics/online', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, type: 'heartbeat' }),
+      }).catch(() => {})
+    }
+  }, [pathname, session?.user])
+
+  useEffect(() => {
+    enviarHeartbeat()
+    const interval = setInterval(enviarHeartbeat, 60000)
+    return () => clearInterval(interval)
+  }, [enviarHeartbeat])
+
   return (
     <SessionProvider>
       <FetchErrorSuppressor>
@@ -46,11 +108,15 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
         <Sidebar />
         <div className="flex flex-1 flex-col min-w-0 overflow-y-auto scroll-area">
           <Header />
+          <ContextualAlert />
           <PageTip />
-          <main className="flex-1">{children}</main>
+          <main className="flex-1">
+            <LimiteErro>{children}</LimiteErro>
+          </main>
         </div>
       </div>
       <AIFab />
+      <GuiaPrimeiroAcesso />
       <WelcomeOverlay />
       <BotEngineInit />
       <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />

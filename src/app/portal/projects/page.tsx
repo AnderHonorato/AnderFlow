@@ -64,7 +64,12 @@ export default function PortalProjects() {
                   </p>
                 )}
               </div>
-              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3">
+                {p.status === 'IN_PROGRESS' && (
+                  <Button variant="outline" size="sm" className="h-6 text-[10px]" onClick={() => router.push(`/portal/projects/${p.id}/status`)}>
+                    Status detalhado <IconArrowRight className="w-[10px] h-[10px] ml-1" />
+                  </Button>
+                )}
                 <Progress value={p.progress || 0} className="w-32 h-[2px]" />
                 <span className="text-[13px] font-[500]">{p.progress || 0}%</span>
               </div>

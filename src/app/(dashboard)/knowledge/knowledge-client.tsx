@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Image from 'next/image'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
@@ -159,8 +160,8 @@ export function KnowledgeClient({ projects: initialProjects }: { projects: any[]
                     <Card className="hover:border-[var(--border-2)] transition-colors">
                       <CardContent className="p-4">
                         {meta.image && (
-                          <div className="mb-3 -mx-4 -mt-4 rounded-t-xl overflow-hidden h-36 bg-[var(--surface-2)]">
-                            <img src={meta.image} alt={project.name} className="w-full h-full object-cover" />
+                          <div className="mb-3 -mx-4 -mt-4 rounded-t-xl overflow-hidden h-36 bg-[var(--surface-2)] relative">
+                            <Image src={meta.image} alt={project.name} fill className="object-cover" sizes="(max-width: 768px) 100vw, 50vw" />
                           </div>
                         )}
                         <div>

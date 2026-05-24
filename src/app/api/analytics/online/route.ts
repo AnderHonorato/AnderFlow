@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getToken } from 'next-auth/jwt'
 import { cargoParaNivel } from '@/lib/hierarquia'
+import { prisma } from '@/lib/prisma'
 
 // Em produção usar Redis, por enquanto em memória
 const onlineUsers = new Map<string, { lastSeen: number; busy: boolean }>()
@@ -41,11 +42,17 @@ export async function GET(request: NextRequest) {
     if (count > maxSimultaneous) maxSimultaneous = count
   }
 
+  let totalHistorico = 0
+  try {
+    totalHistorico = await prisma.user.count()
+  } catch { /* fallback to 0 */ }
+
   return NextResponse.json({
     onlineNow: onlineCount,
     maxSimultaneous,
     totalVisitsToday: dailyVisitors.size,
     totalVisitsHour: visitLog.length,
+    totalHistorico,
   })
 }
 

@@ -175,7 +175,7 @@ export default function PortalDashboard() {
         .catch(() => {})
     }
     loadAll()
-  }, [])
+  }, [session])
 
   if (loading) {
     return (

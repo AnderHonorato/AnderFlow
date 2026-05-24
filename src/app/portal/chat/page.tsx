@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -17,7 +17,7 @@ export default function PortalChat() {
   const [channelId, setChannelId] = useState<string | null>(null)
   const [copiedBlock, setCopiedBlock] = useState('')
 
-  const loadMessages = () => {
+  const loadMessages = useCallback(() => {
     const params = channelId ? `?channelId=${channelId}` : ''
     fetch(`/api/messages${params}`)
       .then(r => r.json())
@@ -27,7 +27,7 @@ export default function PortalChat() {
         setTimeout(() => scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight }), 100)
       })
       .catch(() => setLoading(false))
-  }
+  }, [channelId])
 
   useEffect(() => {
     fetch('/api/channels')
@@ -44,7 +44,7 @@ export default function PortalChat() {
 
   useEffect(() => {
     if (channelId) loadMessages()
-  }, [channelId])
+  }, [channelId, loadMessages])
 
   const send = async () => {
     if (!text.trim() || sending) return

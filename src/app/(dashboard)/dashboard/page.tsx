@@ -118,7 +118,7 @@ export default function DashboardPage() {
         .then(json => { if (json.data) setTodayTasks(json.data) })
         .catch(() => {})
     }
-  }, [])
+  }, [isAdmin])
 
   const [revenueIdx, setRevenueIdx] = useState(0)
   const [streakData, setStreakData] = useState<any>(null)

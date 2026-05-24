@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -36,14 +36,14 @@ export default function MeetingsPage() {
   const [saving, setSaving] = useState(false)
   const [processingId, setProcessingId] = useState<string | null>(null)
 
-  const fetchMeetings = () => {
+  const fetchMeetings = useCallback(() => {
     fetch(`/api/meetings?projectId=${id}`)
       .then(r => r.json())
       .then(json => { setMeetings(json.data || []); setLoading(false) })
       .catch(() => setLoading(false))
-  }
+  }, [id])
 
-  useEffect(() => { fetchMeetings() }, [id])
+  useEffect(() => { fetchMeetings() }, [id, fetchMeetings])
 
   const handleCreate = async () => {
     if (!form.title || !form.date) return

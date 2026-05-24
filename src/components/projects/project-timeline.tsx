@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useRef } from 'react'
+import Image from 'next/image'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -187,7 +188,7 @@ export function ProjectTimeline({
               className="group relative flex items-center gap-1.5 px-2 py-1 rounded-md bg-[var(--surface)] border border-[var(--border)] hover:border-[var(--accent)] transition-colors text-left max-w-[220px]"
             >
               {isImage(f.type) ? (
-                <img src={f.url} alt={f.name} className="h-8 w-8 rounded object-cover shrink-0" />
+                <Image src={f.url} alt={f.name} width={32} height={32} className="rounded object-cover shrink-0" />
               ) : isAudio(f.type) ? (
                 <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-[var(--accent)] shrink-0"><path d="M2 10V6a4 4 0 016.93-2.3M13 10V3l-4 2v6"/><rect x="1" y="9" width="3" height="5" rx="0.5"/><rect x="12" y="8" width="3" height="7" rx="0.5"/></svg>
               ) : isVideo(f.type) ? (
@@ -532,9 +533,9 @@ export function ProjectTimeline({
                   </a>
                 </div>
               </div>
-              <div className="flex-1 flex items-center justify-center p-4 overflow-auto">
+              <div className="flex-1 flex items-center justify-center p-4 overflow-auto relative">
                 {isImage(viewerFile.type) ? (
-                  <img src={viewerFile.url} alt={viewerFile.name} className="max-w-full max-h-[70vh] object-contain rounded-lg" />
+                  <Image src={viewerFile.url} alt={viewerFile.name} fill className="object-contain rounded-lg" sizes="80vw" />
                 ) : isVideo(viewerFile.type) ? (
                   <video src={viewerFile.url} controls className="max-w-full max-h-[70vh] rounded-lg" autoPlay />
                 ) : isAudio(viewerFile.type) ? (

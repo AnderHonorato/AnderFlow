@@ -1,9 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/autenticacao/config'
 import { prisma } from '@/lib/prisma'
 import { getTemplateForCategory, generateSummary } from '@/lib/briefing-engine'
 import { checkAndGrantAchievements } from '@/lib/achievements'
 
 export async function GET(request: NextRequest) {
+  const session = await getServerSession(authOptions)
+  if (!session?.user?.id) {
+    return NextResponse.json({ erro: 'Nao autorizado' }, { status: 401 })
+  }
+
   try {
     const { searchParams } = new URL(request.url)
     const category = searchParams.get('category')
@@ -12,8 +19,11 @@ export async function GET(request: NextRequest) {
     if (draftId) {
       const draft = await prisma.briefingDraft.findUnique({
         where: { id: draftId },
-        select: { id: true, categoryId: true, currentStage: true, currentStep: true, answers: true, updatedAt: true },
+        select: { id: true, userId: true, categoryId: true, currentStage: true, currentStep: true, answers: true, updatedAt: true },
       })
+      if (!draft || draft.userId !== session.user.id) {
+        return NextResponse.json({ erro: 'Rascunho nao encontrado' }, { status: 404 })
+      }
       return NextResponse.json({ data: draft })
     }
 
@@ -29,12 +39,18 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const session = await getServerSession(authOptions)
+  if (!session?.user?.id) {
+    return NextResponse.json({ erro: 'Nao autorizado' }, { status: 401 })
+  }
+
   try {
     const body = await request.json()
-    const { userId, categoryId, draftId, currentStage, currentStep, answers, action } = body
+    const { categoryId, draftId, currentStage, currentStep, answers, action } = body
+    const userId = session.user.id
 
     if (!userId) {
-      return NextResponse.json({ error: 'userId obrigatório' }, { status: 400 })
+      return NextResponse.json({ error: 'userId obrigatorio' }, { status: 400 })
     }
 
     if (action === 'save') {

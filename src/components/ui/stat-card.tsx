@@ -6,9 +6,14 @@ import { cn } from '@/lib/utils'
 function AnimatedNumber({ value }: { value: number }) {
   const [displayed, setDisplayed] = useState(0)
   const frameRef = useRef<number>()
+  const currentRef = useRef(0)
 
   useEffect(() => {
-    const start = displayed
+    currentRef.current = displayed
+  })
+
+  useEffect(() => {
+    const start = currentRef.current
     const end = value
     const duration = 600
     const startTime = performance.now()

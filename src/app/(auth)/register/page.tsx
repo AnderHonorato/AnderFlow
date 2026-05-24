@@ -49,7 +49,7 @@ export default function RegisterPage() {
     try {
       const res = await fetch('/api/auth/verify-code', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, code, type: 'register' }) })
       const data = await res.json()
-      if (res.ok) { toast.success('Conta verificada!'); const r = await signIn('credentials', { email, password, redirect: false }); if (r?.error) router.push('/login'); else { router.push('/dashboard'); router.refresh() } }
+      if (res.ok) { toast.success('Conta verificada!'); toast.info('Sua conta esta em analise. Em breve entraremos em contato!', { duration: 6000 }); router.push('/login') }
       else { setError(data.error || 'Erro ao verificar') }
     } catch { setError('Erro de conexao') }
     setIsLoading(false)

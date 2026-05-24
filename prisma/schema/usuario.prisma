@@ -25,6 +25,7 @@ model User {
   verificationMethod String?
   isOnline           Boolean   @default(false)
   lastSeen           DateTime?
+  currentPage        String?
   rememberUntil      DateTime?
   theme              String    @default("system")
   plan               String    @default("BASIC")
@@ -123,6 +124,7 @@ model UserPreference {
   marketingEmails       Boolean @default(false)
   soundEnabled          Boolean @default(true)
   compactMode           Boolean @default(false)
+  preferences           Json?
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

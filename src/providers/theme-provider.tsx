@@ -29,7 +29,7 @@ export function ThemeProvider({ children, defaultTheme = 'dark' }: { children: R
     const stored = localStorage.getItem('theme') as Theme | null
     setThemeState(stored || (defaultTheme as Theme) || 'dark')
     setMounted(true)
-  }, [])
+  }, [defaultTheme])
 
   useEffect(() => {
     if (!mounted) return

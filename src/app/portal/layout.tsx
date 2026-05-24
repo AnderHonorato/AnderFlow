@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { usePathname, useRouter } from 'next/navigation'
 import { signOut, useSession } from 'next-auth/react'
 import { SessionProvider } from '@/providers/session-provider'
@@ -17,13 +18,14 @@ import { IconCheck } from '@/components/icons'
 import {
   LayoutDashboard, FolderKanban, MessageSquare,
   CreditCard, FileText, LogOut, Headphones, Sun, Moon,
-  Home, Bell, Globe,
+  Home, Bell, Globe, Sparkles,
 } from 'lucide-react'
 import { useTheme } from 'next-themes'
 import { WelcomeOverlay } from '@/components/ui/welcome-overlay'
 import { PushPermission } from '@/components/ui/push-permission'
 import { PwaInstallPrompt } from '@/components/ui/pwa-install-prompt'
 import { BotChat } from '@/components/portal/bot-chat'
+import { FaqWidget } from '@/components/portal/faq-widget'
 import { useMediaQuery } from '@/hooks/use-media-query'
 
 import { useI18n } from '@/providers/i18n-provider'
@@ -32,6 +34,7 @@ const navItems = [
   { name: 'Inicio', href: '/portal', icon: LayoutDashboard },
   { name: 'Meus Projetos', href: '/portal/projects', icon: FolderKanban },
   { name: 'Tickets', href: '/portal/tickets', icon: MessageSquare },
+  { name: 'Novidades', href: '/portal/changelog', icon: Sparkles },
 ]
 
 const navItemsSupport = [
@@ -101,7 +104,7 @@ function PortalSidebarContent({ children }: { children: React.ReactNode }) {
           <Link href="/portal" className="flex items-center gap-2">
             <div className="flex h-6 w-6 items-center justify-center rounded bg-[var(--primary)]">
               {brandLogo ? (
-                <img src={brandLogo} alt="" className="h-5 w-5 object-contain" />
+                <Image src={brandLogo} alt="" width={20} height={20} className="object-contain" />
               ) : (
                 <span className="text-2xs font-bold text-white">AF</span>
               )}
@@ -268,6 +271,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
         <WelcomeOverlay />
         <PwaInstallPrompt />
         <BotChat />
+        <FaqWidget />
       </SessionProvider>
     </I18nProvider>
   )

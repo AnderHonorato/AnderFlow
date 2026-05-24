@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
+import Image from 'next/image'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { toast } from 'sonner'
@@ -105,7 +106,7 @@ export function TwoFactorSetup() {
             <p className="text-[12px] font-[500] text-[var(--text)] mb-2">1. Escaneie o QR Code</p>
             <p className="text-[11px] text-[var(--text-3)] mb-3">Use Google Authenticator, Authy ou qualquer app TOTP</p>
             <div className="flex justify-center">
-              <img src={qrCode} alt="QR Code 2FA" className="w-40 h-40 rounded-xl border border-[var(--border)]" />
+              <Image src={qrCode} alt="QR Code 2FA" width={160} height={160} className="rounded-xl border border-[var(--border)]" />
             </div>
           </div>
           <div className="space-y-1.5">

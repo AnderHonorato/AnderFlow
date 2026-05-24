@@ -22,7 +22,7 @@ import {
 } from 'lucide-react'
 
 function getFileIcon(mimeType: string) {
-  if (mimeType.startsWith('image/')) return <Image className="h-5 w-5 text-purple-500" />
+  if (mimeType.startsWith('image/')) return <Image className="h-5 w-5 text-purple-500" alt="" />
   if (mimeType.startsWith('video/')) return <Film className="h-5 w-5 text-info" />
   if (mimeType.includes('pdf') || mimeType.includes('document')) return <FileText className="h-5 w-5 text-warning" />
   if (mimeType.includes('figma') || mimeType.includes('design')) return <File className="h-5 w-5 text-primary" />

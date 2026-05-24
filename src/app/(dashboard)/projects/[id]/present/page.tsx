@@ -84,7 +84,7 @@ export default function ProjectPresentPage() {
       }, 1000)
       return () => { if (timerRef.current) clearInterval(timerRef.current) }
     }
-  }, [autoAdvance, isPaused, autoSeconds, slide])
+  }, [autoAdvance, isPaused, autoSeconds, slide, nextSlide])
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {

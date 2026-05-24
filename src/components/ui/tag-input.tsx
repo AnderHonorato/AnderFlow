@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { Input } from '@/components/ui/input'
 import { X } from 'lucide-react'
 
-const TAG_COLORS = ['#E8622A', '#3D9A6E', '#3A7AC4', '#C4852A', '#8B5CF6']
+const TAG_COLORS = ['bg-orange-600', 'bg-emerald-600', 'bg-blue-600', 'bg-amber-600', 'bg-violet-600']
 
 function hashColor(str: string) {
   let hash = 0
@@ -25,7 +25,12 @@ export function TagInput({ tags, onChange, maxTags = 5 }: TagInputProps) {
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    fetch('/api/tags').then(r => r.json()).then(j => setSuggestions(j.data?.tags || [])).catch(() => {})
+    let active = true
+    fetch('/api/tags')
+      .then(r => r.json())
+      .then(j => { if (active) setSuggestions(j.data?.tags || []) })
+      .catch(() => {})
+    return () => { active = false }
   }, [])
 
   const addTag = (tag: string) => {
@@ -47,9 +52,9 @@ export function TagInput({ tags, onChange, maxTags = 5 }: TagInputProps) {
     <div className="space-y-2">
       <div className="flex flex-wrap gap-1.5">
         {tags.map(tag => (
-          <span key={tag} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium text-white" style={{ background: hashColor(tag) }}>
+          <span key={tag} className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium text-white ${hashColor(tag)}`}>
             {tag}
-            <button onClick={() => removeTag(tag)} className="hover:opacity-70"><X className="h-3 w-3" /></button>
+            <button onClick={() => removeTag(tag)} className="hover:opacity-70" aria-label={`Remover tag ${tag}`}><X className="h-3 w-3" /></button>
           </span>
         ))}
       </div>

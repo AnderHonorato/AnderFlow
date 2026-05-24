@@ -17,7 +17,7 @@ import {
   IconPlus, IconSearch, IconClient, IconProject, IconFinancial,
   IconLoader, IconArrowLeft,
 } from '@/components/icons'
-import { Link2, Copy, Map, Upload, Download, FileText, AlertCircle } from 'lucide-react'
+import { Link2, Copy, Map, Upload, Download, FileText, AlertCircle, Users } from 'lucide-react'
 import Papa from 'papaparse'
 
 export default function ClientsPage() {
@@ -184,6 +184,9 @@ export default function ClientsPage() {
             <div className="flex items-center gap-1.5">
               <Button size="sm" variant="outline" onClick={() => router.push('/clients/map')} className="h-7 text-[11px] gap-1">
                 <Map className="w-3 h-3" /> Mapa
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => router.push('/clients/compare')} className="h-7 text-[11px] gap-1">
+                <Users className="w-3 h-3" /> Comparar
               </Button>
               <Button size="sm" variant="outline" onClick={() => setCsvOpen(true)} className="h-7 text-[11px] gap-1">
                 <Upload className="w-3 h-3" /> CSV

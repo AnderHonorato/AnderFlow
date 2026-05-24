@@ -6,6 +6,7 @@ import './globals.css'
 import { SessionProvider } from '@/providers/session-provider'
 import { ThemeProvider } from '@/providers/theme-provider'
 import { Toaster } from '@/components/ui/toaster'
+import { BannerCookies } from '@/components/ui/banner-cookies'
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
 const dmSans = DM_Sans({ subsets: ['latin'], weight: ['400','500','600','700'], variable: '--font-dm-sans' })
@@ -50,6 +51,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           <ThemeProvider defaultTheme="dark">
             {children}
             <Toaster />
+            <BannerCookies />
           </ThemeProvider>
         </SessionProvider>
       </body>

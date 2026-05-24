@@ -1,5 +1,10 @@
 'use client'
 
+/**
+ * @deprecated Use {@link GuiaPrimeiroAcesso} em guia-primeiro-acesso.tsx.
+ * Este componente sera removido em versao futura.
+ */
+
 import { useEffect, useState } from 'react'
 import { usePathname } from 'next/navigation'
 import { X, Lightbulb, ChevronRight } from 'lucide-react'

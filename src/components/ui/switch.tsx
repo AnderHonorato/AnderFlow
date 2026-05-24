@@ -4,18 +4,22 @@ import * as React from 'react'
 import { cn } from '@/lib/utils'
 
 interface SwitchProps {
+  id?: string
   checked?: boolean
   onCheckedChange?: (checked: boolean) => void
   disabled?: boolean
   className?: string
+  'aria-label'?: string
 }
 
-export function Switch({ checked = false, onCheckedChange, disabled, className }: SwitchProps) {
+export function Switch({ id, checked = false, onCheckedChange, disabled, className, 'aria-label': ariaLabel }: SwitchProps) {
   return (
     <button
+      id={id}
       type="button"
       role="switch"
-      aria-checked={checked}
+      aria-checked={checked ? 'true' : 'false'}
+      aria-label={ariaLabel || 'Alternar opção'}
       disabled={disabled}
       onClick={() => onCheckedChange?.(!checked)}
       className={cn(
@@ -26,6 +30,7 @@ export function Switch({ checked = false, onCheckedChange, disabled, className }
       )}
     >
       <span
+        aria-hidden="true"
         className={cn(
           'inline-block h-3.5 w-3.5 rounded-full bg-white transition-transform duration-150',
           checked ? 'translate-x-[18px]' : 'translate-x-[2px]'

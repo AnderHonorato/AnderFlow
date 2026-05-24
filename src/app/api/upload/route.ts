@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/autenticacao/config'
 import { writeFile, mkdir } from 'fs/promises'
 import path from 'path'
 import { checkCsrf } from '@/lib/middlewares/csrf'
@@ -7,7 +9,9 @@ const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'ap
 const MAX_SIZE = 10 * 1024 * 1024
 
 export async function POST(request: NextRequest) {
-  if (!checkCsrf(request)) return NextResponse.json({ error: 'Requisição inválida' }, { status: 403 })
+  const session = await getServerSession(authOptions)
+  if (!session?.user?.id) return NextResponse.json({ error: 'Nao autorizado' }, { status: 401 })
+  if (!checkCsrf(request)) return NextResponse.json({ error: 'Requisicao invalida' }, { status: 403 })
 
   try {
     const formData = await request.formData()

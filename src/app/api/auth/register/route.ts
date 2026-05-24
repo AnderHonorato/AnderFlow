@@ -76,7 +76,7 @@ export async function POST(request: NextRequest) {
     const expires = new Date(Date.now() + 30 * 60000)
     const hashedPassword = await bcrypt.hash(password, 12)
 
-    await prisma.user.create({
+    const newUser = await prisma.user.create({
       data: {
         name,
         email,
@@ -91,6 +91,31 @@ export async function POST(request: NextRequest) {
         verificationMethod: 'EMAIL',
       },
     })
+
+    await prisma.permissionRequest.create({
+      data: {
+        userId: newUser.id,
+        permission: 'account_activation',
+        reason: `Novo cadastro de cliente - ${company || 'Nao informada'}`,
+      },
+    })
+
+    // Notify admins
+    const admins = await prisma.user.findMany({
+      where: { role: { in: ['ADMIN', 'OWNER', 'DEVELOPER', 'MODERATOR'] }, isActive: true },
+      select: { id: true },
+    })
+    for (const admin of admins) {
+      await prisma.notification.create({
+        data: {
+          userId: admin.id,
+          type: 'REGISTRATION',
+          title: 'Novo cadastro pendente',
+          message: `${name} (${email}) de ${company || 'Nao informada'} aguarda aprovacao.`,
+          metadata: JSON.stringify({ userId: newUser.id }),
+        },
+      }).catch(() => {})
+    }
 
     await sendVerificationEmail(email, code)
 

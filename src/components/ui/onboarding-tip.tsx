@@ -1,5 +1,10 @@
 'use client'
 
+/**
+ * @deprecated Use {@link GuiaPrimeiroAcesso} em guia-primeiro-acesso.tsx.
+ * Este componente sera removido em versao futura.
+ */
+
 import { useState, useEffect } from 'react'
 import { Button } from './button'
 import { cn } from '@/lib/utils'

@@ -72,24 +72,24 @@ export function RichTextEditor({ value, onChange, placeholder, className, onSubm
   return (
     <div className={className}>
       <div className="flex items-center gap-0.5 p-1 border border-[var(--border)] border-b-0 rounded-t-lg bg-[var(--surface-2)]">
-        <Button variant="ghost" size="icon-sm" onClick={handleBold} title="Negrito" className="h-7 w-7">
-          <Bold className="h-3.5 w-3.5" />
+        <Button variant="ghost" size="icon-sm" onClick={handleBold} title="Negrito" aria-label="Negrito" className="h-7 w-7">
+          <Bold className="h-3.5 w-3.5" aria-hidden="true" />
         </Button>
-        <Button variant="ghost" size="icon-sm" onClick={handleItalic} title="Italico" className="h-7 w-7">
-          <Italic className="h-3.5 w-3.5" />
+        <Button variant="ghost" size="icon-sm" onClick={handleItalic} title="Italico" aria-label="Italico" className="h-7 w-7">
+          <Italic className="h-3.5 w-3.5" aria-hidden="true" />
         </Button>
-        <Button variant="ghost" size="icon-sm" onClick={handleUnderline} title="Sublinhado" className="h-7 w-7">
-          <Underline className="h-3.5 w-3.5" />
+        <Button variant="ghost" size="icon-sm" onClick={handleUnderline} title="Sublinhado" aria-label="Sublinhado" className="h-7 w-7">
+          <Underline className="h-3.5 w-3.5" aria-hidden="true" />
         </Button>
         <div className="w-px h-5 bg-[var(--border)] mx-0.5" />
-        <Button variant="ghost" size="icon-sm" onClick={handleInsertUnorderedList} title="Lista" className="h-7 w-7">
-          <List className="h-3.5 w-3.5" />
+        <Button variant="ghost" size="icon-sm" onClick={handleInsertUnorderedList} title="Lista" aria-label="Lista" className="h-7 w-7">
+          <List className="h-3.5 w-3.5" aria-hidden="true" />
         </Button>
-        <Button variant="ghost" size="icon-sm" onClick={handleCode} title="Codigo" className="h-7 w-7">
-          <Code className="h-3.5 w-3.5" />
+        <Button variant="ghost" size="icon-sm" onClick={handleCode} title="Codigo" aria-label="Codigo" className="h-7 w-7">
+          <Code className="h-3.5 w-3.5" aria-hidden="true" />
         </Button>
-        <Button variant="ghost" size="icon-sm" onClick={handleLink} title="Link" className="h-7 w-7">
-          <Link className="h-3.5 w-3.5" />
+        <Button variant="ghost" size="icon-sm" onClick={handleLink} title="Link" aria-label="Link" className="h-7 w-7">
+          <Link className="h-3.5 w-3.5" aria-hidden="true" />
         </Button>
         {showLinkInput && (
           <div className="flex items-center gap-1 px-1">
@@ -103,22 +103,21 @@ export function RichTextEditor({ value, onChange, placeholder, className, onSubm
           </div>
         )}
         <div className="w-px h-5 bg-[var(--border)] mx-0.5" />
-        <Button variant="ghost" size="icon-sm" onClick={() => handleExec('removeFormat')} title="Limpar formatacao" className="h-7 w-7">
-          <AlignLeft className="h-3.5 w-3.5" />
+        <Button variant="ghost" size="icon-sm" onClick={() => handleExec('removeFormat')} title="Limpar formatacao" aria-label="Limpar formatacao" className="h-7 w-7">
+          <AlignLeft className="h-3.5 w-3.5" aria-hidden="true" />
         </Button>
       </div>
       <div
         ref={editorRef}
         contentEditable
+        role="textbox"
+        aria-multiline="true"
         suppressContentEditableWarning
         className="min-h-[60px] max-h-[200px] overflow-y-auto rounded-b-lg border border-t-0 border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[13px] text-[var(--text)] focus:outline-none focus:border-[var(--accent)]"
         data-placeholder={placeholder || 'Escreva algo...'}
         onPaste={handlePaste}
         onInput={handleInput}
         onKeyDown={handleKeyDown}
-        style={{
-          '--placeholder-opacity': (value && value !== '<br>' && value !== '<br><br>') ? '0' : '1',
-        } as React.CSSProperties}
       />
       <style jsx>{`
         [contenteditable]:empty:before {

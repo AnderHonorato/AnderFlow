@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { Sparkles, Bug, Zap, CheckCircle2 } from 'lucide-react'
+import Link from 'next/link'
 
 const changelog = [
   {
@@ -11,9 +12,9 @@ const changelog = [
     type: 'current',
     changes: [
       { type: 'feature', text: 'IA para resumo de projetos e cronogramas' },
-      { type: 'feature', text: 'Novo dashboard com métricas avançadas' },
+      { type: 'feature', text: 'Novo dashboard com metricas avancadas' },
       { type: 'improvement', text: 'Performance do Kanban melhorada em 40%' },
-      { type: 'fix', text: 'Corrigida notificação de pagamentos duplicados' },
+      { type: 'fix', text: 'Corrigida notificacao de pagamentos duplicados' },
     ],
   },
   {
@@ -21,9 +22,9 @@ const changelog = [
     date: '28 Fev 2024',
     type: 'previous',
     changes: [
-      { type: 'feature', text: 'Integração WhatsApp Business' },
+      { type: 'feature', text: 'Integracao WhatsApp Business' },
       { type: 'feature', text: 'Assinatura digital de contratos' },
-      { type: 'improvement', text: 'Novo sistema de permissões granulares' },
+      { type: 'improvement', text: 'Novo sistema de permissoes granulares' },
       { type: 'fix', text: 'Corrigido upload de arquivos grandes' },
     ],
   },
@@ -33,7 +34,7 @@ const changelog = [
     type: 'previous',
     changes: [
       { type: 'feature', text: 'Pipeline de CRM com drag-and-drop' },
-      { type: 'feature', text: 'Notificações push em tempo real' },
+      { type: 'feature', text: 'Notificacoes push em tempo real' },
       { type: 'improvement', text: 'Redesenho completo do chat interno' },
       { type: 'fix', text: 'Ajustes de responsividade mobile' },
     ],
@@ -43,10 +44,10 @@ const changelog = [
     date: '01 Fev 2024',
     type: 'previous',
     changes: [
-      { type: 'feature', text: 'Lançamento da plataforma SaaS completa' },
+      { type: 'feature', text: 'Lancamento da plataforma SaaS completa' },
       { type: 'feature', text: 'Portal do cliente white-label' },
-      { type: 'feature', text: 'Sistema financeiro com múltiplos gateways' },
-      { type: 'feature', text: 'Gestão de projetos com Kanban e Timeline' },
+      { type: 'feature', text: 'Sistema financeiro com multiplos gateways' },
+      { type: 'feature', text: 'Gestao de projetos com Kanban e Timeline' },
     ],
   },
 ]
@@ -63,11 +64,16 @@ function getIcon(type: string) {
 export default function ChangelogPage() {
   return (
     <div className="p-6 space-y-6 max-w-3xl mx-auto">
-      <div>
-        <h1 className="text-lg font-medium">Changelog</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Acompanhe as novidades e melhorias da plataforma
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-lg font-medium">Changelog</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Acompanhe as novidades e melhorias da plataforma
+          </p>
+        </div>
+        <Link href="/changelog/admin">
+          <Badge variant="secondary" className="cursor-pointer hover:bg-[var(--surface-hover)]">Gerenciar</Badge>
+        </Link>
       </div>
 
       <div className="space-y-1">

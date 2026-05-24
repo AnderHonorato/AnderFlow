@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useRef, useCallback } from 'react'
+import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
@@ -357,7 +358,7 @@ export default function IntegrationsPage() {
               </div>
               {qrCode ? (
                 <div className="p-4 bg-white rounded-xl inline-block">
-                  <img src={qrCode} alt="QR Code WhatsApp" className="w-56 h-56" />
+                  <Image src={qrCode} alt="QR Code WhatsApp" width={224} height={224} unoptimized />
                 </div>
               ) : (
                 <div className="flex items-center justify-center h-56">

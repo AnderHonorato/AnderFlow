@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useSession } from 'next-auth/react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -21,15 +21,15 @@ export default function ApprovalsPage() {
   const [comment, setComment] = useState('')
   const [actionLoading, setActionLoading] = useState(false)
 
-  const fetchApprovals = () => {
+  const fetchApprovals = useCallback(() => {
     setLoading(true)
     fetch(`/api/approvals?status=${filter}`)
       .then(r => r.json())
       .then(json => { setApprovals(json.data || []); setLoading(false) })
       .catch(() => setLoading(false))
-  }
+  }, [filter])
 
-  useEffect(() => { fetchApprovals() }, [filter])
+  useEffect(() => { fetchApprovals() }, [filter, fetchApprovals])
 
   const handleAction = async () => {
     if (!actionModal) return

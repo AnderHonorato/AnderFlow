@@ -7,8 +7,11 @@ import { useSession } from 'next-auth/react'
 import { useUIStore } from '@/stores/app-store'
 import { IconNotification, IconClose, IconMenu, IconArrowRight, IconProject } from '@/components/icons'
 import { FocusModeButton, isFocusActive } from '@/components/ui/focus-mode'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Activity, Users, Eye, BarChart3, TrendingUp } from 'lucide-react'
 
 interface NotificationItem {
   id: string
@@ -17,6 +20,86 @@ interface NotificationItem {
   type: string
   createdAt: string
   metadata?: any
+}
+
+interface UsuarioOnline {
+  id: string
+  name: string
+  image?: string
+  role: string
+  currentPage?: string
+  lastSeen?: string
+}
+
+interface MetricasPainel {
+  onlineAgora: number
+  unicosHoje: number
+  acessosHoje: number
+  totalHistorico: number
+  maxSimultaneo: number
+}
+
+function ContagemAnimada({ valor, duracao = 600 }: { valor: number; duracao?: number }) {
+  const [exibido, setExibido] = useState(0)
+  const valorRef = useRef(valor)
+
+  useEffect(() => {
+    valorRef.current = valor
+    let inicio: number | null = null
+    const doInicio = exibido
+
+    const animar = (timestamp: number) => {
+      if (!inicio) inicio = timestamp
+      const progresso = Math.min((timestamp - inicio) / duracao, 1)
+      const facilidade = 1 - Math.pow(1 - progresso, 3)
+      setExibido(Math.round(doInicio + (valor - doInicio) * facilidade))
+      if (progresso < 1) {
+        requestAnimationFrame(animar)
+      }
+    }
+    requestAnimationFrame(animar)
+  }, [valor, duracao, exibido])
+
+  return <span>{exibido.toLocaleString('pt-BR')}</span>
+}
+
+function MiniProgresso({ valor, maximo, cor }: { valor: number; maximo: number; cor: string }) {
+  const pct = maximo > 0 ? Math.min((valor / maximo) * 100, 100) : 0
+  return (
+    <div className="h-1.5 w-full rounded-full bg-[var(--surface-3)] overflow-hidden">
+      <motion.div
+        className="h-full rounded-full"
+        style={{ backgroundColor: cor }}
+        initial={{ width: 0 }}
+        animate={{ width: `${pct}%` }}
+        transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+      />
+    </div>
+  )
+}
+
+function MiniCartaoMetrica({
+  rotulo,
+  valor,
+  icone: Icone,
+  cor,
+}: {
+  rotulo: string
+  valor: number
+  icone: any
+  cor: string
+}) {
+  return (
+    <div className="flex flex-col gap-1 p-3 rounded-xl bg-[var(--surface-2)] border border-[var(--border)]">
+      <div className="flex items-center gap-1.5">
+        <Icone className="h-3 w-3" style={{ color: cor }} />
+        <span className="text-[10px] text-[var(--text-3)] uppercase font-[500]">{rotulo}</span>
+      </div>
+      <span className="text-[18px] font-[600] font-numeric text-[var(--text)]">
+        <ContagemAnimada valor={valor} />
+      </span>
+    </div>
+  )
 }
 
 export function Header() {
@@ -29,6 +112,7 @@ export function Header() {
   const [activeProject, setActiveProject] = useState<any>(null)
   const [badgeKey, setBadgeKey] = useState(0)
   const dropdownRef = useRef<HTMLDivElement>(null)
+  const metricasRef = useRef<HTMLDivElement>(null)
   const prevIdsRef = useRef<Set<string>>(new Set())
   const prevCountRef = useRef(0)
   const [seenIds, setSeenIds] = useState<Set<string>>(() => {
@@ -38,8 +122,23 @@ export function Header() {
     } catch { return new Set() }
   })
 
+  const [metricas, setMetricas] = useState<MetricasPainel>({
+    onlineAgora: 0,
+    unicosHoje: 0,
+    acessosHoje: 0,
+    totalHistorico: 0,
+    maxSimultaneo: 0,
+  })
+  const [usuariosOnline, setUsuariosOnline] = useState<UsuarioOnline[]>([])
+  const [rotacaoIdx, setRotacaoIdx] = useState(0)
+  const [entradaRecente, setEntradaRecente] = useState<string | null>(null)
+  const [painelAberto, setPainelAberto] = useState(false)
+  const onlineAnteriorRef = useRef(0)
+  const entradaTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
   const roleLevel = (session?.user as any)?.roleLevel || 0
   const isClient = roleLevel < 40
+  const isModOrAbove = roleLevel >= 60
 
   useEffect(() => {
     if (isClient) {
@@ -52,6 +151,75 @@ export function Header() {
         .catch(() => {})
     }
   }, [isClient])
+
+  useEffect(() => {
+    if (!isModOrAbove) return
+    const buscarMetricas = () => {
+      fetch('/api/analytics/online')
+        .then(r => r.json())
+        .then(d => {
+          const novoOnline = d.onlineNow || 0
+          if (novoOnline > onlineAnteriorRef.current && onlineAnteriorRef.current > 0) {
+            if (entradaTimerRef.current) clearTimeout(entradaTimerRef.current)
+            setEntradaRecente('Membro acabou de entrar')
+            entradaTimerRef.current = setTimeout(() => setEntradaRecente(null), 4000)
+          }
+          onlineAnteriorRef.current = novoOnline
+          setMetricas({
+            onlineAgora: novoOnline,
+            unicosHoje: d.totalVisitsToday || 0,
+            acessosHoje: d.totalVisitsHour || 0,
+            totalHistorico: d.totalHistorico || 0,
+            maxSimultaneo: d.maxSimultaneous || novoOnline,
+          })
+        })
+        .catch(() => {})
+    }
+    const buscarUsuarios = () => {
+      fetch('/api/analytics/online-users')
+        .then(r => r.json())
+        .then(d => setUsuariosOnline((d.data || []).filter((u: UsuarioOnline) => u.role === 'CLIENT')))
+        .catch(() => {})
+    }
+    buscarMetricas()
+    buscarUsuarios()
+    const interval = setInterval(buscarMetricas, 30000)
+    const intervalUsuarios = setInterval(buscarUsuarios, 30000)
+    return () => { clearInterval(interval); clearInterval(intervalUsuarios) }
+  }, [isModOrAbove])
+
+  useEffect(() => {
+    if (entradaRecente) return
+    if (!isModOrAbove) return
+    const timer = setInterval(() => {
+      setRotacaoIdx(prev => (prev + 1) % 4)
+    }, 5000)
+    return () => clearInterval(timer)
+  }, [entradaRecente, isModOrAbove])
+
+  useEffect(() => {
+    const fechar = (e: MouseEvent) => {
+      if (metricasRef.current && !metricasRef.current.contains(e.target as Node)) {
+        setPainelAberto(false)
+      }
+    }
+    if (painelAberto) document.addEventListener('click', fechar)
+    return () => document.removeEventListener('click', fechar)
+  }, [painelAberto])
+
+  const rotativos = [
+    `${metricas.onlineAgora} online agora`,
+    `${metricas.unicosHoje} unicos hoje`,
+    `${metricas.acessosHoje} acessos hoje`,
+    `${metricas.totalHistorico} desde o inicio`,
+  ]
+
+  const pctOnline = metricas.totalHistorico > 0
+    ? Math.round((metricas.onlineAgora / metricas.totalHistorico) * 100)
+    : 0
+
+  const iniciais = (nome: string) =>
+    nome.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()
 
   useEffect(() => {
     const fetchNotifications = () => {
@@ -103,7 +271,7 @@ export function Header() {
     fetchNotifications()
     const interval = setInterval(fetchNotifications, 10000)
     return () => clearInterval(interval)
-  }, [session?.user?.id])
+  }, [session?.user?.id, seenIds, unreadItems.length])
 
   useEffect(() => {
     if (unreadItems.length === 0) return
@@ -216,6 +384,158 @@ export function Header() {
       </div>
 
       <div className="flex items-center gap-1 shrink-0" ref={dropdownRef}>
+        <div className="relative" ref={metricasRef}>
+          {isModOrAbove && (
+            <button
+              onClick={(e) => { e.stopPropagation(); setPainelAberto(!painelAberto) }}
+              className={cn(
+                'hidden md:flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] transition-all duration-200 mr-1',
+                entradaRecente
+                  ? 'text-[var(--success)] bg-[var(--success-subtle)]/50'
+                  : 'text-[var(--text-3)] hover:text-[var(--text-2)] hover:bg-[var(--surface-hover)]'
+              )}
+            >
+              {entradaRecente ? (
+                <>
+                  <span className="relative flex h-1.5 w-1.5">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--success)] opacity-75" />
+                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-[var(--success)]" />
+                  </span>
+                  {entradaRecente}
+                </>
+              ) : (
+                <>
+                  <span className="h-1.5 w-1.5 rounded-full bg-[var(--success)]" />
+                  {rotativos[rotacaoIdx]}
+                </>
+              )}
+            </button>
+          )}
+
+          <AnimatePresence>
+            {painelAberto && (
+              <motion.div
+                initial={{ opacity: 0, y: 6, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 6, scale: 0.95 }}
+                transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+                onClick={(e) => e.stopPropagation()}
+                className="absolute right-0 top-full mt-2 w-[340px] bg-[var(--surface)] border border-[var(--border)] rounded-2xl shadow-2xl z-50 overflow-hidden"
+              >
+                <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border)]">
+                  <div className="flex items-center gap-2">
+                    <BarChart3 className="h-4 w-4 text-[var(--accent)]" />
+                    <span className="text-[13px] font-[500] text-[var(--text)]">Metricas em tempo real</span>
+                  </div>
+                  <button
+                    onClick={() => setPainelAberto(false)}
+                    className="h-6 w-6 flex items-center justify-center rounded-md hover:bg-[var(--surface-hover)] text-[var(--text-3)] hover:text-[var(--text)] transition-colors"
+                  >
+                    <IconClose className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+
+                <div className="px-4 py-3 space-y-4">
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="relative flex h-2.5 w-2.5">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--success)] opacity-75" />
+                          <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[var(--success)]" />
+                        </span>
+                        <span className="text-[13px] font-[500] text-[var(--text)]">
+                          <ContagemAnimada valor={metricas.onlineAgora} /> online agora
+                        </span>
+                      </div>
+                      <span className="text-[12px] font-numeric text-[var(--text-2)]">
+                        {pctOnline}% ativos
+                      </span>
+                    </div>
+                    <MiniProgresso valor={metricas.onlineAgora} maximo={metricas.totalHistorico} cor="var(--success)" />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <MiniCartaoMetrica rotulo="Online agora" valor={metricas.onlineAgora} icone={Activity} cor="var(--success)" />
+                    <MiniCartaoMetrica rotulo="Unicos hoje" valor={metricas.unicosHoje} icone={Users} cor="#3b82f6" />
+                    <MiniCartaoMetrica rotulo="Acessos hoje" valor={metricas.acessosHoje} icone={Eye} cor="var(--accent)" />
+                    <MiniCartaoMetrica rotulo="Total historico" valor={metricas.totalHistorico} icone={TrendingUp} cor="var(--text-3)" />
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-1.5">
+                      <Users className="h-3 w-3 text-[var(--text-3)]" />
+                      <span className="text-[10px] text-[var(--text-3)] uppercase font-[500]">
+                        Usuarios online ({usuariosOnline.length})
+                      </span>
+                    </div>
+
+                    {usuariosOnline.length === 0 ? (
+                      <p className="text-[11px] text-[var(--text-3)] text-center py-2">
+                        Nenhum cliente online no momento
+                      </p>
+                    ) : (
+                      <div className="space-y-1 max-h-[160px] overflow-y-auto scrollbar-thin">
+                        {usuariosOnline.map((u, i) => (
+                          <motion.div
+                            key={u.id}
+                            initial={{ opacity: 0, x: -8 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: i * 0.05 }}
+                            className="flex items-center gap-2.5 px-2 py-1.5 rounded-lg hover:bg-[var(--surface-hover)] transition-colors"
+                          >
+                            <div className="relative">
+                              <Avatar className="h-7 w-7">
+                                <AvatarFallback className="text-[10px] bg-[var(--surface-3)]">
+                                  {iniciais(u.name)}
+                                </AvatarFallback>
+                              </Avatar>
+                              <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-[var(--success)] border-2 border-[var(--surface)]" />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-[12px] text-[var(--text)] truncate">{u.name}</p>
+                              {u.currentPage && (
+                                <p className="text-[10px] text-[var(--text-3)] truncate">{u.currentPage}</p>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              {[...Array(3)].map((_, i) => (
+                                <motion.span
+                                  key={i}
+                                  className="h-1 w-1 rounded-full bg-[var(--success)]"
+                                  animate={{ opacity: [0.3, 1, 0.3] }}
+                                  transition={{ duration: 1.5, repeat: Infinity, delay: i * 0.3 }}
+                                />
+                              ))}
+                            </div>
+                          </motion.div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-2 pt-1 border-t border-[var(--border)]">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[10px] text-[var(--text-3)]">Pico simultaneo</span>
+                        <span className="text-[12px] font-[600] font-numeric text-[var(--accent)]">
+                          <ContagemAnimada valor={metricas.maxSimultaneo} />
+                        </span>
+                      </div>
+                    </div>
+                    <Link
+                      href="/analytics"
+                      className="text-[11px] text-[var(--accent)] hover:underline"
+                      onClick={() => setPainelAberto(false)}
+                    >
+                      Ver analytics
+                    </Link>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
         <FocusModeButton />
 
         <button

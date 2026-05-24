@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -21,16 +21,16 @@ export default function ClientContactsPage() {
   const [form, setForm] = useState({ name: '', email: '', role: 'Contato', phone: '', canAccessPortal: false })
   const [saving, setSaving] = useState(false)
 
-  const loadContacts = async () => {
+  const loadContacts = useCallback(async () => {
     try {
       const res = await fetch(`/api/client-contacts?clientId=${id}`)
       const json = await res.json()
       setContacts(json.data || [])
     } catch {}
     setLoading(false)
-  }
+  }, [id])
 
-  useEffect(() => { loadContacts() }, [id])
+  useEffect(() => { loadContacts() }, [id, loadContacts])
 
   const handleCreate = async () => {
     if (!form.name.trim() || !form.email.trim()) { toast.error('Nome e email são obrigatórios'); return }

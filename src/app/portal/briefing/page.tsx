@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useRef, useCallback, Suspense } from 'react'
+import Image from 'next/image'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { Card, CardContent } from '@/components/ui/card'
@@ -10,7 +11,7 @@ import { Progress } from '@/components/ui/progress'
 import { toast } from 'sonner'
 import {
   ArrowLeft, ArrowRight, Check, Loader2,
-  Paperclip, X, Image, File, Save, Upload,
+  Paperclip, X, Image as IconeImagem, File, Save, Upload,
 } from 'lucide-react'
 import { SERVICE_CATEGORIES, getTemplateForCategory, generateSummary } from '@/lib/briefing-engine'
 import type { BriefingTemplate, BriefingStage, ServiceCategory } from '@/lib/briefing-engine'
@@ -342,12 +343,12 @@ function BriefingWizardContent() {
             {attachedFiles.map((file, i) => (
               <div key={i} className="flex items-center gap-2 p-2 rounded bg-[var(--surface-hover)]">
                 {file.preview ? (
-                  <img src={file.preview} alt={file.name} className="h-8 w-8 rounded object-cover" />
+                  <Image src={file.preview} alt={file.name} width={32} height={32} className="rounded object-cover" />
                 ) : (
                   <div className="flex h-8 w-8 items-center justify-center rounded bg-[var(--surface)]">
                     {file.type.startsWith('video/') ? <File className="h-4 w-4 text-[var(--text-muted)]" /> :
                      file.type.includes('pdf') ? <FileTextIcon className="h-4 w-4 text-[var(--text-muted)]" /> :
-                     <Image className="h-4 w-4 text-[var(--text-muted)]" />}
+                     <IconeImagem className="h-4 w-4 text-[var(--text-muted)]" />}
                   </div>
                 )}
                 <div className="flex-1 min-w-0">

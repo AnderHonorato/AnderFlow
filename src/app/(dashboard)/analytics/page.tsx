@@ -144,7 +144,17 @@ export default async function AnalyticsPage() {
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm">
             <Calendar className="mr-2 h-4 w-4" />
-            Últimos 12 meses
+            Ultimos 12 meses
+          </Button>
+          <a href="/analytics/ai-performance">
+            <Button variant="outline" size="sm">Performance IA</Button>
+          </a>
+          <a href="/analytics/sentiment">
+            <Button variant="outline" size="sm">Sentimento</Button>
+          </a>
+          <Button variant="outline" size="sm">
+            <Download className="mr-2 h-4 w-4" />
+            Exportar
           </Button>
           <Button variant="outline" size="sm">
             <Download className="mr-2 h-4 w-4" />

@@ -1,3 +1,4 @@
+import { createHash } from 'crypto'
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getSessionUser } from '@/lib/auth-utils'
@@ -24,6 +25,11 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
     const body = await request.json()
     const { signature, signatureUrl } = body
+    const signatureBase64 = signature
+
+    const verificationHash = createHash('sha256')
+      .update(contract.content + signatureBase64 + user.id + new Date().toISOString().split('T')[0])
+      .digest('hex')
 
     await prisma.contract.update({
       where: { id },
@@ -33,6 +39,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         signature: signature || null,
         signatureUrl: signatureUrl || null,
         signerIp: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || '127.0.0.1',
+        verificationHash,
       },
     })
 

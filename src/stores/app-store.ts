@@ -1,6 +1,19 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 
+export const usePerfilStore = create<{
+  fotoPerfil: string | null
+  setFotoPerfil: (url: string | null) => void
+}>()(
+  persist(
+    (set) => ({
+      fotoPerfil: null,
+      setFotoPerfil: (url) => set({ fotoPerfil: url }),
+    }),
+    { name: 'anderflow-perfil' }
+  )
+)
+
 export const useUIStore = create<{
   sidebarOpen: boolean
   mobileMenuOpen: boolean
@@ -29,16 +42,19 @@ export const useOnlineStore = create<{
   onlineNow: number
   maxSimultaneous: number
   visitsToday: number
-  setStats: (stats: { onlineNow: number; maxSimultaneous: number; totalVisitsToday: number }) => void
+  totalHistorico: number
+  setStats: (stats: { onlineNow: number; maxSimultaneous: number; totalVisitsToday: number; totalHistorico?: number }) => void
 }>((set) => ({
   onlineNow: 0,
   maxSimultaneous: 0,
   visitsToday: 0,
+  totalHistorico: 0,
   setStats: (stats) =>
     set({
       onlineNow: stats.onlineNow,
       maxSimultaneous: stats.maxSimultaneous,
       visitsToday: stats.totalVisitsToday,
+      totalHistorico: stats.totalHistorico ?? 0,
     }),
 }))
 

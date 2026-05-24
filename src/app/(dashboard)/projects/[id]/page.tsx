@@ -138,7 +138,7 @@ export default function ProjectDetailPage() {
     })
   }
 
-  const setDefaultSteps = (projectData: any) => {
+  const setDefaultSteps = useCallback((projectData: any) => {
     const hasBriefing = !!projectData.briefing
     const init = DEFAULT_STEPS.map(s => ({
       id: s.id,
@@ -158,7 +158,7 @@ export default function ProjectDetailPage() {
       setHistory(initHistory)
       try { localStorage.setItem(`project_history_${id}`, JSON.stringify(initHistory)) } catch {}
     }
-  }
+  }, [id])
 
   const totalDays = Object.values(stepTimes).reduce((sum, d) => sum + d, 0)
   const totalWithMargin = Math.ceil(totalDays * (1 + delayMargin / 100))
@@ -197,7 +197,7 @@ export default function ProjectDetailPage() {
         setLoading(false)
       })
       .catch(() => setLoading(false))
-  }, [id])
+  }, [id, setDefaultSteps])
 
   useEffect(() => {
     if (!id || !isAdmin) return
@@ -278,6 +278,25 @@ export default function ProjectDetailPage() {
   }, [id])
 
   useEffect(() => { fetchTasks() }, [fetchTasks])
+
+  useEffect(() => {
+    if (project?.stepsData) {
+      try {
+        const data = JSON.parse(project.stepsData)
+        if (data?.riskAnalysis) {
+          setRiskAnalysis(data.riskAnalysis)
+        }
+      } catch {}
+    }
+    fetch('/api/settings?keys=notion_token,notion_database_id')
+      .then(r => r.json())
+      .then(json => {
+        if (json.data?.notion_token && json.data?.notion_database_id) {
+          setNotionConfigured(true)
+        }
+      })
+      .catch(() => {})
+  }, [project])
 
   const handleAddDependency = async (taskId: string, dependsOnId: string) => {
     setDepLoading(true)
@@ -934,25 +953,6 @@ export default function ProjectDetailPage() {
     setRiskLoading(false)
   }
 
-  useEffect(() => {
-    if (project?.stepsData) {
-      try {
-        const data = JSON.parse(project.stepsData)
-        if (data?.riskAnalysis) {
-          setRiskAnalysis(data.riskAnalysis)
-        }
-      } catch {}
-    }
-    fetch('/api/settings?keys=notion_token,notion_database_id')
-      .then(r => r.json())
-      .then(json => {
-        if (json.data?.notion_token && json.data?.notion_database_id) {
-          setNotionConfigured(true)
-        }
-      })
-      .catch(() => {})
-  }, [project])
-
   const exportToNotion = async () => {
     const notionToken = prompt('Digite o token do Notion (integration secret):')
     const databaseId = prompt('Digite o database ID do Notion:')
@@ -990,7 +990,7 @@ export default function ProjectDetailPage() {
             <a href={`/projects/${id}/okrs`}><Target className="mr-1 h-3 w-3" /> OKRs</a>
           </Button>
           <Button variant="outline" size="sm" asChild className="h-7 text-[11px]">
-            <a href={`/projects/${id}/present`}><Presentation className="mr-1 h-3 w-3" /> Apresentar</a>
+            <a href={`/projects/${id}/dependencies`}><GitBranch className="mr-1 h-3 w-3" /> Dependencias</a>
           </Button>
           {isAdmin && (
             <>

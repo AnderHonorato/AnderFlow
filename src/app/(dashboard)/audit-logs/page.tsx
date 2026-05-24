@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -37,7 +37,7 @@ export default function AuditLogsPage() {
   const [page, setPage] = useState(1)
   const [pagination, setPagination] = useState<any>(null)
 
-  const loadLogs = async (p = 1) => {
+  const loadLogs = useCallback(async (p = 1) => {
     setLoading(true)
     try {
       const params = new URLSearchParams()
@@ -51,9 +51,9 @@ export default function AuditLogsPage() {
       setPagination(json.pagination)
     } catch {}
     setLoading(false)
-  }
+  }, [entityFilter])
 
-  useEffect(() => { loadLogs(page) }, [page, entityFilter])
+  useEffect(() => { loadLogs(page) }, [page, entityFilter, loadLogs])
 
   const filtered = logs.filter(log => {
     if (!search) return true

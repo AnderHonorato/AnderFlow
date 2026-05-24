@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/rules-of-hooks */
 let baileys: any = undefined
 let qrcode: any = undefined
 let whatAi: any = undefined

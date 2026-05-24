@@ -1,13 +1,14 @@
 'use client'
 
 import { useState, useRef, useEffect, useCallback, useMemo, useId } from 'react'
+import Image from 'next/image'
 import { motion, AnimatePresence as FMAnimatePresence } from 'framer-motion'
 import { useSession } from 'next-auth/react'
 import { usePathname } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { toast } from 'sonner'
-import { Send, X, Plus, Trash2, Maximize2, Minimize2, PanelLeft, Paperclip, Image, Download, ChevronLeft, ChevronRight, Pin, ThumbsUp, ThumbsDown, Reply, CornerDownRight, Brain, AlertTriangle, ChevronDown, Bug, ChevronUp, Copy } from 'lucide-react'
+import { Send, X, Plus, Trash2, Maximize2, Minimize2, PanelLeft, Paperclip, Image as ImagemIcone, Download, ChevronLeft, ChevronRight, Pin, ThumbsUp, ThumbsDown, Reply, CornerDownRight, Brain, AlertTriangle, ChevronDown, Bug, ChevronUp, Copy } from 'lucide-react'
 import { replaceIcons } from './chat-icons'
 
 const THINKING = [
@@ -85,6 +86,8 @@ function ReasoningStream({lines,active}:{lines:string[];active:boolean}){
   const charIdxRef=useRef(0)
   const animRef=useRef<ReturnType<typeof setInterval>|null>(null)
   useEffect(()=>{
+    const vis=lines.slice(-3)
+    while(vis.length<3)vis.unshift('')
     if(!active||vis.every(l=>!l)){rIdxRef.current=0;charIdxRef.current=0;setRIdx(0);setCharIdx(0);if(animRef.current)clearInterval(animRef.current);return}
     rIdxRef.current=0;charIdxRef.current=0;setRIdx(0);setCharIdx(0)
     const pump=()=>{
@@ -175,6 +178,7 @@ export function AIFab(){
   const[thinkSec,setThinkSec]=useState(0)
   const[thinkExpanded,setThinkExpanded]=useState(false)
   const autoTimer=useRef<ReturnType<typeof setTimeout>|null>(null)
+  const autoShowRef=useRef(autoShow)
   const thinkStart=useRef(0)
   const abortRef=useRef<AbortController|null>(null)
   const sStreamContent=useRef('')
@@ -311,8 +315,8 @@ useEffect(()=>{setWelcomeIdx(0);setWelcomeStarKey(p=>p+1)},[cn])
   useEffect(()=>{if(streamActive&&streamPhase==='thinking'&&reasoningLines.length===0){const r=Math.floor(Math.random()*THINKING.length);setTi(r);tt.current=setInterval(()=>setTi(p=>{let n=Math.floor(Math.random()*THINKING.length);return n===p?(n+1)%THINKING.length:n}),3000)}else{if(tt.current)clearInterval(tt.current)}return()=>{if(tt.current)clearInterval(tt.current)}},[streamActive,streamPhase,reasoningLines.length])
   useEffect(()=>{const e=ta.current;if(!e)return;e.style.height='auto';e.style.height=Math.min(e.scrollHeight,120)+'px'},[inp])
   const exPid=useCallback(()=>{const m=pp?.match(/\/projects\/([a-zA-Z0-9_-]+)/);return m?m[1]:undefined},[pp])
-  const lCnv=useCallback(async()=>{try{const r=await fetch('/api/ai/conversations');const j=await r.json();const d=Array.isArray(j.data)?j.data.filter(Boolean):[];setCn(d.map((c:Cnv)=>({...c,pinned:c.pinned||false})))}catch{setCn([])}},[op])
-  const lMs=useCallback(async(id:string)=>{try{const r=await fetch(`/api/ai/conversations/${id}`);const j=await r.json();const arr=(j.data?.messages||[]).map((m:any)=>{const rn=extractReasoning(m.content||'');return{...m,reasoning:rn||undefined,content:m.content?.replace(/\[PENSAMENTO\][\s\S]*?\[\/PENSAMENTO\]\n?/g,'')||''}});setMs(arr)}catch{}},[op])
+  const lCnv=useCallback(async()=>{try{const r=await fetch('/api/ai/conversations');const j=await r.json();const d=Array.isArray(j.data)?j.data.filter(Boolean):[];setCn(d.map((c:Cnv)=>({...c,pinned:c.pinned||false})))}catch{setCn([])}},[])
+  const lMs=useCallback(async(id:string)=>{try{const r=await fetch(`/api/ai/conversations/${id}`);const j=await r.json();const arr=(j.data?.messages||[]).map((m:any)=>{const rn=extractReasoning(m.content||'');return{...m,reasoning:rn||undefined,content:m.content?.replace(/\[PENSAMENTO\][\s\S]*?\[\/PENSAMENTO\]\n?/g,'')||''}});setMs(arr)}catch{}},[])
   useEffect(()=>{if(op)lCnv()},[op,lCnv])
   useEffect(()=>{if(!aid||sl.current)return;lMs(aid)},[aid,lMs])
   useEffect(()=>{
@@ -422,10 +426,11 @@ useEffect(()=>{setWelcomeIdx(0);setWelcomeStarKey(p=>p+1)},[cn])
       if(ci<=msg.length)setAutoMsgDisp(msg.slice(0,ci))
       else{clearInterval(autoTypingRef.current!);autoTypingRef.current=null}
     },35+Math.random()*30)
-    autoTimer.current=setTimeout(()=>{setWv(false);setAutoMsgDisp('');setAutoMsgFull('');if(autoTypingRef.current){clearInterval(autoTypingRef.current);autoTypingRef.current=null};autoTimer.current=setTimeout(()=>autoShow(),180000+Math.random()*240000)},8000+msg.length*50)
+    autoTimer.current=setTimeout(()=>{setWv(false);setAutoMsgDisp('');setAutoMsgFull('');if(autoTypingRef.current){clearInterval(autoTypingRef.current);autoTypingRef.current=null};autoTimer.current=setTimeout(()=>autoShowRef.current(),180000+Math.random()*240000)},8000+msg.length*50)
   }
+  autoShowRef.current=autoShow
   useEffect(()=>{
-    if(!op){autoTimer.current=setTimeout(()=>autoShow(),120000)}
+    if(!op){autoTimer.current=setTimeout(()=>autoShowRef.current(),120000)}
     else{if(autoTimer.current)clearTimeout(autoTimer.current)}
     return()=>{if(autoTimer.current)clearTimeout(autoTimer.current)}
   },[op])
@@ -618,9 +623,9 @@ useEffect(()=>{setWelcomeIdx(0);setWelcomeStarKey(p=>p+1)},[cn])
             {rpMsg&&(<div className={`flex mb-1 ${ia?'justify-start ml-8':'justify-end mr-8'}`}><div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-[var(--surface-2)] border-l-2 border-l-[var(--accent)] text-[10px] text-[var(--text-3)] max-w-[200px] truncate"><CornerDownRight className="h-3 w-3 shrink-0"/><span className="truncate">{rpMsg.content?.slice(0,40)||'(imagem)'}</span></div></div>)}
             {ia&&msg.reasoning&&<ReasoningBox content={msg.reasoning} msgIdx={i} onReport={reportErr}/>}
             <div className={`flex group ${ia?'justify-start':'justify-end'}`}><div className={`flex items-start gap-2 max-w-[90%] ${ia?'':'flex-row-reverse'}`}>
-              {ia?<AIA/>:session?.user?.image?<img src={session.user.image} alt="" className="h-7 w-7 rounded-full shrink-0 mt-0.5 object-cover"/>:<div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--accent)] text-[10px] font-[500] text-white mt-0.5">{session?.user?.name?.slice(0,2).toUpperCase()||'VC'}</div>}
+              {ia?<AIA/>:session?.user?.image?<Image src={session.user.image} alt="" width={28} height={28} className="rounded-full shrink-0 mt-0.5 object-cover"/>:<div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--accent)] text-[10px] font-[500] text-white mt-0.5">{session?.user?.name?.slice(0,2).toUpperCase()||'VC'}</div>}
               <div className="min-w-0">
-                {imgs.length>0&&(<div className={`flex gap-1.5 flex-wrap mb-1.5 ${ia?'':'justify-end'}`}>{imgs.map((img,ii)=>(<button key={ii} title={`Ver ${img.name}`} onClick={()=>setVi(vim.indexOf(img))} className="rounded-xl border border-[var(--border)] overflow-hidden hover:ring-2 ring-[var(--accent)]/40 transition-all"><img src={img.url} alt={img.name} className="h-16 w-16 object-cover"/></button>))}</div>)}
+                {imgs.length>0&&(<div className={`flex gap-1.5 flex-wrap mb-1.5 ${ia?'':'justify-end'}`}>{imgs.map((img,ii)=>(<button key={ii} title={`Ver ${img.name}`} onClick={()=>setVi(vim.indexOf(img))} className="rounded-xl border border-[var(--border)] overflow-hidden hover:ring-2 ring-[var(--accent)]/40 transition-all"><Image src={img.url} alt={img.name} width={64} height={64} className="object-cover"/></button>))}</div>)}
                 {docs.length>0&&(<div className={`flex gap-1.5 flex-wrap mb-1.5 ${ia?'':'justify-end'}`}>{docs.map((doc,di)=>(<div key={di} className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-[var(--surface)] border border-[var(--border)] text-[11px] text-[var(--text-3)]"><Paperclip className="h-3 w-3"/>{doc.name}</div>))}</div>)}
                 {msg.content&&(ia?<div className="text-[12px] leading-relaxed whitespace-pre-wrap break-words"><MD content={msg.content}/></div>:<div className="rounded-2xl px-3 py-2 bg-[var(--surface-2)] rounded-tr-sm"><p className="text-[12px] leading-relaxed whitespace-pre-wrap break-words text-[var(--text)]">{msg.content}</p></div>)}
                 {msg.liked!==undefined&&(<p className="text-[9px] text-[var(--success)] mt-0.5 px-1">Agradecemos pelo feedback!</p>)}
@@ -663,7 +668,7 @@ useEffect(()=>{setWelcomeIdx(0);setWelcomeStarKey(p=>p+1)},[cn])
 
         {rp&&(<div className="px-3 pb-1"><div className="flex items-center gap-2 bg-[var(--surface-2)] rounded-lg border border-[var(--border)] px-2.5 py-1.5"><div className="flex-1 min-w-0"><p className="text-[10px] text-[var(--text-3)]">Respondendo a {rp.role==='assistant'?'Metrys':session?.user?.name||'Voce'}</p><p className="text-[11px] text-[var(--text)] truncate">{rp.content?.slice(0,60)||'(imagem)'}</p></div><button title="Cancelar resposta" onClick={()=>setRp(null)} className="text-[var(--text-3)] hover:text-[var(--destructive)]"><X className="h-3.5 w-3.5"/></button></div></div>)}
 
-        {pf.length>0&&(<div className="px-3 pb-1 flex gap-1.5 flex-wrap">{pf.map((f,i)=>(<div key={i} className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-[var(--surface-2)] border border-[var(--border)] text-[11px]">{f.isImg?<img src={f.url} alt={f.name} className="h-5 w-5 rounded object-cover"/>:<><Paperclip className="h-3 w-3 text-[var(--text-3)]"/><span className="text-[var(--text-2)] truncate max-w-[100px]">{f.name}</span></>}<button title="Remover anexo" onClick={()=>rf(i)} className="text-[var(--text-3)] hover:text-[var(--destructive)]"><X className="h-3 w-3"/></button></div>))}</div>)}
+        {pf.length>0&&(<div className="px-3 pb-1 flex gap-1.5 flex-wrap">{pf.map((f,i)=>(<div key={i} className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-[var(--surface-2)] border border-[var(--border)] text-[11px]">{f.isImg?<Image src={f.url} alt={f.name} width={20} height={20} className="rounded object-cover"/>:<><Paperclip className="h-3 w-3 text-[var(--text-3)]"/><span className="text-[var(--text-2)] truncate max-w-[100px]">{f.name}</span></>}<button title="Remover anexo" onClick={()=>rf(i)} className="text-[var(--text-3)] hover:text-[var(--destructive)]"><X className="h-3 w-3"/></button></div>))}</div>)}
 
         <div className="px-2 pb-1"><div className="relative">
           <input title="Selecionar imagens" type="file" ref={ii} multiple accept="image/*" className="hidden" onChange={e=>{if(e.target.files)Array.from(e.target.files).forEach(f=>af(f));if(ii.current)ii.current.value=''}}/>
@@ -674,7 +679,7 @@ useEffect(()=>{setWelcomeIdx(0);setWelcomeStarKey(p=>p+1)},[cn])
               <button onClick={()=>setModel('metrys-pro')} className={`px-1.5 py-0.5 text-[9px] font-[500] transition-colors ${model==='metrys-pro'?'bg-[var(--accent)] text-white':'text-[var(--text-3)] hover:text-[var(--text)]'}`}>Pro</button>
               <button onClick={()=>setModel('metrys-flash')} className={`px-1.5 py-0.5 text-[9px] font-[500] transition-colors ${model==='metrys-flash'?'bg-[var(--accent)] text-white':'text-[var(--text-3)] hover:text-[var(--text)]'}`}>Flash</button>
             </div>
-            <button onClick={()=>ii.current?.click()} className="h-7 w-7 flex items-center justify-center rounded-lg text-[var(--text-3)] hover:text-[var(--accent)] hover:bg-[var(--accent-subtle)] transition-all shrink-0" title="Imagem"><Image className="h-3.5 w-3.5"/></button>
+            <button onClick={()=>ii.current?.click()} className="h-7 w-7 flex items-center justify-center rounded-lg text-[var(--text-3)] hover:text-[var(--accent)] hover:bg-[var(--accent-subtle)] transition-all shrink-0" title="Imagem"><ImagemIcone className="h-3.5 w-3.5"/></button>
             <button onClick={()=>fi.current?.click()} className="h-7 w-7 flex items-center justify-center rounded-lg text-[var(--text-3)] hover:text-[var(--accent)] hover:bg-[var(--accent-subtle)] transition-all shrink-0" title="Arquivo"><Paperclip className="h-3.5 w-3.5"/></button>
             {ms.length>0&&(<div className="group/tok relative shrink-0 flex items-center">
               <button title="Tokens" className="h-7 px-1.5 flex items-center gap-1 rounded-lg text-[var(--text-3)] hover:bg-[var(--surface-hover)] transition-all shrink-0">
@@ -703,6 +708,6 @@ useEffect(()=>{setWelcomeIdx(0);setWelcomeStarKey(p=>p+1)},[cn])
       )}
     </FMAnimatePresence>
 
-    <Dialog open={vi!==null} onOpenChange={()=>setVi(null)}><DialogContent className="max-w-3xl max-h-[90vh] p-0 overflow-hidden bg-[var(--bg)] border-[var(--border)]">{vi!==null&&vim[vi]&&(<div className="flex flex-col h-full max-h-[85vh]"><div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border)] shrink-0"><span className="text-[12px] font-[500] text-[var(--text)] truncate">{vim[vi].name}</span><div className="flex items-center gap-1">{vim.length>1&&(<div className="flex items-center gap-0.5 mr-2"><button title="Anterior" onClick={()=>setVi(Math.max(0,vi-1))} disabled={vi===0} className="h-7 w-7 flex items-center justify-center rounded-lg hover:bg-[var(--surface-hover)] text-[var(--text-3)] disabled:opacity-30"><ChevronLeft className="h-4 w-4"/></button><span className="text-[11px] text-[var(--text-3)]">{vi+1}/{vim.length}</span><button title="Proxima" onClick={()=>setVi(Math.min(vim.length-1,vi+1))} disabled={vi===vim.length-1} className="h-7 w-7 flex items-center justify-center rounded-lg hover:bg-[var(--surface-hover)] text-[var(--text-3)] disabled:opacity-30"><ChevronRight className="h-4 w-4"/></button></div>)}<a title="Baixar imagem" href={vim[vi].url} download={vim[vi].name} className="h-7 w-7 flex items-center justify-center rounded-lg hover:bg-[var(--surface-hover)] text-[var(--text-3)]"><Download className="h-4 w-4"/></a><button title="Fechar visualizador" onClick={()=>setVi(null)} className="h-7 w-7 flex items-center justify-center rounded-lg hover:bg-[var(--surface-hover)] text-[var(--text-3)]"><X className="h-4 w-4"/></button></div></div><div className="flex-1 flex items-center justify-center p-4 overflow-auto"><img src={vim[vi].url} alt={vim[vi].name} className="max-w-full max-h-[70vh] object-contain rounded-lg"/></div></div>)}</DialogContent></Dialog>
+    <Dialog open={vi!==null} onOpenChange={()=>setVi(null)}><DialogContent className="max-w-3xl max-h-[90vh] p-0 overflow-hidden bg-[var(--bg)] border-[var(--border)]">{vi!==null&&vim[vi]&&(<div className="flex flex-col h-full max-h-[85vh]"><div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border)] shrink-0"><span className="text-[12px] font-[500] text-[var(--text)] truncate">{vim[vi].name}</span><div className="flex items-center gap-1">{vim.length>1&&(<div className="flex items-center gap-0.5 mr-2"><button title="Anterior" onClick={()=>setVi(Math.max(0,vi-1))} disabled={vi===0} className="h-7 w-7 flex items-center justify-center rounded-lg hover:bg-[var(--surface-hover)] text-[var(--text-3)] disabled:opacity-30"><ChevronLeft className="h-4 w-4"/></button><span className="text-[11px] text-[var(--text-3)]">{vi+1}/{vim.length}</span><button title="Proxima" onClick={()=>setVi(Math.min(vim.length-1,vi+1))} disabled={vi===vim.length-1} className="h-7 w-7 flex items-center justify-center rounded-lg hover:bg-[var(--surface-hover)] text-[var(--text-3)] disabled:opacity-30"><ChevronRight className="h-4 w-4"/></button></div>)}<a title="Baixar imagem" href={vim[vi].url} download={vim[vi].name} className="h-7 w-7 flex items-center justify-center rounded-lg hover:bg-[var(--surface-hover)] text-[var(--text-3)]"><Download className="h-4 w-4"/></a><button title="Fechar visualizador" onClick={()=>setVi(null)} className="h-7 w-7 flex items-center justify-center rounded-lg hover:bg-[var(--surface-hover)] text-[var(--text-3)]"><X className="h-4 w-4"/></button></div></div><div className="flex-1 flex items-center justify-center p-4 overflow-auto relative"><Image src={vim[vi].url} alt={vim[vi].name} fill className="object-contain rounded-lg" sizes="80vw" /></div></div>)}</DialogContent></Dialog>
   </>)
 }

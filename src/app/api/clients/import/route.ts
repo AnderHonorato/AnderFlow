@@ -73,7 +73,8 @@ export async function POST(request: NextRequest) {
 
       await prisma.channel.create({
         data: {
-          userId: newClient.id,
+          name: parsed.name || 'Geral',
+          clientId: newClient.id,
         },
       }).catch(() => {})
 

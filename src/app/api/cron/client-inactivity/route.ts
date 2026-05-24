@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
     activeClients.map(async (client) => {
       const [lastMessage, lastTicket, lastProjectUpdate] = await Promise.all([
         prisma.message.findFirst({
-          where: { userId: client.id },
+          where: { senderId: client.id },
           orderBy: { createdAt: 'desc' },
           select: { createdAt: true },
         }),
