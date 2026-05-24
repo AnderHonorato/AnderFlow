@@ -105,6 +105,20 @@ export default function ProjectDetailPage() {
   const [completingStepId, setCompletingStepId] = useState<number | null>(null)
   const [checklistLoading, setChecklistLoading] = useState(false)
 
+  const [cloneOpen, setCloneOpen] = useState(false)
+  const [cloneName, setCloneName] = useState('')
+  const [cloneClientId, setCloneClientId] = useState('')
+  const [cloneCopyTasks, setCloneCopyTasks] = useState(true)
+  const [cloneCopyMilestones, setCloneCopyMilestones] = useState(true)
+  const [cloneSaving, setCloneSaving] = useState(false)
+  const [clients, setClients] = useState<any[]>([])
+
+  const [riskAnalysis, setRiskAnalysis] = useState<any>(null)
+  const [riskLoading, setRiskLoading] = useState(false)
+  const [mitigatedRisks, setMitigatedRisks] = useState<Set<number>>(new Set())
+
+  const [notionConfigured, setNotionConfigured] = useState(false)
+
   const handlePrintModal = (modalSelector: string) => {
     const modal = document.querySelector(modalSelector)
     if (!modal) { window.print(); return }
@@ -872,6 +886,99 @@ export default function ProjectDetailPage() {
     return trackerEl
   }
 
+  const openCloneDialog = async () => {
+    setCloneName(`Cópia de ${project.name}`)
+    setCloneClientId(project.clientId || '')
+    setCloneOpen(true)
+    const res = await fetch('/api/users?role=CLIENT').then(r => r.json())
+    setClients(res.data || [])
+  }
+
+  const handleClone = async () => {
+    if (!cloneName.trim() || !cloneClientId) { toast.error('Preencha todos os campos'); return }
+    setCloneSaving(true)
+    const res = await fetch(`/api/projects/${id}/clone`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: cloneName,
+        clientId: cloneClientId,
+        copyTasks: cloneCopyTasks,
+        copyMilestones: cloneCopyMilestones,
+      }),
+    })
+    if (res.ok) {
+      const json = await res.json()
+      toast.success('Projeto clonado com sucesso!', {
+        action: { label: 'Abrir novo projeto', onClick: () => window.open(`/projects/${json.data.id}`, '_blank') },
+      })
+      setCloneOpen(false)
+    } else {
+      toast.error('Erro ao clonar projeto')
+    }
+    setCloneSaving(false)
+  }
+
+  const fetchRiskAnalysis = async () => {
+    setRiskLoading(true)
+    try {
+      const res = await fetch(`/api/projects/${id}/risk-analysis`, { method: 'POST' })
+      const json = await res.json()
+      if (json.data) {
+        setRiskAnalysis(json.data)
+        setMitigatedRisks(new Set())
+      } else {
+        toast.error(json.error || 'Erro na análise')
+      }
+    } catch { toast.error('Erro ao chamar IA') }
+    setRiskLoading(false)
+  }
+
+  useEffect(() => {
+    if (project?.stepsData) {
+      try {
+        const data = JSON.parse(project.stepsData)
+        if (data?.riskAnalysis) {
+          setRiskAnalysis(data.riskAnalysis)
+        }
+      } catch {}
+    }
+    fetch('/api/settings?keys=notion_token,notion_database_id')
+      .then(r => r.json())
+      .then(json => {
+        if (json.data?.notion_token && json.data?.notion_database_id) {
+          setNotionConfigured(true)
+        }
+      })
+      .catch(() => {})
+  }, [project])
+
+  const exportToNotion = async () => {
+    const notionToken = prompt('Digite o token do Notion (integration secret):')
+    const databaseId = prompt('Digite o database ID do Notion:')
+    if (!notionToken || !databaseId) return
+    const res = await fetch('/api/integrations/notion', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ projectId: id, notionToken, databaseId }),
+    })
+    if (res.ok) {
+      const json = await res.json()
+      toast.success('Exportado para o Notion!', {
+        action: { label: 'Abrir', onClick: () => window.open(json.data.notionPageUrl, '_blank') },
+      })
+    } else {
+      toast.error('Erro ao exportar para o Notion')
+    }
+  }
+
+  const riskLevelColors: Record<string, string> = {
+    critical: 'var(--destructive)',
+    high: 'var(--warning)',
+    medium: 'var(--info)',
+    low: 'var(--success)',
+  }
+
   return (
     <div className="p-6 space-y-6 max-w-4xl mx-auto animate-page-enter">
       <div className="flex items-center justify-between">
@@ -897,12 +1004,84 @@ export default function ProjectDetailPage() {
                 <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M8 2v10M4 8l4 4 4-4M2 14h12"/></svg>
                 Importar CSV
               </Button>
+              <Button variant="outline" size="sm" onClick={openCloneDialog} className="h-7 text-[11px] gap-1">
+                <Copy className="h-3 w-3" /> Clonar projeto
+              </Button>
+              <Button variant="outline" size="sm" onClick={exportToNotion} className="h-7 text-[11px] gap-1">
+                <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M8 2v12M2 8h12"/></svg>
+                Exportar Notion
+              </Button>
             </>
           )}
         </div>
       </div>
 
       {project.status !== 'DRAFT' && <SatisfactionScorecard projectId={id} />}
+
+      {riskAnalysis && (
+        <Card>
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-[14px] flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4" style={{ color: riskLevelColors[riskAnalysis.overallRisk] || 'var(--text-3)' }} />
+                Análise de Risco
+              </CardTitle>
+              <Button variant="ghost" size="sm" onClick={fetchRiskAnalysis} disabled={riskLoading} className="h-7 text-[11px]">
+                {riskLoading ? 'Atualizando...' : 'Atualizar análise'}
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="pt-0 space-y-2">
+            <Badge
+              variant={riskAnalysis.overallRisk === 'critical' ? 'destructive' : riskAnalysis.overallRisk === 'high' ? 'warning' : riskAnalysis.overallRisk === 'medium' ? 'info' : 'success'}
+              className="text-[11px]"
+            >
+              Risco {riskAnalysis.overallRisk === 'critical' ? 'Crítico' : riskAnalysis.overallRisk === 'high' ? 'Alto' : riskAnalysis.overallRisk === 'medium' ? 'Médio' : 'Baixo'}
+            </Badge>
+            {riskAnalysis.risks?.map((risk: any, i: number) => (
+              <div key={i} className={`flex items-start gap-3 p-2.5 rounded-lg ${mitigatedRisks.has(i) ? 'opacity-50 bg-[var(--surface-2)]' : 'bg-[var(--surface-2)]'}`}>
+                <div className="mt-0.5">
+                  {risk.level === 'critical' ? <span className="text-red-500 text-lg">●</span> :
+                   risk.level === 'high' ? <span className="text-orange-500 text-lg">●</span> :
+                   risk.level === 'medium' ? <span className="text-blue-500 text-lg">●</span> :
+                   <span className="text-green-500 text-lg">●</span>}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <p className="text-[12px] font-[500] text-[var(--text)]">{risk.description}</p>
+                    <Badge variant="secondary" className="text-2xs">{risk.category}</Badge>
+                  </div>
+                  <p className="text-[11px] text-[var(--text-2)] mt-0.5">{risk.mitigation}</p>
+                </div>
+                {!mitigatedRisks.has(i) && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 text-[10px] shrink-0"
+                    onClick={() => setMitigatedRisks(prev => new Set(prev).add(i))}
+                  >
+                    Mitigar
+                  </Button>
+                )}
+                {mitigatedRisks.has(i) && (
+                  <Badge variant="success" className="text-2xs shrink-0 h-5">Mitigado</Badge>
+                )}
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
+      {isAdmin && !riskAnalysis && (
+        <Card className="border-dashed border-[var(--border)]">
+          <CardContent className="p-4 text-center">
+            <p className="text-[12px] text-[var(--text-3)] mb-2">Análise de risco por IA disponível</p>
+            <Button variant="outline" size="sm" onClick={fetchRiskAnalysis} disabled={riskLoading} className="h-7 text-[11px]">
+              {riskLoading ? 'Analisando...' : 'Gerar análise de risco'}
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardContent className="p-4">
@@ -1788,6 +1967,47 @@ export default function ProjectDetailPage() {
           </DialogContent>
         </Dialog>
       )}
+
+      <Dialog open={cloneOpen} onOpenChange={setCloneOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Clonar Projeto</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <div>
+              <label className="text-[12px] font-[500] text-[var(--text-2)] mb-1 block">Nome do novo projeto</label>
+              <Input value={cloneName} onChange={e => setCloneName(e.target.value)} placeholder="Nome do projeto" />
+            </div>
+            <div>
+              <label className="text-[12px] font-[500] text-[var(--text-2)] mb-1 block">Cliente</label>
+              <select
+                value={cloneClientId}
+                onChange={e => setCloneClientId(e.target.value)}
+                className="w-full h-9 px-3 text-[13px] rounded-lg border border-[var(--border)] bg-transparent text-[var(--text)]"
+              >
+                <option value="">Selecione um cliente</option>
+                {clients.map((c: any) => (
+                  <option key={c.id} value={c.id}>{c.name} ({c.email})</option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-2">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" checked={cloneCopyTasks} onChange={e => setCloneCopyTasks(e.target.checked)} className="w-3.5 h-3.5 rounded accent-[var(--accent)]" />
+                <span className="text-[12px] text-[var(--text)]">Copiar tarefas</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" checked={cloneCopyMilestones} onChange={e => setCloneCopyMilestones(e.target.checked)} className="w-3.5 h-3.5 rounded accent-[var(--accent)]" />
+                <span className="text-[12px] text-[var(--text)]">Copiar marcos</span>
+              </label>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCloneOpen(false)}>Cancelar</Button>
+            <Button onClick={handleClone} disabled={cloneSaving}>{cloneSaving ? 'Clonando...' : 'Clonar'}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

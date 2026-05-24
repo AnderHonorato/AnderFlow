@@ -7,12 +7,13 @@ import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { toast } from 'sonner'
-import { Plus, Trash2, Webhook, RefreshCw, ExternalLink, Check } from 'lucide-react'
+import { Plus, Trash2, Webhook, RefreshCw, ExternalLink, Check, X } from 'lucide-react'
 import crypto from 'crypto'
 
 const WEBHOOK_EVENTS = [
   { id: 'project_created', label: 'Projeto criado' },
   { id: 'project_completed', label: 'Projeto concluído' },
+  { id: 'project.status_changed', label: 'Status de projeto alterado' },
   { id: 'ticket_created', label: 'Ticket criado' },
   { id: 'invoice_paid', label: 'Fatura paga' },
   { id: 'contract_signed', label: 'Contrato assinado' },
@@ -29,6 +30,9 @@ export default function WebhooksSettingsPage() {
   const [selectedEvents, setSelectedEvents] = useState<string[]>([])
   const [saving, setSaving] = useState(false)
   const [testing, setTesting] = useState<Record<string, boolean>>({})
+  const [tab, setTab] = useState<'endpoints' | 'deliveries'>('endpoints')
+  const [deliveries, setDeliveries] = useState<any[]>([])
+  const [deliveriesLoading, setDeliveriesLoading] = useState(false)
 
   const loadEndpoints = async () => {
     try {
@@ -120,6 +124,46 @@ export default function WebhooksSettingsPage() {
     setSecret(Array.from(crypto.getRandomValues(new Uint8Array(32)), b => b.toString(16).padStart(2, '0')).join(''))
   }
 
+  const loadDeliveries = async () => {
+    setDeliveriesLoading(true)
+    const since = new Date()
+    since.setDate(since.getDate() - 7)
+    const res = await fetch(`/api/webhooks/deliveries?since=${since.toISOString()}`)
+    const json = await res.json()
+    setDeliveries(json.data || [])
+    setDeliveriesLoading(false)
+  }
+
+  useEffect(() => {
+    if (tab === 'deliveries') loadDeliveries()
+  }, [tab])
+
+  const handleResend = async (delivery: any) => {
+    if (!delivery.endpoint?.url) return
+    try {
+      const res = await fetch(delivery.endpoint.url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Event': delivery.event,
+          'X-Signature': delivery.endpoint.secret
+            ? crypto.createHmac('sha256', delivery.endpoint.secret).update(JSON.stringify(delivery.payload)).digest('hex')
+            : '',
+        },
+        body: JSON.stringify(delivery.payload),
+        signal: AbortSignal.timeout(10000),
+      })
+      if (res.ok) {
+        toast.success('Reenviado com sucesso!')
+        loadDeliveries()
+      } else {
+        toast.error(`Erro ${res.status}`)
+      }
+    } catch {
+      toast.error('Falha ao reenviar')
+    }
+  }
+
   return (
     <div className="p-6 space-y-5 max-w-3xl mx-auto animate-page-enter">
       <div className="flex items-center justify-between">
@@ -127,73 +171,149 @@ export default function WebhooksSettingsPage() {
           <h1 className="text-[17px] font-[500]">Webhooks</h1>
           <p className="text-[12px] text-[var(--text-3)] mt-1">Configure endpoints para receber eventos em tempo real</p>
         </div>
-        <Button size="sm" onClick={() => setDialogOpen(true)}>
-          <Plus className="mr-1.5 h-3.5 w-3.5" /> Adicionar endpoint
-        </Button>
+        {tab === 'endpoints' && (
+          <Button size="sm" onClick={() => setDialogOpen(true)}>
+            <Plus className="mr-1.5 h-3.5 w-3.5" /> Adicionar endpoint
+          </Button>
+        )}
       </div>
 
-      {loading ? (
-        <div className="space-y-3">{[1,2].map(i => <div key={i} className="h-32 bg-[var(--surface-2)] rounded-xl animate-pulse" />)}</div>
-      ) : endpoints.length === 0 ? (
+      <div className="flex items-center gap-1 p-1 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] w-fit">
+        <button
+          onClick={() => setTab('endpoints')}
+          className={`px-4 py-1.5 text-[12px] font-[500] rounded-lg transition-all duration-150 ${
+            tab === 'endpoints' ? 'bg-[var(--surface)] text-[var(--text)] shadow-sm border border-[var(--border)]' : 'text-[var(--text-3)] hover:text-[var(--text-2)]'
+          }`}
+        >
+          Endpoints
+        </button>
+        <button
+          onClick={() => setTab('deliveries')}
+          className={`px-4 py-1.5 text-[12px] font-[500] rounded-lg transition-all duration-150 ${
+            tab === 'deliveries' ? 'bg-[var(--surface)] text-[var(--text)] shadow-sm border border-[var(--border)]' : 'text-[var(--text-3)] hover:text-[var(--text-2)]'
+          }`}
+        >
+          Log de entregas
+        </button>
+      </div>
+
+      {tab === 'endpoints' ? (
+        loading ? (
+          <div className="space-y-3">{[1,2].map(i => <div key={i} className="h-32 bg-[var(--surface-2)] rounded-xl animate-pulse" />)}</div>
+        ) : endpoints.length === 0 ? (
+          <Card>
+            <CardContent className="p-8 text-center">
+              <Webhook className="h-8 w-8 mx-auto mb-3 text-[var(--text-3)]" />
+              <p className="text-sm text-[var(--text-3)]">Nenhum webhook configurado</p>
+              <p className="text-xs text-[var(--text-3)] mt-1">Adicione um endpoint para começar a receber eventos</p>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="space-y-3">
+            {endpoints.map((ep) => (
+              <Card key={ep.id}>
+                <CardContent className="p-4">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Webhook className="h-4 w-4 text-[var(--accent)] shrink-0" />
+                        <p className="text-[14px] font-[500] text-[var(--text)] truncate">{ep.url}</p>
+                        <Badge variant={ep.isActive ? 'success' : 'secondary'} className="text-2xs">
+                          {ep.isActive ? 'Ativo' : 'Pausado'}
+                        </Badge>
+                      </div>
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        {ep.events.map((ev: string) => (
+                          <Badge key={ev} variant="outline" className="text-2xs border-[var(--border)]">
+                            {WEBHOOK_EVENTS.find(e => e.id === ev)?.label || ev}
+                          </Badge>
+                        ))}
+                      </div>
+                      {ep.deliveries?.length > 0 && (
+                        <div className="flex items-center gap-3 mt-3 text-[10px] text-[var(--text-3)]">
+                          <span>Últimas entregas:</span>
+                          {ep.deliveries.map((d: any) => (
+                            <span key={d.id} className={`px-1.5 py-0.5 rounded ${d.success ? 'bg-[var(--success)]/10 text-[var(--success)]' : 'bg-[var(--destructive)]/10 text-[var(--destructive)]'}`}>
+                              {d.statusCode || 'ERR'}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleTest(ep)}
+                        disabled={testing[ep.id]}
+                        className="h-7 text-[11px]"
+                      >
+                        {testing[ep.id] ? <RefreshCw className="h-3 w-3 animate-spin" /> : <ExternalLink className="h-3 w-3" />}
+                        Testar
+                      </Button>
+                      <Button variant="ghost" size="icon-sm" onClick={() => handleDelete(ep.id)}>
+                        <Trash2 className="h-3.5 w-3.5 text-[var(--text-3)]" />
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )
+      ) : deliveriesLoading ? (
+        <div className="space-y-3">{[1,2,3].map(i => <div key={i} className="h-12 bg-[var(--surface-2)] rounded-xl animate-pulse" />)}</div>
+      ) : deliveries.length === 0 ? (
         <Card>
           <CardContent className="p-8 text-center">
-            <Webhook className="h-8 w-8 mx-auto mb-3 text-[var(--text-3)]" />
-            <p className="text-sm text-[var(--text-3)]">Nenhum webhook configurado</p>
-            <p className="text-xs text-[var(--text-3)] mt-1">Adicione um endpoint para começar a receber eventos</p>
+            <p className="text-sm text-[var(--text-3)]">Nenhuma entrega nos últimos 7 dias</p>
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-3">
-          {endpoints.map((ep) => (
-            <Card key={ep.id}>
-              <CardContent className="p-4">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <Webhook className="h-4 w-4 text-[var(--accent)] shrink-0" />
-                      <p className="text-[14px] font-[500] text-[var(--text)] truncate">{ep.url}</p>
-                      <Badge variant={ep.isActive ? 'success' : 'secondary'} className="text-2xs">
-                        {ep.isActive ? 'Ativo' : 'Pausado'}
-                      </Badge>
-                    </div>
-                    <div className="flex flex-wrap gap-1 mt-2">
-                      {ep.events.map((ev: string) => (
-                        <Badge key={ev} variant="outline" className="text-2xs border-[var(--border)]">
-                          {WEBHOOK_EVENTS.find(e => e.id === ev)?.label || ev}
-                        </Badge>
-                      ))}
-                    </div>
-                    {ep.deliveries?.length > 0 && (
-                      <div className="flex items-center gap-3 mt-3 text-[10px] text-[var(--text-3)]">
-                        <span>Últimas entregas:</span>
-                        {ep.deliveries.map((d: any) => (
-                          <span key={d.id} className={`px-1.5 py-0.5 rounded ${d.success ? 'bg-[var(--success)]/10 text-[var(--success)]' : 'bg-[var(--destructive)]/10 text-[var(--destructive)]'}`}>
-                            {d.statusCode || 'ERR'}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleTest(ep)}
-                      disabled={testing[ep.id]}
-                      className="h-7 text-[11px]"
-                    >
-                      {testing[ep.id] ? <RefreshCw className="h-3 w-3 animate-spin" /> : <ExternalLink className="h-3 w-3" />}
-                      Testar
-                    </Button>
-                    <Button variant="ghost" size="icon-sm" onClick={() => handleDelete(ep.id)}>
-                      <Trash2 className="h-3.5 w-3.5 text-[var(--text-3)]" />
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+        <Card>
+          <CardContent className="p-0">
+            <table className="w-full text-[12px]">
+              <thead>
+                <tr className="border-b border-[var(--border)] text-[var(--text-3)]">
+                  <th className="text-left py-2.5 px-4 font-[500]">Evento</th>
+                  <th className="text-left py-2.5 px-4 font-[500]">Status</th>
+                  <th className="text-left py-2.5 px-4 font-[500]">HTTP</th>
+                  <th className="text-left py-2.5 px-4 font-[500]">Tentativas</th>
+                  <th className="text-left py-2.5 px-4 font-[500]">Data</th>
+                  <th className="text-right py-2.5 px-4 font-[500]">Ação</th>
+                </tr>
+              </thead>
+              <tbody>
+                {deliveries.map(d => (
+                  <tr key={d.id} className="border-b border-[var(--border)]/50 hover:bg-[var(--surface-2)]">
+                    <td className="py-2.5 px-4">
+                      <Badge variant="outline" className="text-2xs">{d.event}</Badge>
+                    </td>
+                    <td className="py-2.5 px-4">
+                      {d.success ? (
+                        <span className="text-[var(--success)] font-[500]">✓ OK</span>
+                      ) : (
+                        <span className="text-[var(--destructive)] font-[500]">✗ Erro</span>
+                      )}
+                    </td>
+                    <td className="py-2.5 px-4 text-[var(--text-3)]">{d.statusCode || '-'}</td>
+                    <td className="py-2.5 px-4 text-[var(--text-3)]">{d.attempts || 1}</td>
+                    <td className="py-2.5 px-4 text-[var(--text-3)]">
+                      {new Date(d.createdAt).toLocaleString('pt-BR')}
+                    </td>
+                    <td className="py-2.5 px-4 text-right">
+                      {!d.success && (
+                        <Button variant="ghost" size="sm" onClick={() => handleResend(d)} className="h-6 text-[10px]">
+                          Re-enviar
+                        </Button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </CardContent>
+        </Card>
       )}
 
       <Dialog open={dialogOpen} onOpenChange={(o) => { if (!o) handleClose() }}>

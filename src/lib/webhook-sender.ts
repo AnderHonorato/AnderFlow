@@ -9,6 +9,8 @@ export async function sendWebhook(event: string, payload: Record<string, unknown
 
     for (const endpoint of endpoints) {
       let lastError: Error | null = null
+      let lastStatusCode: number | null = null
+      let lastResponseBody: string | null = null
 
       for (let attempt = 1; attempt <= 3; attempt++) {
         try {
@@ -24,11 +26,14 @@ export async function sendWebhook(event: string, payload: Record<string, unknown
               'Content-Type': 'application/json',
               'X-Signature': signature,
               'X-Event': event,
-              'X-Delivery-Id': `${endpoint.id}-${Date.now()}`,
+              'X-Delivery-Id': `${endpoint.id}-${Date.now()}-${attempt}`,
             },
             body,
             signal: AbortSignal.timeout(10000),
           })
+
+          lastStatusCode = response.status
+          try { lastResponseBody = await response.text() } catch { lastResponseBody = null }
 
           await prisma.webhookDelivery.create({
             data: {
@@ -36,7 +41,9 @@ export async function sendWebhook(event: string, payload: Record<string, unknown
               event,
               payload: payload as any,
               statusCode: response.status,
+              responseBody: lastResponseBody,
               success: response.ok,
+              attempts: attempt,
             },
           })
 
@@ -44,9 +51,13 @@ export async function sendWebhook(event: string, payload: Record<string, unknown
           lastError = new Error(`HTTP ${response.status}`)
         } catch (err: any) {
           lastError = err
-          if (attempt < 3) {
-            await new Promise(r => setTimeout(r, 1000 * attempt))
-          }
+          lastStatusCode = null
+          lastResponseBody = err.message || null
+        }
+
+        if (attempt < 3) {
+          const delay = attempt === 1 ? 5000 : 15000
+          await new Promise(r => setTimeout(r, delay))
         }
       }
 
@@ -56,8 +67,10 @@ export async function sendWebhook(event: string, payload: Record<string, unknown
             endpointId: endpoint.id,
             event,
             payload: payload as any,
-            statusCode: null,
+            statusCode: lastStatusCode,
+            responseBody: lastResponseBody,
             success: false,
+            attempts: 3,
           },
         })
       }

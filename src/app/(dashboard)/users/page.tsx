@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { toast } from 'sonner'
 import { IconSearch, IconCheck, IconClose, IconSettings, IconFilter, IconChevronDown, IconBot, IconPlay, IconPause } from '@/components/icons'
 import { cn } from '@/lib/utils'
-import { isOwner, canManageRole, getRoleLabel, ROLE_LABELS, ALL_PERMISSIONS, ROLES } from '@/lib/auth-utils'
+import { isOwner, canManageRole, getRoleLabel, ROLE_LABELS, ALL_PERMISSIONS, ROLES, parsePermissions, getEffectivePermissions } from '@/lib/auth-utils'
 import type { Role } from '@/lib/auth-utils'
 
 function getRoleBadgeVariant(role: string) {
@@ -73,6 +73,11 @@ export default function UsersPage() {
   const actorRole = (session?.user as any)?.role as Role | undefined
   const actorIsOwner = isOwner({ role: actorRole })
   const [botToggling, setBotToggling] = useState<string | null>(null)
+
+  const [singleUserPermsOpen, setSingleUserPermsOpen] = useState(false)
+  const [singleUserPerms, setSingleUserPerms] = useState<any>(null)
+  const [singleUserRole, setSingleUserRole] = useState('')
+  const [singleUserExtraPerms, setSingleUserExtraPerms] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     if (session === undefined) return
@@ -229,6 +234,36 @@ export default function UsersPage() {
     }
   }
 
+  const openSingleUserPerms = (user: any) => {
+    setSingleUserPerms(user)
+    setSingleUserRole(user.role)
+    const extras = parsePermissions(user.permissions || '[]')
+    setSingleUserExtraPerms(new Set(extras))
+    setSingleUserPermsOpen(true)
+  }
+
+  const saveSingleUserPerms = async () => {
+    if (!singleUserPerms) return
+    setSaving(true)
+    const res = await fetch(`/api/users/${singleUserPerms.id}/permissions`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        role: singleUserRole,
+        permissions: [...singleUserExtraPerms],
+      }),
+    })
+    if (res.ok) {
+      toast.success('Permissões atualizadas')
+      setSingleUserPermsOpen(false)
+      loadUsers()
+    } else {
+      const json = await res.json()
+      toast.error(json.error || 'Erro ao salvar')
+    }
+    setSaving(false)
+  }
+
   if (!actorIsOwner) {
     return (
       <div className="p-6 text-center">
@@ -373,6 +408,14 @@ export default function UsersPage() {
                         >
                           {user.isActive ? 'Desativar' : 'Reativar'}
                         </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => openSingleUserPerms(user)}
+                          className="h-7 text-[11px]"
+                        >
+                          Permissões
+                        </Button>
                         {actorIsOwner && user.isBot && (
                           <Button
                             size="sm"
@@ -505,6 +548,83 @@ export default function UsersPage() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setPermissionsModal(false)}>Cancelar</Button>
             <Button onClick={savePermissions} disabled={saving}>Salvar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={singleUserPermsOpen} onOpenChange={setSingleUserPermsOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Permissões — {singleUserPerms?.name}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div>
+              <label className="text-[12px] font-[500] text-[var(--text-2)] mb-1.5 block">Função</label>
+              <select
+                value={singleUserRole}
+                onChange={e => {
+                  const newRole = e.target.value
+                  setSingleUserRole(newRole)
+                  const inherited = getEffectivePermissions(newRole as Role, null)
+                  setSingleUserExtraPerms(prev => {
+                    const next = new Set(prev)
+                    for (const p of inherited) next.delete(p)
+                    return next
+                  })
+                }}
+                className="w-full h-9 px-3 text-[13px] rounded-lg border border-[var(--border)] bg-transparent text-[var(--text)]"
+              >
+                {ROLES.map(r => (
+                  <option key={r.role} value={r.role}>{r.label}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <p className="text-[12px] font-[500] text-[var(--text-2)] mb-2">Permissões adicionais</p>
+              <div className="space-y-1 max-h-[350px] overflow-y-auto">
+                {ALL_PERMISSIONS.map(perm => {
+                  const inherited = getEffectivePermissions(singleUserRole as Role, null)
+                  const isInherited = inherited.includes(perm.key)
+                  const isChecked = isInherited || singleUserExtraPerms.has(perm.key)
+                  return (
+                    <label
+                      key={perm.key}
+                      className={cn(
+                        'flex items-center gap-3 p-2 rounded-lg transition-colors',
+                        isInherited
+                          ? 'bg-[var(--surface-2)] cursor-not-allowed opacity-60'
+                          : 'cursor-pointer hover:bg-[var(--surface-hover)]',
+                        !isInherited && singleUserExtraPerms.has(perm.key) && 'bg-[var(--accent-subtle)]'
+                      )}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        disabled={isInherited}
+                        onChange={() => {
+                          if (isInherited) return
+                          setSingleUserExtraPerms(prev => {
+                            const next = new Set(prev)
+                            if (next.has(perm.key)) next.delete(perm.key)
+                            else next.add(perm.key)
+                            return next
+                          })
+                        }}
+                        className="w-3.5 h-3.5 rounded accent-[var(--accent)]"
+                      />
+                      <span className="text-[13px] text-[var(--text)]">{perm.label}</span>
+                      {isInherited && (
+                        <span className="text-2xs text-[var(--text-3)] ml-auto">Herdado</span>
+                      )}
+                    </label>
+                  )
+                })}
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSingleUserPermsOpen(false)}>Cancelar</Button>
+            <Button onClick={saveSingleUserPerms} disabled={saving}>Salvar</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -90,3 +90,15 @@ model PushSubscription {
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
+
+model MessageTemplate {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  content   String
+  variables String   @default("[]")
+  uses      Int      @default(0)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}

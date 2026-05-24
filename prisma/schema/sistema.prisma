@@ -135,15 +135,27 @@ model WebhookEndpoint {
 }
 
 model WebhookDelivery {
-  id         String   @id @default(cuid())
-  endpointId String
-  event      String
-  payload    Json
-  statusCode Int?
-  success    Boolean  @default(false)
-  createdAt  DateTime @default(now())
+  id           String   @id @default(cuid())
+  endpointId   String
+  event        String
+  payload      Json
+  statusCode   Int?
+  responseBody String?
+  success      Boolean  @default(false)
+  attempts     Int      @default(1)
+  createdAt    DateTime @default(now())
 
   endpoint WebhookEndpoint @relation(fields: [endpointId], references: [id])
+}
+
+model SavedReport {
+  id        String   @id @default(cuid())
+  name      String
+  config    Json
+  ownerId   String
+  createdAt DateTime @default(now())
+
+  owner User @relation(fields: [ownerId], references: [id])
 }
 
 model OKR {

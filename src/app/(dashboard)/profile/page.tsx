@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -8,8 +8,11 @@ import { Input } from '@/components/ui/input'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Separator } from '@/components/ui/separator'
 import { Badge } from '@/components/ui/badge'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { toast } from 'sonner'
 import { IconTrash, IconLoader, IconLogout, IconCheck } from '@/components/icons'
+import { ADMIN_BADGES } from '@/lib/admin-badges'
+import type { AdminBadgeType } from '@/lib/admin-badges'
 
 export default function ProfilePage() {
   const { data: session } = useSession()
@@ -20,6 +23,17 @@ export default function ProfilePage() {
   const [deleteConfirm, setDeleteConfirm] = useState('')
   const [deleteLoading, setDeleteLoading] = useState(false)
   const [deleteResult, setDeleteResult] = useState<string | null>(null)
+  const [adminBadges, setAdminBadges] = useState<{ type: string; unlockedAt: string }[]>([])
+  const isAdmin = (session?.user as any)?.role !== 'CLIENT'
+
+  useEffect(() => {
+    if (isAdmin) {
+      fetch('/api/admin-badges')
+        .then(r => r.json())
+        .then(json => setAdminBadges(json.data || []))
+        .catch(() => {})
+    }
+  }, [isAdmin])
 
   const handleDelete = async () => {
     if (deleteConfirm !== 'confirmo') {
@@ -102,6 +116,44 @@ export default function ProfilePage() {
           </div>
         </CardContent>
       </Card>
+
+      {isAdmin && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Conquistas</CardTitle>
+            <CardDescription>Badges de expertise desbloqueados</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+              {Object.entries(ADMIN_BADGES).map(([type, badge]) => {
+                const unlocked = adminBadges.find(b => b.type === type)
+                return (
+                  <Tooltip key={type}>
+                    <TooltipTrigger asChild>
+                      <div className={`p-3 rounded-lg border text-center transition-all ${
+                        unlocked
+                          ? 'border-[var(--accent)]/30 bg-[var(--accent-subtle)]'
+                          : 'border-[var(--border)] bg-[var(--surface-2)] opacity-50 grayscale'
+                      }`}>
+                        <div className="text-2xl mb-1">{badge.icon}</div>
+                        <p className="text-[11px] font-[500] text-[var(--text)]">{badge.name}</p>
+                        {unlocked && (
+                          <p className="text-2xs text-[var(--text-3)] mt-0.5">
+                            {new Date(unlocked.unlockedAt).toLocaleDateString('pt-BR')}
+                          </p>
+                        )}
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent side="top">
+                      <p className="text-[11px]">{unlocked ? `Desbloqueado em ${new Date(unlocked.unlockedAt).toLocaleDateString('pt-BR')}` : `Falta: ${badge.condition}`}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                )
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <Card className="border-[var(--destructive-subtle)]">
         <CardHeader>

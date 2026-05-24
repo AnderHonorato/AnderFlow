@@ -65,3 +65,14 @@ model Achievement {
   @@unique([userId, type])
   @@unique([userId, type, projectId])
 }
+
+model AdminBadge {
+  id         String   @id @default(cuid())
+  userId     String
+  type       String
+  unlockedAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, type])
+}

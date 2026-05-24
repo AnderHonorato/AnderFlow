@@ -18,7 +18,7 @@ import {
   IconArrowRight, IconCheck as IconCheck2,
 } from '@/components/icons'
 import { cn } from '@/lib/utils'
-import { Send, Download, Layers } from 'lucide-react'
+import { Send, Download, Layers, MessageSquare, Upload, FileJson } from 'lucide-react'
 import { TwoFactorSetup } from '@/components/ui/two-factor-setup'
 
 const categories = [
@@ -30,7 +30,10 @@ const categories = [
   { id: 'integrations', label: 'Integrações', icon: IconAutomation, href: '/settings/integrations' },
   { id: 'api-keys', label: 'Chaves de API', icon: IconSettings, href: '/settings/api-keys' },
   { id: 'templates', label: 'Templates', icon: IconFile, href: '/settings/templates' },
+  { id: 'message-templates', label: 'Templates de Mensagem', icon: MessageSquare, href: '/settings/message-templates' },
   { id: 'webhooks', label: 'Webhooks', icon: IconAutomation, href: '/settings/webhooks' },
+  { id: 'import', label: 'Importação', icon: Upload, href: '/settings/import' },
+  { id: 'notion', label: 'Notion', icon: FileJson, href: '/settings/integrations/notion' },
   { id: 'status', label: 'Status', icon: IconAnalytics, href: '/settings/status-page' },
 ] as const
 

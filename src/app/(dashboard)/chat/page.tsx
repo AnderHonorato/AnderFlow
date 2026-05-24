@@ -30,6 +30,11 @@ export default function ChatPage() {
   const [searchResults, setSearchResults] = useState<any[]>([])
   const [searching, setSearching] = useState(false)
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [templates, setTemplates] = useState<any[]>([])
+  const [templateOpen, setTemplateOpen] = useState(false)
+  const [templateFilter, setTemplateFilter] = useState('')
+  const [templateIndex, setTemplateIndex] = useState(0)
+  const filterTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const handleSearch = useCallback((q: string) => {
     if (!q.trim() || !selectedChannel) { setSearchResults([]); return }
@@ -79,6 +84,13 @@ export default function ChatPage() {
   }, [])
 
   useEffect(() => {
+    fetch('/api/message-templates')
+      .then(r => r.json())
+      .then(json => setTemplates(json.data || []))
+      .catch(() => {})
+  }, [])
+
+  useEffect(() => {
     if (!selectedChannel) return
     const fetchMessages = () => {
       fetch(`/api/messages?channelId=${selectedChannel}`)
@@ -112,7 +124,19 @@ export default function ChatPage() {
   }, [selectedChannel])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setNewMessage(e.target.value)
+    const val = e.target.value
+    setNewMessage(val)
+
+    if (val.startsWith('/')) {
+      const filter = val.slice(1)
+      setTemplateFilter(filter)
+      setTemplateOpen(true)
+      setTemplateIndex(0)
+    } else {
+      setTemplateOpen(false)
+      setTemplateFilter('')
+    }
+
     const now = Date.now()
     if (now - lastTypingRef.current > 2000 && selectedChannel) {
       lastTypingRef.current = now
@@ -122,6 +146,20 @@ export default function ChatPage() {
         body: JSON.stringify({ channelId: selectedChannel }),
       }).catch(() => {})
     }
+  }
+
+  const filteredTemplates = templates.filter(t =>
+    t.title.toLowerCase().includes(templateFilter.toLowerCase())
+  )
+
+  const selectTemplate = async (template: any) => {
+    setNewMessage(template.content)
+    setTemplateOpen(false)
+    fetch(`/api/message-templates`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ useIncrement: template.id }),
+    }).catch(() => {})
   }
 
   const handleSend = async () => {
@@ -363,6 +401,27 @@ export default function ChatPage() {
                   onChange={handleInputChange}
                   className="flex-1 h-10"
                   onKeyDown={(e) => {
+                    if (templateOpen && filteredTemplates.length > 0) {
+                      if (e.key === 'ArrowDown') {
+                        e.preventDefault()
+                        setTemplateIndex(i => Math.min(i + 1, filteredTemplates.length - 1))
+                        return
+                      }
+                      if (e.key === 'ArrowUp') {
+                        e.preventDefault()
+                        setTemplateIndex(i => Math.max(i - 1, 0))
+                        return
+                      }
+                      if (e.key === 'Enter') {
+                        e.preventDefault()
+                        selectTemplate(filteredTemplates[templateIndex])
+                        return
+                      }
+                      if (e.key === 'Escape') {
+                        setTemplateOpen(false)
+                        return
+                      }
+                    }
                     if (e.key === 'Enter' && !e.shiftKey) {
                       e.preventDefault()
                       handleSend()
@@ -373,6 +432,22 @@ export default function ChatPage() {
                   {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                 </Button>
               </div>
+              {templateOpen && filteredTemplates.length > 0 && (
+                <div className="mt-2 border border-[var(--border)] rounded-lg bg-[var(--surface)] max-h-[200px] overflow-y-auto max-w-3xl mx-auto">
+                  {filteredTemplates.map((t, i) => (
+                    <button
+                      key={t.id}
+                      className={`w-full text-left px-3 py-2 text-sm flex items-center justify-between transition-colors ${
+                        i === templateIndex ? 'bg-[var(--accent-subtle)]' : 'hover:bg-[var(--surface-2)]'
+                      }`}
+                      onClick={() => selectTemplate(t)}
+                    >
+                      <span className="text-[var(--text)]">{t.title}</span>
+                      <span className="text-2xs text-[var(--text-3)]">{t.uses} usos</span>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           </>
         ) : (
