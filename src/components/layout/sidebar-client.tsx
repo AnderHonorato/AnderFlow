@@ -171,7 +171,7 @@ export function SidebarClient() {
         'fixed lg:sticky top-0 left-0 z-40 h-screen flex flex-col',
         'bg-[var(--bg-secondary)] border-r border-[var(--border)]',
         'transform transition-all transition-duration-[300ms] transition-timing-function-[cubic-bezier(0.2,0,0,1)]',
-        mounted && (mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'),
+        mobileMenuOpen ? 'translate-x-0' : '-translate-x-full',
         'lg:translate-x-0 lg:flex',
         collapsed ? 'w-[60px]' : 'w-[220px]'
       )} suppressHydrationWarning>
