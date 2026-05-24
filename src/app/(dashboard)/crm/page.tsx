@@ -17,9 +17,8 @@ import { CSS } from '@dnd-kit/utilities'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { GripVertical } from 'lucide-react'
-import {
-  Plus, Search, DollarSign, TrendingUp, Users, Target,
-  MoreHorizontal, Building2, Loader2, LayoutGrid, List,
+import { Plus, Search, DollarSign, TrendingUp, Users, Target,
+  MoreHorizontal, Building2, Loader2, LayoutGrid, List, Brain,
 } from 'lucide-react'
 
 type ViewMode = 'funnel' | 'list'
@@ -41,10 +40,14 @@ function getTemperature(lead: any): { label: string; emoji: string } {
   return { label: 'Frio', emoji: '❄️' }
 }
 
-function SortableLeadCard({ lead, onView }: { lead: any; onView: (id: string) => void }) {
+function SortableLeadCard({ lead, onView, onScore }: { lead: any; onView: (id: string) => void; onScore?: (id: string) => void }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: lead.id })
   const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.6 : 1, zIndex: isDragging ? 50 : 'auto' }
   const temp = getTemperature(lead)
+
+  const scoreColor = lead.leadScore !== null && lead.leadScore !== undefined
+    ? lead.leadScore >= 70 ? 'bg-success' : lead.leadScore >= 40 ? 'bg-warning' : 'bg-destructive'
+    : null
 
   return (
     <Card ref={setNodeRef} style={style} className="card-hover cursor-pointer" onClick={() => onView(lead.id)}>
@@ -52,6 +55,11 @@ function SortableLeadCard({ lead, onView }: { lead: any; onView: (id: string) =>
         <div className="flex items-center gap-1.5" {...attributes} {...listeners}>
           <GripVertical className="h-3 w-3 text-[var(--text-3)] opacity-40 cursor-grab shrink-0" />
           <span className="text-[9px] text-[var(--text-3)]" title={temp.label}>{temp.emoji}</span>
+          {scoreColor && (
+            <span className={`ml-auto text-2xs px-1.5 py-0.5 rounded-full text-white ${scoreColor}`}>
+              {Math.round(lead.leadScore)}
+            </span>
+          )}
         </div>
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-2">
@@ -62,6 +70,7 @@ function SortableLeadCard({ lead, onView }: { lead: any; onView: (id: string) =>
             <DropdownMenuTrigger asChild><Button variant="ghost" size="icon-sm"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-40">
               <DropdownMenuItem onClick={() => onView(lead.id)}>Ver detalhes</DropdownMenuItem>
+              {onScore && <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onScore(lead.id) }}>Pontuar com IA</DropdownMenuItem>}
               <DropdownMenuItem className="text-destructive" onClick={async (e) => {
                 e.stopPropagation()
                 await fetch(`/api/leads/${lead.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: 'LOST' }) })
@@ -83,7 +92,7 @@ function SortableLeadCard({ lead, onView }: { lead: any; onView: (id: string) =>
   )
 }
 
-function FunnelColumn({ stage, leads, onView }: { stage: typeof PIPELINE_STAGES[0]; leads: any[]; onView: (id: string) => void }) {
+function FunnelColumn({ stage, leads, onView, onScore }: { stage: typeof PIPELINE_STAGES[0]; leads: any[]; onView: (id: string) => void; onScore?: (id: string) => void }) {
   const stageValue = leads.reduce((s, l) => s + (l.value || 0), 0)
   return (
     <div className="flex-shrink-0 w-[280px]">
@@ -102,7 +111,7 @@ function FunnelColumn({ stage, leads, onView }: { stage: typeof PIPELINE_STAGES[
               <p className="text-[11px] text-[var(--text-3)]">Arraste leads para ca</p>
             </div>
           )}
-          {leads.map(lead => <SortableLeadCard key={lead.id} lead={lead} onView={onView} />)}
+          {leads.map(lead => <SortableLeadCard key={lead.id} lead={lead} onView={onView} onScore={onScore} />)}
         </div>
       </SortableContext>
     </div>
@@ -119,6 +128,8 @@ export default function CRMPage() {
   const [saving, setSaving] = useState(false)
   const [form, setForm] = useState({ name: '', email: '', phone: '', company: '', source: '', value: '' })
   const [selectedLead, setSelectedLead] = useState<any>(null)
+  const [scoring, setScoring] = useState<string | null>(null)
+  const [sortByScore, setSortByScore] = useState(false)
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
 
@@ -175,7 +186,19 @@ export default function CRMPage() {
     }
   }
 
+  const scoreLead = async (leadId: string) => {
+    setScoring(leadId)
+    try {
+      const res = await fetch('/api/leads/score', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ leadId }) })
+      const json = await res.json()
+      if (json.score) { toast.success(`Score: ${json.score}`); loadLeads() }
+      else toast.error('Erro ao pontuar')
+    } catch { toast.error('Erro de conexao') }
+    setScoring(null)
+  }
+
   const filtered = leads.filter(l => !search || l.name.toLowerCase().includes(search.toLowerCase()) || (l.company || '').toLowerCase().includes(search.toLowerCase()))
+  const sorted = sortByScore ? [...filtered].sort((a, b) => (b.leadScore || 0) - (a.leadScore || 0)) : filtered
   const totalValue = useMemo(() => leads.reduce((s, l) => s + (l.value || 0), 0), [leads])
   const wonValue = useMemo(() => leads.filter(l => l.status === 'WON').reduce((s, l) => s + (l.value || 0), 0), [leads])
 
@@ -204,15 +227,18 @@ export default function CRMPage() {
 
       <div className="flex items-center gap-3">
         <div className="relative flex-1 max-w-sm"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><Input placeholder="Buscar leads..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9" /></div>
+        <Button variant={sortByScore ? 'default' : 'outline'} size="sm" onClick={() => setSortByScore(!sortByScore)}>
+          Por score
+        </Button>
       </div>
 
       {view === 'funnel' && (
         <DndContext sensors={sensors} collisionDetection={closestCorners} onDragEnd={handleDragEnd}>
           <div className="flex gap-4 overflow-x-auto pb-4">
-            {PIPELINE_STAGES.map(stage => {
-              const stageLeads = filtered.filter(l => l.status === stage.id)
-              return <FunnelColumn key={stage.id} stage={stage} leads={stageLeads} onView={(id) => setSelectedLead(leads.find(l => l.id === id) || null)} />
-            })}
+              {PIPELINE_STAGES.map(stage => {
+                const stageLeads = sorted.filter(l => l.status === stage.id)
+                return <FunnelColumn key={stage.id} stage={stage} leads={stageLeads} onView={(id) => setSelectedLead(leads.find(l => l.id === id) || null)} onScore={scoreLead} />
+              })}
           </div>
         </DndContext>
       )}

@@ -13,6 +13,8 @@ import {
   IconLogout, IconProfile, IconTicket, IconFile,
   IconAutomation,
 } from '@/components/icons'
+import { Star, Clock } from 'lucide-react'
+import { motion } from 'framer-motion'
 
 const adminNavSections = [
   {
@@ -58,6 +60,22 @@ const clientBottomNav = [
   { name: 'Configuracoes', href: '/settings', icon: IconSettings },
 ]
 
+const iconMap: Record<string, any> = {
+  IconDashboard,
+  IconProject,
+  IconClient,
+  IconCRM,
+  IconChat,
+  IconFinancial,
+  IconAnalytics,
+  IconKnowledge,
+  IconNotification,
+  IconTicket,
+  IconFile,
+  IconAutomation,
+  IconSettings,
+}
+
 export function SidebarClient() {
   const pathname = usePathname()
   const router = useRouter()
@@ -67,7 +85,48 @@ export function SidebarClient() {
   const [collapsed, setCollapsed] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
   const [mounted, setMounted] = useState(false)
+
   useEffect(() => { setMounted(true) }, [])
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('anderflow-compact-mode')
+      if (stored !== null) setCollapsed(stored === 'true')
+    } catch { /* noop */ }
+  }, [])
+
+  useEffect(() => {
+    if (!mounted) return
+    localStorage.setItem('anderflow-compact-mode', String(collapsed))
+  }, [collapsed, mounted])
+
+  const [favorites, setFavorites] = useState<{ name: string; href: string; iconType: string }[]>([])
+  const [recents, setRecents] = useState<string[]>([])
+
+  useEffect(() => {
+    try {
+      const fav = localStorage.getItem('anderflow-favorites')
+      if (fav) setFavorites(JSON.parse(fav))
+      const rec = localStorage.getItem('anderflow-recents')
+      if (rec) setRecents(JSON.parse(rec))
+    } catch { /* noop */ }
+  }, [])
+
+  const isFav = (href: string) => favorites.some(f => f.href === href)
+
+  const toggleFavorite = (item: { name: string; href: string; iconType: string }) => {
+    setFavorites(prev => {
+      const exists = prev.some(f => f.href === item.href)
+      const next = exists
+        ? prev.filter(f => f.href !== item.href)
+        : [item, ...prev].slice(0, 5)
+      localStorage.setItem('anderflow-favorites', JSON.stringify(next))
+      return next
+    })
+  }
+
+  const [openTicketsCount, setOpenTicketsCount] = useState(0)
+  const [chatUnread, setChatUnread] = useState(0)
 
   const role = (session?.user as any)?.role || 'USER'
   const roleLevel = (session?.user as any)?.roleLevel || 0
@@ -75,7 +134,6 @@ export function SidebarClient() {
   const [permissaoNivel, setPermissaoNivel] = useState(roleLevel)
   const [permissaoErro, setPermissaoErro] = useState(false)
 
-  // Verifica hierarquia real no backend ao montar
   useEffect(() => {
     const controller = new AbortController()
     const { signal } = controller
@@ -108,12 +166,59 @@ export function SidebarClient() {
   const isOwner = nivelEfetivo >= 100
   const topNav = isModOrAbove ? adminNavItems : clientNavItems
 
+  useEffect(() => {
+    if (!mounted || !pathname) return
+    const allItems = [...topNav, ...bottomNav]
+    const match = allItems.find(i => {
+      if (i.href === '/dashboard') return pathname === '/dashboard'
+      return pathname === i.href || pathname.startsWith(i.href + '/')
+    })
+    if (!match) return
+    setRecents(prev => {
+      const next = [match.href, ...prev.filter(u => u !== match.href)].slice(0, 10)
+      localStorage.setItem('anderflow-recents', JSON.stringify(next))
+      return next
+    })
+  }, [pathname, mounted])
+
+  useEffect(() => {
+    if (!isModOrAbove) return
+    const fetchTickets = async () => {
+      try {
+        const [openRes, progRes] = await Promise.all([
+          fetch('/api/tickets?status=OPEN&limit=1'),
+          fetch('/api/tickets?status=IN_PROGRESS&limit=1'),
+        ])
+        const openData = await openRes.json()
+        const progData = await progRes.json()
+        setOpenTicketsCount((openData.pagination?.total || 0) + (progData.pagination?.total || 0))
+      } catch { /* noop */ }
+    }
+    fetchTickets()
+    const interval = setInterval(fetchTickets, 60000)
+    return () => clearInterval(interval)
+  }, [isModOrAbove])
+
+  useEffect(() => {
+    const fetchChat = async () => {
+      try {
+        const res = await fetch('/api/chat/unread-count')
+        const data = await res.json()
+        setChatUnread(data.count || 0)
+      } catch { /* noop */ }
+    }
+    fetchChat()
+    const interval = setInterval(fetchChat, 30000)
+    return () => clearInterval(interval)
+  }, [])
+
   const bottomNav = useMemo(() => {
     if (!isModOrAbove) return clientBottomNav
     return [
       ...(isOwner ? [{ name: 'Chaves API', href: '/settings/api-keys', icon: IconSettings }] : []),
-      ...(isAdminOrAbove ? [{ name: 'Integrações', href: '/settings/integrations', icon: IconAutomation }] : []),
-      ...(isOwner ? [{ name: 'Usuários', href: '/users', icon: IconClient }] : []),
+      ...(isAdminOrAbove ? [{ name: 'Integracoes', href: '/settings/integrations', icon: IconAutomation }] : []),
+      ...(isOwner ? [{ name: 'Usuarios', href: '/users', icon: IconClient }] : []),
+      ...(isOwner ? [{ name: 'Founder', href: '/founder', icon: IconDashboard }] : []),
       { name: 'Notificações', href: '/notifications', icon: IconNotification },
       { name: 'Configurações', href: '/settings', icon: IconSettings },
     ]
@@ -168,7 +273,10 @@ export function SidebarClient() {
         <div className="fixed inset-0 z-40 bg-black/40 lg:hidden" onClick={() => setMobileMenuOpen(false)} />
       )}
 
-      <aside className={cn(
+      <motion.aside
+        animate={{ width: collapsed ? 60 : 220 }}
+        transition={{ duration: 0.3, ease: [0.2, 0, 0, 1] }}
+        className={cn(
         'fixed lg:sticky top-0 left-0 z-40 h-screen flex flex-col',
         'bg-[var(--bg-secondary)] border-r border-[var(--border)]',
         'transform transition-all transition-duration-[300ms] transition-timing-function-[cubic-bezier(0.2,0,0,1)]',
@@ -200,6 +308,59 @@ export function SidebarClient() {
         </div>
 
         <nav className="flex-1 overflow-y-auto py-2 px-2 space-y-0.5 scroll-area">
+          {favorites.length > 0 && (
+            <div className="mb-1">
+              {!collapsed && (
+                <div className="px-3 py-1.5 text-[10px] font-[500] text-[var(--text-3)] uppercase tracking-wider">
+                  Favoritos
+                </div>
+              )}
+              {favorites.map(fav => {
+                const FavIcon = iconMap[fav.iconType]
+                if (!FavIcon) return null
+                const active = isActive(fav.href)
+                return (
+                  <Link
+                    key={fav.href}
+                    href={fav.href}
+                    onClick={() => setMobileMenuOpen(false)}
+                    title={collapsed ? fav.name : undefined}
+                    className={navItemClass(active)}
+                  >
+                    <FavIcon className="w-[16px] h-[16px] shrink-0" />
+                    {!collapsed && <span className="truncate">{fav.name}</span>}
+                  </Link>
+                )
+              })}
+            </div>
+          )}
+
+          {recents.length > 0 && (
+            <div className="mb-1">
+              {!collapsed && (
+                <div className="px-3 py-1.5 text-[10px] font-[500] text-[var(--text-3)] uppercase tracking-wider">
+                  Recentes
+                </div>
+              )}
+              {recents.slice(0, 3).map(url => {
+                const item = topNav.find(i => i.href === url) || bottomNav.find(i => i.href === url)
+                if (!item) return null
+                const active = isActive(url)
+                return (
+                  <Link
+                    key={url}
+                    href={url}
+                    onClick={() => setMobileMenuOpen(false)}
+                    title={collapsed ? item.name : undefined}
+                    className={navItemClass(active)}
+                  >
+                    <Clock className="w-[16px] h-[16px] shrink-0" />
+                    {!collapsed && <span className="truncate">{item.name}</span>}
+                  </Link>
+                )
+              })}
+            </div>
+          )}
           {isModOrAbove ? adminNavSections.map((section, si) => (
             <div key={si} className="mb-1">
               {!collapsed && (
@@ -215,15 +376,26 @@ export function SidebarClient() {
                     href={item.href}
                     onClick={() => setMobileMenuOpen(false)}
                     title={collapsed ? item.name : undefined}
-                    className={navItemClass(active)}
+                    className={cn(navItemClass(active), 'group')}
                   >
                     {active && (
                       <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 rounded-r bg-[var(--accent)] animate-scale-in origin-center" style={{ height: '16px' }} />
                     )}
                     <item.icon className="w-[16px] h-[16px] shrink-0" />
-                    {!collapsed && <span className="truncate">{item.name}</span>}
+                    {!collapsed && <span className="truncate flex-1 min-w-0">{item.name}</span>}
+                    {!collapsed && (
+                      <button
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleFavorite({ name: item.name, href: item.href, iconType: item.icon.name }) }}
+                        className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <Star className={cn('w-3 h-3', isFav(item.href) ? 'fill-yellow-400 text-yellow-400' : 'text-[var(--text-3)]')} />
+                      </button>
+                    )}
                     {!collapsed && item.name === 'Inbox' && inboxUnread > 0 && (
                       <span className="badge-pulse ml-auto text-[10px] font-bold text-white bg-red-500 rounded-full px-1.5 py-0.5 font-numeric">{inboxUnread}</span>
+                    )}
+                    {!collapsed && item.name === 'Tickets' && openTicketsCount > 0 && (
+                      <span className="badge-pulse ml-auto text-[10px] font-bold text-white bg-red-500 rounded-full px-1.5 py-0.5 font-numeric">{openTicketsCount}</span>
                     )}
                   </Link>
                 )
@@ -237,13 +409,26 @@ export function SidebarClient() {
                 href={item.href}
                 onClick={() => setMobileMenuOpen(false)}
                 title={collapsed ? item.name : undefined}
-                className={navItemClass(active)}
+                className={cn(navItemClass(active), 'group')}
               >
                 {active && (
                   <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 rounded-r bg-[var(--accent)] animate-scale-in origin-center" style={{ height: '16px' }} />
                 )}
-                <item.icon className="w-[16px] h-[16px] shrink-0" />
-                {!collapsed && <span className="truncate">{item.name}</span>}
+                <span className="relative">
+                  <item.icon className="w-[16px] h-[16px] shrink-0" />
+                  {item.name === 'Chat' && chatUnread > 0 && (
+                    <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-green-500" />
+                  )}
+                </span>
+                {!collapsed && <span className="truncate flex-1 min-w-0">{item.name}</span>}
+                {!collapsed && (
+                  <button
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleFavorite({ name: item.name, href: item.href, iconType: item.icon.name }) }}
+                    className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <Star className={cn('w-3 h-3', isFav(item.href) ? 'fill-yellow-400 text-yellow-400' : 'text-[var(--text-3)]')} />
+                  </button>
+                )}
               </Link>
             )
           })}
@@ -268,7 +453,7 @@ export function SidebarClient() {
                 href={item.href}
                 onClick={() => setMobileMenuOpen(false)}
                 title={collapsed ? item.name : undefined}
-                className={navItemClass(active)}
+                className={cn(navItemClass(active), 'group')}
               >
                 {active && (
                   <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 rounded-r bg-[var(--accent)] animate-scale-in origin-center" style={{ height: '16px' }} />
@@ -279,7 +464,15 @@ export function SidebarClient() {
                     <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-red-500 badge-pulse" />
                   )}
                 </span>
-                {!collapsed && <span className="truncate">{item.name}</span>}
+                {!collapsed && <span className="truncate flex-1 min-w-0">{item.name}</span>}
+                {!collapsed && (
+                  <button
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleFavorite({ name: item.name, href: item.href, iconType: item.icon.name }) }}
+                    className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <Star className={cn('w-3 h-3', isFav(item.href) ? 'fill-yellow-400 text-yellow-400' : 'text-[var(--text-3)]')} />
+                  </button>
+                )}
               </Link>
             )
           })}
@@ -310,7 +503,7 @@ export function SidebarClient() {
             )}
           </div>
         </div>
-      </aside>
+      </motion.aside>
     </>
   )
 }

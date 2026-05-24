@@ -18,9 +18,10 @@ model Contract {
   signatureUrl   String?
   signerIp       String?
   pdfUrl         String?
-  autoRenew      Boolean   @default(false)
-  loyaltyMonths  Int?
-  metadata       String?
+  autoRenew        Boolean   @default(false)
+  loyaltyMonths    Int?
+  metadata         String?
+  verificationHash String?
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 

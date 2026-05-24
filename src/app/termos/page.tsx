@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { Input } from '@/components/ui/input'
 
@@ -79,6 +80,11 @@ export default function TermosPage() {
   const [showFloating, setShowFloating] = useState(false)
   const [showBackTop, setShowBackTop] = useState(false)
   const sidebarRef = useRef<HTMLDivElement>(null)
+  const { data: session } = useSession()
+  const [legalContent, setLegalContent] = useState<string | null>(null)
+  const [legalVersion, setLegalVersion] = useState('1.0')
+  const [showConsentModal, setShowConsentModal] = useState(false)
+  const [submittingConsent, setSubmittingConsent] = useState(false)
 
   const filteredSections = search
     ? allSections.filter(s => s.label.toLowerCase().includes(search.toLowerCase()) || catLabels[s.cat]?.toLowerCase().includes(search.toLowerCase()))
@@ -103,6 +109,41 @@ export default function TermosPage() {
     window.addEventListener('scroll', handleScroll, { passive: true })
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
+
+  useEffect(() => {
+    fetch('/api/legal?type=terms')
+      .then(r => r.json())
+      .then(json => {
+        const content = json.data?.content || ''
+        const version = json.data?.version || '1.0'
+        setLegalContent(content || null)
+        setLegalVersion(version)
+        if (content && session?.user) {
+          const accepted = localStorage.getItem('acceptedTermsVersion')
+          if (accepted !== version) {
+            setShowConsentModal(true)
+          }
+        }
+      })
+      .catch(() => {})
+  }, [session])
+
+  const handleAcceptTerms = async () => {
+    setSubmittingConsent(true)
+    try {
+      const res = await fetch('/api/legal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ docType: 'terms', docVersion: legalVersion }),
+      })
+      if (res.ok) {
+        localStorage.setItem('acceptedTermsVersion', legalVersion)
+        setShowConsentModal(false)
+      }
+    } catch {} finally {
+      setSubmittingConsent(false)
+    }
+  }
 
   const scrollTo = (id: string) => {
     const el = document.getElementById(id)
@@ -181,6 +222,13 @@ export default function TermosPage() {
             </div>
           )}
 
+          {legalContent ? (
+            <div
+              className="text-[13px] text-[var(--text-2)] leading-relaxed space-y-4 [&_h1]:text-[24px] [&_h1]:font-[700] [&_h2]:text-[18px] [&_h2]:font-[600] [&_h3]:text-[15px] [&_h3]:font-[600] [&_p]:text-[13px] [&_strong]:text-[var(--text)] [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:mb-1 [&_a]:text-[var(--accent)] [&_table]:w-full [&_table]:text-[12px] [&_th]:p-2 [&_th]:border-b [&_th]:border-[var(--border)] [&_th]:text-left [&_th]:text-[var(--text-3)] [&_th]:text-[10px] [&_th]:uppercase [&_th]:tracking-wider [&_td]:p-2 [&_td]:border-b [&_td]:border-[var(--border)]"
+              dangerouslySetInnerHTML={{ __html: legalContent }}
+            />
+          ) : (
+            <>
           <Section id="aceitacao" num="1" title="Aceitação dos Termos">
             <p>Ao preencher o briefing de solicitação de projeto, realizar qualquer pagamento ou assinar o contrato de prestação de serviços, o contratante confirma que leu e aceita integralmente estes Termos e Condições.</p>
             <p>Estes termos se aplicam a todas as interações, projetos, comunicações e relações comerciais estabelecidas com este desenvolvedor, independentemente do canal utilizado.</p>
@@ -412,6 +460,8 @@ export default function TermosPage() {
           <Section id="disputas" num="38" title="Resolução de Disputas">
             <p>Sequência: 1) Negociação direta (15 dias); 2) Mediação extrajudicial; 3) Via judicial no foro da comarca do domicílio do desenvolvedor.</p>
           </Section>
+            </>
+          )}
 
           <footer className="border-t border-[var(--border)] mt-12 pt-6 flex items-center justify-between text-[10px] text-[var(--text-3)] flex-wrap gap-2">
             <span>2026 AnderFlow · Todos os direitos reservados</span>
@@ -450,6 +500,39 @@ export default function TermosPage() {
           </button>
         )}
       </div>
+
+      {/* Consent Modal */}
+      {showConsentModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+          <div className="relative bg-[var(--bg)] border border-[var(--border)] rounded-2xl shadow-2xl max-w-lg w-full max-h-[80vh] flex flex-col overflow-hidden">
+            <div className="p-5 border-b border-[var(--border)] shrink-0">
+              <p className="text-[10px] font-[600] text-[var(--accent)] uppercase tracking-widest mb-1">termos atualizados</p>
+              <h2 className="text-[18px] font-[700] tracking-[-0.02em] text-[var(--text)]">Novos Termos de Uso v{legalVersion}</h2>
+              <p className="text-[12px] text-[var(--text-3)] mt-1">Os termos foram atualizados. Leia e aceite para continuar.</p>
+            </div>
+            <div className="overflow-y-auto p-5 text-[12px] text-[var(--text-2)] leading-relaxed space-y-3 flex-1">
+              {legalContent ? (
+                <div
+                  className="[&_h1]:text-[18px] [&_h1]:font-[700] [&_h2]:text-[15px] [&_h2]:font-[600] [&_h3]:text-[13px] [&_h3]:font-[600] [&_p]:text-[12px] [&_strong]:text-[var(--text)] [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4 [&_li]:mb-0.5 [&_a]:text-[var(--accent)]"
+                  dangerouslySetInnerHTML={{ __html: legalContent }}
+                />
+              ) : (
+                <p className="text-[var(--text-3)]">Carregando...</p>
+              )}
+            </div>
+            <div className="p-4 border-t border-[var(--border)] shrink-0 flex items-center justify-end gap-3">
+              <button
+                onClick={handleAcceptTerms}
+                disabled={submittingConsent}
+                className="px-6 py-2.5 rounded-xl bg-[var(--accent)] text-white text-[13px] font-[500] hover:bg-[var(--accent-hover)] disabled:opacity-50 transition-all"
+              >
+                {submittingConsent ? 'Enviando...' : 'Aceitar Termos'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

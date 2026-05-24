@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { usePathname } from 'next/navigation'
 import { SessionProvider } from '@/providers/session-provider'
 import { FetchErrorSuppressor } from '@/providers/fetch-error-suppressor'
 import { Sidebar } from '@/components/layout/sidebar'
@@ -10,6 +11,8 @@ import { WelcomeOverlay } from '@/components/ui/welcome-overlay'
 import { AIFab } from '@/components/ui/ai-fab'
 import { BotEngineInit } from '@/components/bots/motor-inicializador'
 import { CommandPalette } from '@/components/ui/command-palette'
+import { ContextualAlert } from '@/components/ui/contextual-alert'
+import { OnlineIndicator } from '@/components/ui/online-indicator'
 
 function BackgroundBlobs() {
   const [mounted, setMounted] = useState(false)
@@ -25,6 +28,7 @@ function BackgroundBlobs() {
 }
 
 export function DashboardShell({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname()
   const [paletteOpen, setPaletteOpen] = useState(false)
 
   useEffect(() => {
@@ -38,6 +42,19 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     return () => document.removeEventListener('keydown', handler)
   }, [])
 
+  useEffect(() => {
+    const heartbeat = () => {
+      fetch('/api/users/heartbeat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ page: pathname }),
+      }).catch(() => {})
+    }
+    heartbeat()
+    const interval = setInterval(heartbeat, 60000)
+    return () => clearInterval(interval)
+  }, [pathname])
+
   return (
     <SessionProvider>
       <FetchErrorSuppressor>
@@ -46,6 +63,10 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
         <Sidebar />
         <div className="flex flex-1 flex-col min-w-0 overflow-y-auto scroll-area">
           <Header />
+          <div className="px-6 pt-3 flex justify-end">
+            <OnlineIndicator />
+          </div>
+          <ContextualAlert />
           <PageTip />
           <main className="flex-1">{children}</main>
         </div>

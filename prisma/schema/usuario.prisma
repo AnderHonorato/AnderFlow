@@ -25,6 +25,7 @@ model User {
   verificationMethod String?
   isOnline           Boolean   @default(false)
   lastSeen           DateTime?
+  currentPage        String?
   rememberUntil      DateTime?
   theme              String    @default("system")
   plan               String    @default("BASIC")

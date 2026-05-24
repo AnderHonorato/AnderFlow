@@ -257,3 +257,123 @@ model ApprovalFlow {
   @@index([requiredBy])
   @@index([status])
 }
+
+model FaqCache {
+  id        String   @id @default(cuid())
+  question  String
+  answer    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  @@index([expiresAt])
+}
+
+model ChangelogEntry {
+  id          String    @id @default(cuid())
+  version     String
+  title       String
+  description String
+  type        String    @default("feature")
+  isPublic    Boolean   @default(false)
+  publishedAt DateTime?
+  createdAt   DateTime  @default(now())
+  @@index([isPublic, publishedAt])
+}
+
+model ApiKeyUsage {
+  id         String   @id @default(cuid())
+  keyId      String
+  endpoint   String
+  method     String
+  statusCode Int
+  createdAt  DateTime @default(now())
+  @@index([keyId, createdAt])
+}
+
+model LegalDocument {
+  id        String   @id @default(cuid())
+  type      String   @unique
+  content   String
+  version   String
+  updatedAt DateTime @updatedAt
+}
+
+model UserConsent {
+  id         String   @id @default(cuid())
+  userId     String
+  docType    String
+  docVersion String
+  ip         String?
+  createdAt  DateTime @default(now())
+  @@index([userId, docType])
+}
+
+model BackupLog {
+  id        String   @id @default(cuid())
+  filename  String
+  size      Int
+  status    String
+  createdAt DateTime @default(now())
+}
+
+model CodeReview {
+  id          String   @id @default(cuid())
+  projectId   String
+  title       String
+  description String?
+  codeSnippet String?
+  language    String   @default("javascript")
+  status      String   @default("pending")
+  authorId    String
+  reviewerId  String?
+  createdAt   DateTime @default(now())
+  comments   CodeReviewComment[]
+  @@index([projectId, status])
+}
+
+model CodeReviewComment {
+  id        String   @id @default(cuid())
+  reviewId  String
+  content   String
+  lineRef   Int?
+  authorId  String
+  createdAt DateTime @default(now())
+  review CodeReview @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  @@index([reviewId])
+}
+
+model ScheduledCall {
+  id          String   @id @default(cuid())
+  projectId   String?
+  clientId    String
+  scheduledBy String
+  title       String
+  description String?
+  scheduledAt DateTime
+  duration    Int      @default(60)
+  meetLink    String?
+  status      String   @default("scheduled")
+  notes       String?
+  createdAt   DateTime @default(now())
+  @@index([clientId, scheduledAt])
+  @@index([projectId])
+}
+
+model ProjectBudgetHistory {
+  id        String   @id @default(cuid())
+  projectId String
+  oldValue  Float?
+  newValue  Float
+  reason    String?
+  changedBy String
+  createdAt DateTime @default(now())
+  project Project @relation(fields: [projectId], references: [id])
+  @@index([projectId, createdAt])
+}
+
+model ContextualTipDismissal {
+  id        String   @id @default(cuid())
+  userId    String
+  tipKey    String
+  dismissedAt DateTime @default(now())
+  @@unique([userId, tipKey])
+}

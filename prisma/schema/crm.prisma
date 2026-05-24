@@ -17,13 +17,12 @@ model Lead {
   tags        String    @default("[]")
   metadata    String?
   convertedAt DateTime?
+  leadScore   Float?
+  aiInsight   String?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
-
   owner User? @relation("LeadOwner", fields: [ownerId], references: [id])
-
-  @@index([status])
-  @@index([ownerId])
+  @@index([status, ownerId])
 }
 
 model Ticket {

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getSessionUser, isAdmin } from '@/lib/auth-utils'
+import { chat } from '@/lib/deepseek'
 
 export async function GET(request: NextRequest) {
   try {
@@ -46,6 +47,32 @@ export async function POST(request: NextRequest) {
       },
       include: { author: { select: { id: true, name: true } } },
     })
+
+    if (update.description) {
+      try {
+        const result = await chat([
+          {
+            role: 'user',
+            content: `Analise o sentimento deste texto de cliente. Responda APENAS com JSON:
+{ "sentiment": "positive"|"neutral"|"negative", "score": 0.0-1.0, "keywords": ["palavra1", "palavra2"] }
+
+Texto: "${update.description}"`,
+          },
+        ], { maxTokens: 150, temperature: 0.3 })
+
+        const parsed = JSON.parse(result.content)
+        const metadata = {
+          sentiment: parsed.sentiment || 'neutral',
+          score: parsed.score || 0.5,
+          keywords: parsed.keywords || [],
+        }
+
+        await prisma.projectUpdate.update({
+          where: { id: update.id },
+          data: { metadata },
+        })
+      } catch { /* sentiment analysis failure doesn't block the main flow */ }
+    }
 
     if (requiresApproval) {
       const project = await prisma.project.findUnique({ where: { id: projectId }, select: { clientId: true, name: true } })

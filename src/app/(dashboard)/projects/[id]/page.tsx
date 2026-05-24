@@ -990,7 +990,7 @@ export default function ProjectDetailPage() {
             <a href={`/projects/${id}/okrs`}><Target className="mr-1 h-3 w-3" /> OKRs</a>
           </Button>
           <Button variant="outline" size="sm" asChild className="h-7 text-[11px]">
-            <a href={`/projects/${id}/present`}><Presentation className="mr-1 h-3 w-3" /> Apresentar</a>
+            <a href={`/projects/${id}/dependencies`}><GitBranch className="mr-1 h-3 w-3" /> Dependencias</a>
           </Button>
           {isAdmin && (
             <>

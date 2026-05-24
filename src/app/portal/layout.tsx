@@ -17,13 +17,14 @@ import { IconCheck } from '@/components/icons'
 import {
   LayoutDashboard, FolderKanban, MessageSquare,
   CreditCard, FileText, LogOut, Headphones, Sun, Moon,
-  Home, Bell, Globe,
+  Home, Bell, Globe, Sparkles,
 } from 'lucide-react'
 import { useTheme } from 'next-themes'
 import { WelcomeOverlay } from '@/components/ui/welcome-overlay'
 import { PushPermission } from '@/components/ui/push-permission'
 import { PwaInstallPrompt } from '@/components/ui/pwa-install-prompt'
 import { BotChat } from '@/components/portal/bot-chat'
+import { FaqWidget } from '@/components/portal/faq-widget'
 import { useMediaQuery } from '@/hooks/use-media-query'
 
 import { useI18n } from '@/providers/i18n-provider'
@@ -32,6 +33,7 @@ const navItems = [
   { name: 'Inicio', href: '/portal', icon: LayoutDashboard },
   { name: 'Meus Projetos', href: '/portal/projects', icon: FolderKanban },
   { name: 'Tickets', href: '/portal/tickets', icon: MessageSquare },
+  { name: 'Novidades', href: '/portal/changelog', icon: Sparkles },
 ]
 
 const navItemsSupport = [
@@ -268,6 +270,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
         <WelcomeOverlay />
         <PwaInstallPrompt />
         <BotChat />
+        <FaqWidget />
       </SessionProvider>
     </I18nProvider>
   )

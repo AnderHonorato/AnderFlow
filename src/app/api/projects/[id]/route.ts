@@ -72,6 +72,18 @@ export async function PATCH(
       data,
     })
 
+    if (body.budget !== undefined) {
+      await prisma.projectBudgetHistory.create({
+        data: {
+          projectId: id,
+          oldValue: body.oldBudget ?? null,
+          newValue: body.budget,
+          reason: body.budgetReason || null,
+          changedBy: body.userId || 'system',
+        },
+      })
+    }
+
     if (body.status === 'COMPLETED' && project.clientId) {
       await prisma.notification.create({
         data: {

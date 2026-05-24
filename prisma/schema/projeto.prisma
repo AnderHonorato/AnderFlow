@@ -58,6 +58,7 @@ model Project {
   proposalVersions ProposalVersion[]
   meetings        Meeting[]
   DeliveryChecklist DeliveryChecklist?
+  budgetHistory   ProjectBudgetHistory[]
 
   @@index([clientId])
   @@index([status])
@@ -179,6 +180,7 @@ model ProjectUpdate {
   requiresApproval Boolean   @default(false)
   approvedAt       DateTime?
   approvedBy       String?
+  metadata         Json?
   createdAt        DateTime  @default(now())
 
   project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
