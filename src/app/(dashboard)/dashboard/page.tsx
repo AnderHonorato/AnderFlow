@@ -35,6 +35,29 @@ export default function DashboardPage() {
       .catch(() => setLoading(false))
   }, [])
 
+  const revenueMetric = useRef([
+    { label: 'Hoje', value: data?.stats?.revenueToday || 0 },
+    { label: 'Esta semana', value: data?.stats?.revenueWeek || 0 },
+    { label: 'Este mês', value: data?.stats?.totalRevenue || 0 },
+  ])
+  const [revenueIdx, setRevenueIdx] = useState(0)
+
+  useEffect(() => {
+    revenueMetric.current = [
+      { label: 'Hoje', value: data?.stats?.revenueToday || 0 },
+      { label: 'Esta semana', value: data?.stats?.revenueWeek || 0 },
+      { label: 'Este mês', value: data?.stats?.totalRevenue || 0 },
+    ]
+  }, [data])
+
+  useEffect(() => {
+    if (!isAdmin) return
+    const timer = setInterval(() => {
+      setRevenueIdx(prev => (prev + 1) % 3)
+    }, 4000)
+    return () => clearInterval(timer)
+  }, [isAdmin])
+
   if (loading) {
     return (
       <div className="p-4 space-y-5 animate-page-enter">
@@ -71,29 +94,6 @@ export default function DashboardPage() {
   const activeProject = recentProjects.find((p: any) => p.status !== 'COMPLETED' && p.status !== 'CANCELLED')
   const completed = recentProjects.filter((p: any) => p.status === 'COMPLETED').length
   const inProgress = recentProjects.filter((p: any) => p.status === 'IN_PROGRESS').length
-
-  const revenueMetric = useRef([
-    { label: 'Hoje', value: data?.stats?.revenueToday || 0 },
-    { label: 'Esta semana', value: data?.stats?.revenueWeek || 0 },
-    { label: 'Este mês', value: data?.stats?.totalRevenue || 0 },
-  ])
-  const [revenueIdx, setRevenueIdx] = useState(0)
-
-  useEffect(() => {
-    revenueMetric.current = [
-      { label: 'Hoje', value: data?.stats?.revenueToday || 0 },
-      { label: 'Esta semana', value: data?.stats?.revenueWeek || 0 },
-      { label: 'Este mês', value: data?.stats?.totalRevenue || 0 },
-    ]
-  }, [data])
-
-  useEffect(() => {
-    if (!isAdmin) return
-    const timer = setInterval(() => {
-      setRevenueIdx(prev => (prev + 1) % 3)
-    }, 4000)
-    return () => clearInterval(timer)
-  }, [isAdmin])
 
   const formatRevenue = (v: number) => {
     if (v >= 1000) return `R$ ${(v / 1000).toFixed(0)}k`

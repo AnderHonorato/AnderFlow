@@ -519,32 +519,7 @@ useEffect(()=>{setWelcomeIdx(0);setWelcomeStarKey(p=>p+1)},[cn])
   return(<>
     {wv&&!op&&(<div className="fixed bottom-20 right-6 z-[60] max-w-[260px] rounded-2xl font-sans-dm p-3.5 shadow-xl backdrop-blur-sm" style={{background:'var(--surface)',border:'1.5px solid rgba(232,98,42,0.18)',animation:'autoMsgGlow 2.6s ease-in-out infinite, md-card-pop 0.4s var(--ease-spring) both'}}><button title="Fechar" onClick={dw} className="absolute top-1.5 right-1.5 h-5 w-5 flex items-center justify-center rounded-full hover:bg-[var(--surface-hover)] text-[var(--text-3)] transition-colors"><X className="h-3 w-3"/></button><div className="flex items-start gap-2.5"><div style={{animation:'autoMsgBgPulse 2.6s ease-in-out infinite'}} className="shrink-0 rounded-full p-1"><AIs s={28}/></div><p className="text-[12px] leading-relaxed text-[var(--text)] pr-4"><span>{autoMsgDisp||wm}</span>{autoMsgDisp&&autoMsgDisp.length<autoMsgFull.length&&<span className="typewriter-cursor"/>}</p></div></div>)}
 
-    <FMAnimatePresence>
-      {!op && (
-        <motion.div
-          initial={{ opacity: 0, scale: 0.8, y: 16 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.8, y: 16 }}
-          transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-          style={{ position: 'fixed', zIndex: 50, bottom: '1.5rem', right: '1.5rem' }}
-        >
-          <motion.button
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => { setOp(true); dw() }}
-            className={`group relative flex items-center justify-center h-14 w-14 rounded-full shadow-xl shadow-[var(--accent)]/10 overflow-hidden font-sans-dm ${wv ? 'pulse-fab' : ''}`}
-            title="Assistente IA"
-          >
-            <span className="absolute inset-0 rounded-full bg-gradient-to-br from-[var(--accent)] via-violet-500 to-blue-500 opacity-90" />
-            <span className="absolute inset-[-3px] rounded-full opacity-40" style={{background:'conic-gradient(from 0deg, var(--accent), #8b5cf6, #3b82f6, var(--accent))',animation:'fab-glow-spin 6s linear infinite'}} />
-            <span className="absolute inset-0 rounded-full ring-pulse" />
-            <span className="relative z-10 flex items-center justify-center drop-shadow-[0_0_8px_rgba(0,0,0,0.3)]">
-              <AIs s={36} />
-            </span>
-          </motion.button>
-        </motion.div>
-      )}
-    </FMAnimatePresence>
+    <div style={{position:'fixed',zIndex:50,bottom:'1.5rem',right:'1.5rem',transform:op?'scale(0.5) translateY(12px)':'scale(1) translateY(0)',opacity:op?0:1,transition:'all 0.35s cubic-bezier(0.34,1.2,0.64,1)',pointerEvents:op?'none':'auto'}}><button onClick={()=>{setOp(true);dw()}} className={`group flex items-center h-12 rounded-full bg-[var(--surface)] border border-[var(--border)] shadow-lg hover:shadow-xl transition-all transition-duration-[300ms] transition-timing-function-[cubic-bezier(0.2,0,0,1)] w-12 hover:w-[172px] justify-center hover:justify-start hover:pl-2.5 hover:pr-4 overflow-hidden font-sans-dm ${wv?'pulse-fab':''}`} title="Assistente IA" style={{boxShadow:'0 0 0 1px var(--border), 0 8px 24px rgba(0,0,0,0.3)'}}><span className="shrink-0 w-10 h-10 flex items-center justify-center"><AIs s={40}/></span><span className="text-[12px] font-[500] text-[var(--text)] whitespace-nowrap truncate w-0 opacity-0 group-hover:w-auto group-hover:opacity-100 group-hover:ml-1.5 transition-all transition-duration-[300ms] overflow-hidden select-none">Metrys Assistente</span></button></div>
 
     <FMAnimatePresence>
       {op && (
