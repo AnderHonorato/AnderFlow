@@ -77,9 +77,12 @@ export function SidebarClient() {
   useEffect(() => {
     const controller = new AbortController()
     const { signal } = controller
+    let cancelled = false
+
     fetch('/api/auth/permissao', { signal })
       .then(r => r.json())
       .then(data => {
+        if (cancelled) return
         if (data.autorizado) {
           setPermissaoNivel(data.nivel)
           setHierarquiaVerificada(true)
@@ -87,10 +90,14 @@ export function SidebarClient() {
           setPermissaoErro(true)
         }
       })
-      .catch(() => {
-        if (!signal.aborted) setPermissaoErro(true)
+      .catch((err) => {
+        if (err?.name === 'AbortError' || cancelled) return
+        setPermissaoErro(true)
       })
-    return () => controller.abort()
+    return () => {
+      cancelled = true
+      controller.abort()
+    }
   }, [])
 
   const nivelEfetivo = hierarquiaVerificada ? permissaoNivel : roleLevel

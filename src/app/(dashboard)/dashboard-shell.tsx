@@ -9,6 +9,7 @@ import { PageTip } from '@/components/ui/page-tips'
 import { WelcomeOverlay } from '@/components/ui/welcome-overlay'
 import { AIFab } from '@/components/ui/ai-fab'
 import { BotEngineInit } from '@/components/bots/motor-inicializador'
+import { CommandPalette } from '@/components/ui/command-palette'
 
 function BackgroundBlobs() {
   const [mounted, setMounted] = useState(false)
@@ -24,6 +25,19 @@ function BackgroundBlobs() {
 }
 
 export function DashboardShell({ children }: { children: React.ReactNode }) {
+  const [paletteOpen, setPaletteOpen] = useState(false)
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault()
+        setPaletteOpen((prev) => !prev)
+      }
+    }
+    document.addEventListener('keydown', handler)
+    return () => document.removeEventListener('keydown', handler)
+  }, [])
+
   return (
     <SessionProvider>
       <FetchErrorSuppressor>
@@ -39,6 +53,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
       <AIFab />
       <WelcomeOverlay />
       <BotEngineInit />
+      <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
       </FetchErrorSuppressor>
     </SessionProvider>
   )

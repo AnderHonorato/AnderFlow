@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -16,9 +17,10 @@ import {
   IconPlus, IconSearch, IconClient, IconProject, IconFinancial,
   IconLoader, IconArrowLeft,
 } from '@/components/icons'
-import { Link2, Copy } from 'lucide-react'
+import { Link2, Copy, Map } from 'lucide-react'
 
 export default function ClientsPage() {
+  const router = useRouter()
   const { data: session } = useSession()
   const [clients, setClients] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -148,9 +150,14 @@ export default function ClientsPage() {
         <div className="p-4 border-b space-y-3">
           <div className="flex items-center justify-between">
             <h2 className="text-[15px] font-[500]">Clientes</h2>
-            <Button size="sm" onClick={() => setShowNew(true)} className="h-7 text-[11px]">
-              <IconPlus className="w-[12px] h-[12px]" /> Novo
-            </Button>
+            <div className="flex items-center gap-1.5">
+              <Button size="sm" variant="outline" onClick={() => router.push('/clients/map')} className="h-7 text-[11px] gap-1">
+                <Map className="w-3 h-3" /> Mapa
+              </Button>
+              <Button size="sm" onClick={() => setShowNew(true)} className="h-7 text-[11px]">
+                <IconPlus className="w-[12px] h-[12px]" /> Novo
+              </Button>
+            </div>
           </div>
           <div className="relative">
             <IconSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-[14px] h-[14px] text-[var(--text-3)]" />

@@ -11,7 +11,15 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { AchievementBadge, achievementConfig } from '@/components/ui/achievement-badge'
+import { ProjectCompleteModal } from '@/components/ui/project-complete-modal'
 import { IconProject, IconCheck, IconAnalytics, IconPlus, IconFinancial, IconNotification, IconArrowRight, IconArrowUpRight } from '@/components/icons'
+import { CheckCircle2, Circle, X, Sparkles } from 'lucide-react'
+
+const ONBOARDING_STEPS = [
+  { id: 'profile', label: 'Complete seu perfil', description: 'Adicione seus dados de contato', href: '/portal/profile', icon: null },
+  { id: 'briefing', label: 'Envie um briefing', description: 'Solicite seu primeiro projeto', href: '/portal/briefing', icon: null },
+  { id: 'contract', label: 'Assine o contrato', description: 'Formalize a parceria', href: '/portal/contracts', icon: null },
+]
 
 function getGreeting() {
   const hour = new Date().getHours()
@@ -54,29 +62,41 @@ export default function PortalDashboard() {
   const [notifications, setNotifications] = useState<any[]>([])
   const [achievements, setAchievements] = useState<any[]>([])
   const [newAchievement, setNewAchievement] = useState<any>(null)
+  const [celebratingProject, setCelebratingProject] = useState<{ id: string; name: string } | null>(null)
+  const [contracts, setContracts] = useState<any[]>([])
+  const [onboardingHidden, setOnboardingHidden] = useState(false)
+  const [aiSummary, setAiSummary] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [greeting, setGreeting] = useState('Ola')
 
   useEffect(() => { setGreeting(getGreeting()) }, [])
+
+  useEffect(() => {
+    const hidden = localStorage.getItem('onboarding_checklist_hidden')
+    if (hidden === 'true') setOnboardingHidden(true)
+  }, [])
 
   const firstName = session?.user?.name?.split(' ')[0] || 'Cliente'
 
   useEffect(() => {
     const loadAll = async () => {
       try {
-        const [projRes, invRes, notifRes, achRes] = await Promise.all([
+        const [projRes, invRes, notifRes, achRes, conRes] = await Promise.all([
           fetch('/api/projects', { credentials: 'include' }),
           fetch('/api/invoices', { credentials: 'include' }),
           fetch('/api/notifications', { credentials: 'include' }),
           fetch('/api/achievements', { credentials: 'include' }),
+          fetch('/api/contracts', { credentials: 'include' }),
         ])
         const projJson = await projRes.json()
         const invJson = await invRes.json()
         const notifJson = await notifRes.json()
         const achJson = await achRes.json()
+        const conJson = await conRes.json()
         setProjects(projJson.data || [])
         setInvoices(invJson.data || [])
         setNotifications((notifJson.data || []).slice(0, 5))
+        setContracts(conJson.data || [])
         const achData = achJson.data || []
         setAchievements(achData)
 
@@ -91,8 +111,25 @@ export default function PortalDashboard() {
           } catch {}
         }
         localStorage.setItem('anderflow_achievements', JSON.stringify(achData.map((a: any) => a.id)))
+
+        const projData = projJson.data || []
+        const lastStatusesStr = sessionStorage.getItem('lastProjectStatuses')
+        const lastStatuses: Record<string, string> = lastStatusesStr ? JSON.parse(lastStatusesStr) : {}
+        const currentStatuses: Record<string, string> = {}
+        projData.forEach((p: any) => { currentStatuses[p.id] = p.status })
+        for (const p of projData) {
+          if (p.status === 'COMPLETED' && lastStatuses[p.id] && lastStatuses[p.id] !== 'COMPLETED') {
+            setCelebratingProject({ id: p.id, name: p.name })
+            break
+          }
+        }
+        sessionStorage.setItem('lastProjectStatuses', JSON.stringify(currentStatuses))
       } catch {}
       setLoading(false)
+      fetch('/api/portal/ai-summary', { credentials: 'include' })
+        .then(r => r.json())
+        .then(json => { if (json.data?.summary) setAiSummary(json.data.summary) })
+        .catch(() => {})
     }
     loadAll()
   }, [])
@@ -117,6 +154,20 @@ export default function PortalDashboard() {
   const pendingTotal = pendingInvoices.reduce((s: number, i: any) => s + (i.total || 0), 0)
   const overdueCount = invoices.filter((i: any) => i.status === 'OVERDUE').length
 
+  const onboardingResults = ONBOARDING_STEPS.map(step => {
+    if (step.id === 'profile') return { ...step, done: !!(session?.user as any)?.phone }
+    if (step.id === 'briefing') return { ...step, done: projects.length > 0 }
+    if (step.id === 'contract') return { ...step, done: contracts.some((c: any) => c.status === 'SIGNED') }
+    return { ...step, done: false }
+  })
+  const onboardingDone = onboardingResults.filter(s => s.done).length
+  const onboardingTotal = onboardingResults.length
+  const onboardingProgress = onboardingTotal > 0 ? Math.round((onboardingDone / onboardingTotal) * 100) : 0
+  const hideOnboarding = () => {
+    localStorage.setItem('onboarding_checklist_hidden', 'true')
+    setOnboardingHidden(true)
+  }
+
   return (
     <div className="p-6 space-y-5 animate-page-enter">
       <div className="flex items-center justify-between">
@@ -134,6 +185,18 @@ export default function PortalDashboard() {
           </a>
         </Button>
       </div>
+
+      {aiSummary !== null && (
+        <Card className="border-[var(--accent)]/20 bg-[var(--accent-subtle)] animate-card-pop">
+          <CardContent className="p-4 flex items-start gap-3">
+            <Sparkles className="w-4 h-4 text-[var(--accent)] mt-0.5 shrink-0" />
+            <div>
+              <p className="text-[11px] font-[500] text-[var(--accent)] uppercase tracking-wider mb-1">Resumo Inteligente</p>
+              <p className="text-[13px] text-[var(--text-2)] leading-relaxed">{aiSummary}</p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
         <Card className="animate-card-pop stagger-1"><CardContent className="p-4 flex items-center gap-3">
@@ -172,6 +235,50 @@ export default function PortalDashboard() {
             {Object.keys(achievementConfig).filter(t => !achievements.some((a: any) => a.type === t)).map(t => (
               <AchievementBadge key={t} type={t} locked />
             ))}
+          </CardContent>
+        </Card>
+      )}
+
+      {!onboardingHidden && onboardingProgress < 100 && (
+        <Card className="animate-card-pop border-[var(--accent)]/20 bg-[var(--accent)]/[0.03]">
+          <CardContent className="p-4">
+            <div className="flex items-start justify-between mb-3">
+              <div>
+                <p className="text-[12px] font-[500] text-[var(--text)]">Primeiros passos</p>
+                <p className="text-[11px] text-[var(--text-3)] mt-0.5">Complete as etapas para desbloquear todo o potencial</p>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <Badge variant="info" className="text-2xs">
+                  {onboardingDone} de {onboardingTotal} concluídos
+                </Badge>
+                <button onClick={hideOnboarding} className="text-[var(--text-3)] hover:text-[var(--text)] transition-colors">
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            </div>
+            <Progress value={onboardingProgress} className="h-1 mb-3" />
+            <div className="space-y-1">
+              {onboardingResults.map((step) => (
+                <div key={step.id} className="flex items-center gap-2.5 py-1.5">
+                  {step.done ? (
+                    <CheckCircle2 className="h-4 w-4 text-[var(--success)] shrink-0" />
+                  ) : (
+                    <Circle className="h-4 w-4 text-[var(--text-3)] shrink-0" />
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className={`text-[13px] font-[500] ${step.done ? 'text-[var(--text-3)]' : 'text-[var(--text)]'}`}>
+                      {step.label}
+                    </p>
+                    <p className="text-[11px] text-[var(--text-3)]">{step.description}</p>
+                  </div>
+                  {!step.done && (
+                    <Button size="sm" variant="outline" className="h-7 text-[11px]" asChild>
+                      <a href={step.href}>Ir</a>
+                    </Button>
+                  )}
+                </div>
+              ))}
+            </div>
           </CardContent>
         </Card>
       )}
@@ -386,6 +493,13 @@ export default function PortalDashboard() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ProjectCompleteModal
+        open={!!celebratingProject}
+        projectName={celebratingProject?.name}
+        projectId={celebratingProject?.id}
+        onClose={() => setCelebratingProject(null)}
+      />
     </div>
   )
 }

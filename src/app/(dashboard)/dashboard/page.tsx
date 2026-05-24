@@ -12,6 +12,7 @@ import { StatCard } from '@/components/ui/stat-card'
 import { OnboardingTip } from '@/components/ui/onboarding-tip'
 import { IconProject, IconFinancial, IconClient, IconAnalytics, IconPlus, IconChat, IconFile, IconCheck, IconArrowRight, IconKnowledge } from '@/components/icons'
 import { cn } from '@/lib/utils'
+import { AnimatedCounter } from '@/components/ui/animated-counter'
 
 export default function DashboardPage() {
   const { data: session } = useSession()
@@ -64,6 +65,8 @@ export default function DashboardPage() {
   }))
 
   const activeProject = recentProjects.find((p: any) => p.status !== 'COMPLETED' && p.status !== 'CANCELLED')
+  const completed = recentProjects.filter((p: any) => p.status === 'COMPLETED').length
+  const inProgress = recentProjects.filter((p: any) => p.status === 'IN_PROGRESS').length
 
   return (
     <div className="p-4 space-y-5 animate-page-enter">
@@ -98,8 +101,8 @@ export default function DashboardPage() {
                   <IconProject className="w-[18px] h-[18px] text-[var(--accent)]" />
                 </div>
                 <div>
-                  <p className="text-xl font-[500] text-[var(--text)]">{recentProjects.length}</p>
-                  <p className="text-[11px] text-[var(--text-3)]">Projetos</p>
+<p className="text-xl font-[500] text-[var(--text)]"><AnimatedCounter value={recentProjects.length} /></p>
+                   <p className="text-[11px] text-[var(--text-3)]">Projetos</p>
                 </div>
               </CardContent>
             </Card>
@@ -109,8 +112,8 @@ export default function DashboardPage() {
                   <IconCheck className="w-[18px] h-[18px] text-[var(--success)]" />
                 </div>
                 <div>
-                  <p className="text-xl font-[500] text-[var(--text)]">{recentProjects.filter((p: any) => p.status === 'COMPLETED').length}</p>
-                  <p className="text-[11px] text-[var(--text-3)]">Concluidos</p>
+<p className="text-xl font-[500] text-[var(--text)]"><AnimatedCounter value={completed} /></p>
+                   <p className="text-[11px] text-[var(--text-3)]">Concluidos</p>
                 </div>
               </CardContent>
             </Card>
@@ -120,8 +123,8 @@ export default function DashboardPage() {
                   <IconKnowledge className="w-[18px] h-[18px] text-[var(--info)]" />
                 </div>
                 <div>
-                  <p className="text-xl font-[500] text-[var(--text)]">{recentProjects.filter((p: any) => p.status === 'IN_PROGRESS').length}</p>
-                  <p className="text-[11px] text-[var(--text-3)]">Em andamento</p>
+<p className="text-xl font-[500] text-[var(--text)]"><AnimatedCounter value={inProgress} /></p>
+                   <p className="text-[11px] text-[var(--text-3)]">Em andamento</p>
                 </div>
               </CardContent>
             </Card>

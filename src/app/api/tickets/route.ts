@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getSessionUser, isAdmin, unauthorizedResponse } from '@/lib/auth-utils'
+import { sendWebhook } from '@/lib/webhook-sender'
 
 export async function GET(request: NextRequest) {
   const user = await getSessionUser(request)
@@ -65,6 +66,14 @@ export async function POST(request: NextRequest) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Cookie': request.headers.get('cookie') || '' },
       body: JSON.stringify({ ticketId: ticket.id }),
+    }).catch(() => {})
+
+    sendWebhook('ticket_created', {
+      id: ticket.id,
+      title: ticket.title,
+      priority: ticket.priority,
+      category: ticket.category,
+      createdAt: ticket.createdAt?.toISOString(),
     }).catch(() => {})
 
     return NextResponse.json({ data: ticket }, { status: 201 })

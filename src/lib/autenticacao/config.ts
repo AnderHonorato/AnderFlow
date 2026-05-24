@@ -85,6 +85,7 @@ export const authOptions: NextAuthOptions = {
           roleLevel: getRoleLevel(user.role),
           permissions: user.permissions,
           rememberUntil: rememberUntil?.toISOString() || null,
+          createdAt: user.createdAt?.toISOString() || null,
         }
       },
     }),
@@ -97,6 +98,7 @@ export const authOptions: NextAuthOptions = {
         token.roleLevel = (user as any).roleLevel || getRoleLevel((user as any).role)
         token.permissions = (user as any).permissions || null
         token.rememberUntil = (user as any).rememberUntil || null
+        token.createdAt = (user as any).createdAt || null
       }
       if (!token.roleLevel && token.id) {
         const dbUser = await prisma.user.findUnique({ where: { id: token.id as string }, select: { role: true, permissions: true, rememberUntil: true } })
@@ -116,6 +118,7 @@ export const authOptions: NextAuthOptions = {
         ;(session.user as any).roleLevel = token.roleLevel
         ;(session.user as any).permissions = token.permissions || null
         ;(session.user as any).rememberUntil = token.rememberUntil
+        ;(session.user as any).createdAt = token.createdAt || null
       }
       return session
     },

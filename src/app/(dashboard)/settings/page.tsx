@@ -18,7 +18,7 @@ import {
   IconArrowRight, IconCheck as IconCheck2,
 } from '@/components/icons'
 import { cn } from '@/lib/utils'
-import { Send } from 'lucide-react'
+import { Send, Download, Layers } from 'lucide-react'
 
 const categories = [
   { id: 'general', label: 'Geral', icon: IconSettings },
@@ -28,6 +28,8 @@ const categories = [
   { id: 'modules', label: 'Módulos', icon: IconAutomation },
   { id: 'integrations', label: 'Integrações', icon: IconAutomation, href: '/settings/integrations' },
   { id: 'api-keys', label: 'Chaves de API', icon: IconSettings, href: '/settings/api-keys' },
+  { id: 'templates', label: 'Templates', icon: IconFile, href: '/settings/templates' },
+  { id: 'webhooks', label: 'Webhooks', icon: IconAutomation, href: '/settings/webhooks' },
 ] as const
 
 const modules = [
@@ -66,6 +68,10 @@ export default function SettingsPage() {
   })
   const [orgName, setOrgName] = useState('ANDERFLOW Sistemas')
   const [saved, setSaved] = useState(false)
+  const [exportEntities, setExportEntities] = useState<string[]>([
+    'clients', 'projects', 'tasks', 'tickets', 'invoices', 'contracts',
+  ])
+  const [exporting, setExporting] = useState(false)
 
   useEffect(() => { setMounted(true) }, [])
 
@@ -73,6 +79,23 @@ export default function SettingsPage() {
     setSaved(true)
     toast.success('Configurações salvas')
     setTimeout(() => setSaved(false), 2000)
+  }
+
+  const toggleExportEntity = (entity: string) => {
+    setExportEntities(prev =>
+      prev.includes(entity) ? prev.filter(e => e !== entity) : [...prev, entity]
+    )
+  }
+
+  const handleExport = () => {
+    if (exportEntities.length === 0) {
+      toast.error('Selecione pelo menos uma entidade')
+      return
+    }
+    setExporting(true)
+    window.open(`/api/export?entities=${exportEntities.join(',')}`, '_blank')
+    toast.success('Download iniciado!')
+    setTimeout(() => setExporting(false), 2000)
   }
 
   if (!mounted) return null
@@ -100,6 +123,10 @@ export default function SettingsPage() {
                         router.push('/settings/integrations')
                       } else if (cat.id === 'api-keys') {
                         router.push('/settings/api-keys')
+                      } else if (cat.id === 'templates') {
+                        router.push('/settings/templates')
+                      } else if (cat.id === 'webhooks') {
+                        router.push('/settings/webhooks')
                       } else {
                         setActiveCategory(cat.id)
                       }
@@ -300,6 +327,50 @@ export default function SettingsPage() {
                   </CardContent>
                 </Card>
               )}
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Download className="h-4 w-4" /> Exportar Dados
+                  </CardTitle>
+                  <CardDescription>Exporte os dados da plataforma em arquivo ZIP</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="grid grid-cols-3 gap-2">
+                    {[
+                      { id: 'clients', label: 'Clientes' },
+                      { id: 'projects', label: 'Projetos' },
+                      { id: 'tasks', label: 'Tarefas' },
+                      { id: 'tickets', label: 'Tickets' },
+                      { id: 'invoices', label: 'Faturas' },
+                      { id: 'contracts', label: 'Contratos' },
+                    ].map((entity) => (
+                      <label
+                        key={entity.id}
+                        className={`flex items-center gap-2 px-3 py-2 rounded-lg border cursor-pointer transition-colors text-xs ${
+                          exportEntities.includes(entity.id)
+                            ? 'border-[var(--accent)] bg-[var(--accent)]/5 text-[var(--text)]'
+                            : 'border-[var(--border)] text-[var(--text-3)] hover:border-[var(--text-3)]'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={exportEntities.includes(entity.id)}
+                          onChange={() => toggleExportEntity(entity.id)}
+                          className="sr-only"
+                        />
+                        {entity.label}
+                      </label>
+                    ))}
+                  </div>
+                  <div className="flex justify-end">
+                    <Button size="sm" onClick={handleExport} disabled={exporting || exportEntities.length === 0}>
+                      <Download className="h-3.5 w-3.5 mr-1.5" />
+                      {exporting ? 'Exportando...' : `Exportar selecionados (${exportEntities.length})`}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
           </div>
         </div>
     </div>

@@ -16,7 +16,7 @@ import {
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import {
-  Plus, Search, DollarSign, TrendingUp, Clock, MoreHorizontal, Loader2, ArrowUpRight,
+  Plus, Search, DollarSign, TrendingUp, Clock, MoreHorizontal, Loader2, ArrowUpRight, ReceiptText as ReceiptIcon,
 } from 'lucide-react'
 
 export default function FinancialPage() {
@@ -104,6 +104,11 @@ export default function FinancialPage() {
                 <Badge variant={i.status === 'PAID' ? 'success' : i.status === 'OVERDUE' ? 'destructive' : 'warning'} className="text-2xs">
                   {i.status === 'PAID' ? 'Pago' : i.status === 'SENT' ? 'Pendente' : i.status === 'OVERDUE' ? 'Vencido' : i.status}
                 </Badge>
+                {i.status === 'PAID' && (
+                  <Button variant="ghost" size="sm" onClick={() => window.open(`/api/invoices/${i.id}/receipt`, '_blank')} className="h-6 text-[10px]">
+                    <ReceiptIcon className="w-3 h-3" /> Recibo
+                  </Button>
+                )}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" size="icon-sm"><MoreHorizontal className="h-4 w-4" /></Button>

@@ -9,8 +9,10 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Skeleton } from '@/components/ui/skeleton'
 import { toast } from 'sonner'
 import {
-  Search, Send, Phone, Video, Check, CheckCheck, Loader2,
+  Search, Send, Phone, Video, Check, CheckCheck, Loader2, Copy, Code,
 } from 'lucide-react'
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
+import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism'
 
 export default function ChatPage() {
   const { data: session } = useSession()
@@ -110,6 +112,59 @@ export default function ChatPage() {
     setSending(false)
   }
 
+  const [copiedBlock, setCopiedBlock] = useState('')
+
+  const renderMessageContent = (text: string) => {
+    const parts: { type: 'text' | 'code'; content: string; lang?: string; key: string }[] = []
+    const regex = /```(\w*)\n?([\s\S]+?)```/g
+    let lastIndex = 0
+    let match
+    while ((match = regex.exec(text)) !== null) {
+      if (match.index > lastIndex) {
+        parts.push({ type: 'text', content: text.slice(lastIndex, match.index), key: `t-${lastIndex}` })
+      }
+      parts.push({ type: 'code', content: match[2], lang: match[1] || 'text', key: `c-${match.index}` })
+      lastIndex = regex.lastIndex
+    }
+    if (lastIndex < text.length) {
+      parts.push({ type: 'text', content: text.slice(lastIndex), key: `t-${lastIndex}` })
+    }
+    if (parts.length === 0) return <p className="text-sm leading-relaxed">{text}</p>
+    return (
+      <>
+        {parts.map(part =>
+          part.type === 'text'
+            ? <span key={part.key} className="text-sm leading-relaxed whitespace-pre-wrap">{part.content}</span>
+            : (
+              <div key={part.key} className="relative my-2 rounded-lg overflow-hidden border border-[var(--border)]">
+                <div className="flex items-center justify-between px-3 py-1.5 bg-[var(--surface-2)]">
+                  <span className="text-[10px] text-[var(--text-3)] uppercase">{part.lang}</span>
+                  <button
+                    className="flex items-center gap-1 text-[10px] text-[var(--text-3)] hover:text-[var(--text)] transition-colors"
+                    onClick={() => {
+                      navigator.clipboard.writeText(part.content)
+                      setCopiedBlock(part.key)
+                      setTimeout(() => setCopiedBlock(''), 2000)
+                    }}
+                  >
+                    {copiedBlock === part.key ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+                    {copiedBlock === part.key ? 'Copiado' : 'Copiar'}
+                  </button>
+                </div>
+                <SyntaxHighlighter language={part.lang} style={vscDarkPlus} customStyle={{ borderRadius: '0 0 8px 8px', fontSize: '12px', maxHeight: '400px', margin: 0 }}>
+                  {part.content}
+                </SyntaxHighlighter>
+              </div>
+            )
+        )}
+      </>
+    )
+  }
+
+  const handleInsertCodeBlock = () => {
+    setNewMessage(prev => prev + '\n```\ncole o código aqui\n```\n')
+  }
+
   const selectedChannelData = channels.find(c => c.id === selectedChannel)
 
   if (loading) {
@@ -190,7 +245,7 @@ export default function ChatPage() {
                           <p className="text-2xs text-muted-foreground mb-1 px-1">{msg.sender?.name || 'Cliente'}</p>
                         )}
                         <div className={`rounded-2xl px-4 py-2.5 ${isMine ? 'bg-primary text-primary-foreground rounded-br-md' : 'bg-muted rounded-bl-md'}`}>
-                          <p className="text-sm leading-relaxed">{msg.content}</p>
+                          {renderMessageContent(msg.content)}
                         </div>
                         <div className={`flex items-center gap-1 mt-1 px-1 ${isMine ? 'justify-end' : ''}`}>
                           <span className="text-2xs text-muted-foreground">
@@ -219,6 +274,9 @@ export default function ChatPage() {
 
             <div className="border-t px-6 py-4">
               <div className="flex items-center gap-2 max-w-3xl mx-auto">
+                <Button variant="ghost" size="icon-sm" onClick={handleInsertCodeBlock} title="Inserir bloco de código">
+                  <Code className="h-4 w-4" />
+                </Button>
                 <Input
                   placeholder="Digite sua mensagem..."
                   value={newMessage}

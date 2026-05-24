@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { toast } from 'sonner'
-import { Send, X, Plus, Trash2, Maximize2, Minimize2, PanelLeft, Paperclip, Image, Download, ChevronLeft, ChevronRight, Pin, ThumbsUp, ThumbsDown, Reply, CornerDownRight, Brain, AlertTriangle, ChevronDown, Bug, ChevronUp } from 'lucide-react'
+import { Send, X, Plus, Trash2, Maximize2, Minimize2, PanelLeft, Paperclip, Image, Download, ChevronLeft, ChevronRight, Pin, ThumbsUp, ThumbsDown, Reply, CornerDownRight, Brain, AlertTriangle, ChevronDown, Bug, ChevronUp, Copy } from 'lucide-react'
 import { replaceIcons } from './chat-icons'
 
 const THINKING = [
@@ -119,7 +119,8 @@ function ReasoningStream({lines,active}:{lines:string[];active:boolean}){
 }
 
 function MD({content}:{content:string}){const h=useMemo(()=>{
-  let t=replaceIcons(content).replace(/\[PENSAMENTO\][\s\S]*?\[\/PENSAMENTO\]\n?/g,'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+  let t=content.replace(/\[PENSAMENTO\][\s\S]*?\[\/PENSAMENTO\]\n?/g,'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+  t=replaceIcons(t)
   t=t.replace(/```(\w*)\n?([\s\S]*?)```/g,'<div class="rounded-xl bg-[var(--surface)] border border-[var(--border)] p-3 my-2 overflow-x-auto"><pre class="text-[11px] leading-relaxed"><code>$2</code></pre></div>')
   t=t.replace(/`([^`]+)`/g,'<code class="bg-[var(--accent-subtle)] text-[var(--accent)] px-1.5 py-0.5 rounded-md text-[11px] font-mono">$1</code>')
   t=t.replace(/\*\*\*(.+?)\*\*\*/g,'<strong class="font-[600] text-[var(--text)]"><em>$1</em></strong>')
@@ -525,6 +526,7 @@ useEffect(()=>{setWelcomeIdx(0);setWelcomeStarKey(p=>p+1)},[cn])
               </div>
             </div>
             <p className="text-[10px] text-[var(--text-3)] truncate mt-0.5">{c.preview||'Nova conversa'}</p>
+            <p className="text-[8px] text-[var(--text-3)] mt-0.5 opacity-60">{fmtD(c.updatedAt)}</p>
           </div>))}
         </div></div>
       </div>
@@ -573,8 +575,7 @@ useEffect(()=>{setWelcomeIdx(0);setWelcomeStarKey(p=>p+1)},[cn])
                   left:i<=1?'-6px':'auto',right:i>=3?'-8px':'auto',
                   border:`2px solid ${CARD_RING_COLORS[i%CARD_RING_COLORS.length]}`,
                   borderRadius:'50%',opacity:c.visible?0.5:0.15,zIndex:0,
-                  transition:'opacity 0.6s ease, transform 0.6s ease',
-                  transform:c.visible?'scale(1)':'scale(0.8)',
+                  transition:'opacity 0.6s ease',
                   animation:`blobMorph${String.fromCharCode(65+i%5)} ${4+i*1.4}s ease-in-out infinite`,
                 }}/>
                 {/* organic blob background */}
@@ -582,8 +583,7 @@ useEffect(()=>{setWelcomeIdx(0);setWelcomeStarKey(p=>p+1)},[cn])
                   borderRadius:CARD_BLOB_RADII[i%CARD_BLOB_RADII.length],
                   background:priColor||CARD_BG[i%CARD_BG.length],
                   opacity:c.visible?0.9:0.2,
-                  transition:'opacity 0.5s ease, transform 0.5s ease',
-                  transform:c.visible?'scale(1)':'scale(0.92)',
+                  transition:'opacity 0.5s ease',
                   zIndex:0,filter:'blur(2px)',
                   animation:`${blobKey} ${4.5+i*1.2}s ease-in-out infinite`,
                 }}/>
@@ -594,8 +594,7 @@ useEffect(()=>{setWelcomeIdx(0);setWelcomeStarKey(p=>p+1)},[cn])
                     borderColor:'var(--border)',
                     borderRadius:CARD_SHAPES[i%CARD_SHAPES.length],
                     opacity:c.visible?1:0.3,
-                    transform:c.visible?'translateY(0)':'translateY(6px)',
-                    transition:'opacity 0.5s ease, transform 0.5s ease',
+                    transition:'opacity 0.5s ease',
                     zIndex:1,
                   }}
                   onMouseEnter={e=>{e.currentTarget.style.borderColor='var(--accent)';e.currentTarget.style.boxShadow='0 0 16px rgba(232,98,42,0.1)'}}
@@ -621,13 +620,15 @@ useEffect(()=>{setWelcomeIdx(0);setWelcomeStarKey(p=>p+1)},[cn])
                 <div className={`flex items-center gap-1 mt-0.5 px-1 ${ia?'':'justify-end'}`}>
                   <span className="text-[9px] text-[var(--text-3)]">{fmtT(msg.createdAt)}</span>
                   {ia&&(<div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5 ml-1">
-                    <button title="Gostei" onClick={()=>{if(msg.liked===undefined){sfb(i,true,fbk||undefined);setFbk(null)}}} className={`h-4 w-4 flex items-center justify-center rounded ${msg.liked===true?'text-[var(--success)]':'text-[var(--text-3)] hover:text-[var(--success)]'}`}><ThumbsUp className="h-3 w-3"/></button>
+                    <button title="Gostei" onClick={()=>{if(msg.liked===undefined){sfb(i,true);setFbk('')}}} className={`h-4 w-4 flex items-center justify-center rounded ${msg.liked===true?'text-[var(--success)]':'text-[var(--text-3)] hover:text-[var(--success)]'}`}><ThumbsUp className="h-3 w-3"/></button>
                     <button title="Nao gostei" onClick={()=>{if(msg.liked===undefined)sfb(i,false)}} className={`h-4 w-4 flex items-center justify-center rounded ${msg.liked===false?'text-[var(--destructive)]':'text-[var(--text-3)] hover:text-[var(--destructive)]'}`}><ThumbsDown className="h-3 w-3"/></button>
                     <button title="Responder" onClick={()=>setRp(msg)} className="h-4 w-4 flex items-center justify-center rounded text-[var(--text-3)] hover:text-[var(--accent)]"><Reply className="h-3 w-3"/></button>
+                    <button title="Copiar" onClick={()=>{navigator.clipboard.writeText(msg.content||'');toast.success('Copiado!')}} className="h-4 w-4 flex items-center justify-center rounded text-[var(--text-3)] hover:text-[var(--info)]"><Copy className="h-3 w-3"/></button>
     </div>)}
 
-                </div>
-              </div>
+          </div>
+          <p className="text-[10px] text-[var(--text-3)] text-center mt-3 opacity-60 hover:opacity-100 transition-opacity cursor-pointer select-none" onClick={()=>setCardSlots(buildCardSlots())}>Ver mais sugestões</p>
+          </div>
             </div></div></div>)})}
           {/* Streaming reasoning display - 3 linhas rotativas com card arredondado visivel durante geracao */}
           {streamActive&&reasoningLines.length>0&&<div className="flex justify-start"><div className="flex items-start gap-2"><AIA rr={streamPhase==='thinking'}/><div className="min-w-0 flex-1"><ReasoningStream lines={reasoningLines} active={streamPhase==='thinking'||streamPhase==='typing'}/></div></div></div>}

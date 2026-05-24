@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { auditLog } from '@/lib/audit'
+import { sendWebhook } from '@/lib/webhook-sender'
 
 export async function GET(
   request: NextRequest,
@@ -69,7 +71,22 @@ export async function PATCH(
           metadata: JSON.stringify({ url: `/portal/feedback/${project.id}` }),
         },
       })
+
+      sendWebhook('project_completed', {
+        id: project.id,
+        name: project.name,
+        clientId: project.clientId,
+        completedAt: project.completedAt?.toISOString() || new Date().toISOString(),
+      }).catch(() => {})
     }
+
+    auditLog({
+      userId: body.userId,
+      action: 'UPDATE',
+      entity: 'Project',
+      entityId: project.id,
+      description: body.status ? `Status atualizado para ${body.status}` : 'Projeto atualizado',
+    }).catch(() => {})
 
     return NextResponse.json({ data: project })
   } catch (error) {

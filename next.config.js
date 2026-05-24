@@ -7,6 +7,7 @@ const nextConfig = {
       { protocol: 'https', hostname: 'res.cloudinary.com' },
     ],
   },
+  allowedDevOrigins: ['192.168.1.1', 'localhost'],
 }
 
 module.exports = nextConfig

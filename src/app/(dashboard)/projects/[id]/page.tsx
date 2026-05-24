@@ -15,7 +15,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { toast } from 'sonner'
 import { ProjectTimeline, type NodeStatus } from '@/components/projects/project-timeline'
 import { TimeTracker } from '@/components/ui/time-tracker'
+import { CsvImportModal } from '@/components/ui/csv-import-modal'
 import { IconArrowLeft, IconThumbsUp, IconThumbsDown, IconCheck, IconClose, IconLoader, IconFile, IconClock, IconSparkles } from '@/components/icons'
+import { Target } from 'lucide-react'
 
 const DEFAULT_STEPS = [
   { id: 1, label: 'Briefing', description: 'Coleta de requisitos e entendimento do projeto' },
@@ -67,6 +69,7 @@ export default function ProjectDetailPage() {
   const [proposalViewOpen, setProposalViewOpen] = useState(false)
   const [proposalHistory, setProposalHistory] = useState<{ value: string; date: string; author: string }[]>([])
   const [aiLoading, setAiLoading] = useState(false)
+  const [csvImportOpen, setCsvImportOpen] = useState(false)
 
   const handlePrintModal = (modalSelector: string) => {
     const modal = document.querySelector(modalSelector)
@@ -323,6 +326,22 @@ export default function ProjectDetailPage() {
     setAiLoading(false)
   }
 
+  const handleCsvImport = async (tasks: { title: string; description?: string; deadline?: string }[]) => {
+    const res = await fetch('/api/tasks/import', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ projectId: id, tasks }),
+    })
+    const json = await res.json()
+    if (res.ok) {
+      toast.success(`${json.created} tarefas importadas!`)
+      const refreshed = await fetch(`/api/projects/${id}`).then(r => r.json())
+      if (refreshed.data) setProject(refreshed.data)
+    } else {
+      toast.error(json.error || 'Erro ao importar tarefas')
+    }
+  }
+
   const handleInfoRequest = async () => {
     if (!infoRequestMsg.trim()) return
     setInfoRequestLoading(true)
@@ -569,9 +588,22 @@ export default function ProjectDetailPage() {
 
   return (
     <div className="p-6 space-y-6 max-w-4xl mx-auto animate-page-enter">
-      <Link href="/projects" className="inline-flex items-center gap-2 text-[13px] text-[var(--text-3)] hover:text-[var(--text)]">
-        <IconArrowLeft className="w-4 h-4" /> Voltar para projetos
-      </Link>
+      <div className="flex items-center justify-between">
+        <Link href="/projects" className="inline-flex items-center gap-2 text-[13px] text-[var(--text-3)] hover:text-[var(--text)]">
+          <IconArrowLeft className="w-4 h-4" /> Voltar para projetos
+        </Link>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" asChild className="h-7 text-[11px]">
+            <a href={`/projects/${id}/okrs`}><Target className="mr-1 h-3 w-3" /> OKRs</a>
+          </Button>
+          {isAdmin && (
+            <Button variant="outline" size="sm" onClick={() => setCsvImportOpen(true)} className="h-7 text-[11px] gap-1.5">
+              <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M8 2v10M4 8l4 4 4-4M2 14h12"/></svg>
+              Importar CSV
+            </Button>
+          )}
+        </div>
+      </div>
 
       <Card>
         <CardContent className="p-4">
@@ -1115,6 +1147,12 @@ export default function ProjectDetailPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <CsvImportModal
+        open={csvImportOpen}
+        onClose={() => setCsvImportOpen(false)}
+        onImport={handleCsvImport}
+      />
     </div>
   )
 }

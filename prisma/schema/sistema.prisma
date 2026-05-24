@@ -60,15 +60,17 @@ model Activity {
 }
 
 model AuditLog {
-  id        String   @id @default(cuid())
-  userId    String?
-  action    String
-  entity    String
-  entityId  String?
-  details   String?
-  ipAddress String?
-  userAgent String?
-  createdAt DateTime @default(now())
+  id          String   @id @default(cuid())
+  userId      String?
+  userName    String?
+  action      String
+  entity      String
+  entityId    String?
+  description String?
+  details     String?
+  ipAddress   String?
+  userAgent   String?
+  createdAt   DateTime @default(now())
 }
 
 model Automation {
@@ -95,6 +97,86 @@ model KnowledgeBase {
   views       Int      @default(0)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+model WeeklyCheckin {
+  id        String   @id @default(cuid())
+  clientId  String
+  projectId String?
+  mood      Int
+  week      Int
+  createdAt DateTime @default(now())
+}
+
+model ProjectTemplate {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  tasks       String
+  createdAt   DateTime @default(now())
+}
+
+model WebhookEndpoint {
+  id        String   @id @default(cuid())
+  url       String
+  secret    String
+  events    String[]
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  deliveries WebhookDelivery[]
+}
+
+model WebhookDelivery {
+  id         String   @id @default(cuid())
+  endpointId String
+  event      String
+  payload    Json
+  statusCode Int?
+  success    Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  endpoint WebhookEndpoint @relation(fields: [endpointId], references: [id])
+}
+
+model OKR {
+  id        String      @id @default(cuid())
+  projectId String
+  objective String
+  createdAt DateTime    @default(now())
+
+  keyResults KeyResult[]
+}
+
+model KeyResult {
+  id           String @id @default(cuid())
+  okrId        String
+  title        String
+  currentValue Float  @default(0)
+  targetValue  Float
+  unit         String @default("%")
+
+  okr OKR @relation(fields: [okrId], references: [id])
+}
+
+model TaskFeedback {
+  id        String   @id @default(cuid())
+  projectId String
+  stepId    Int
+  clientId  String
+  approved  Boolean
+  comment   String?
+  createdAt DateTime @default(now())
+}
+
+model ClientContact {
+  id             String   @id @default(cuid())
+  clientId       String
+  name           String
+  email          String
+  role           String   @default("Contato")
+  phone          String?
+  canAccessPortal Boolean  @default(false)
+  createdAt      DateTime @default(now())
 }
 
 model ApiKey {

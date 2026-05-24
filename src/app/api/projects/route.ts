@@ -3,6 +3,8 @@ import { prisma } from '@/lib/prisma'
 import { getSessionUser, isAdmin } from '@/lib/auth-utils'
 import { sendWhatsApp } from '@/lib/whatsapp'
 import { checkAndGrantAchievements } from '@/lib/achievements'
+import { auditLog } from '@/lib/audit'
+import { sendWebhook } from '@/lib/webhook-sender'
 
 export async function GET(request: NextRequest) {
   try {
@@ -104,6 +106,23 @@ export async function POST(request: NextRequest) {
     }
 
     checkAndGrantAchievements(clientId, 'first_project', project.id).catch(() => {})
+
+    auditLog({
+      userId: user.id,
+      userName: user.name,
+      action: 'CREATE',
+      entity: 'Project',
+      entityId: project.id,
+      description: `Projeto criado: ${project.name}`,
+    }).catch(() => {})
+
+    sendWebhook('project_created', {
+      id: project.id,
+      name: project.name,
+      clientId: project.clientId,
+      status: project.status,
+      createdAt: project.createdAt?.toISOString(),
+    }).catch(() => {})
 
     return NextResponse.json({ data: project }, { status: 201 })
   } catch (error: any) {

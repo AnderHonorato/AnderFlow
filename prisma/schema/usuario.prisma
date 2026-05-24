@@ -28,6 +28,8 @@ model User {
   rememberUntil    DateTime?
   theme            String    @default("system")
   plan             String    @default("BASIC")
+  brandColor       String?
+  brandLogo        String?
   permissions      String    @default("[]")
   deleteRequestedAt DateTime?
   deleteScheduledAt DateTime?

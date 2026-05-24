@@ -10,6 +10,7 @@ import {
   ArrowUpRight, Calendar, Download,
 } from 'lucide-react'
 import { AnalyticsCharts } from './analytics-charts'
+import { ActivityHeatmapWrapper } from './heatmap-wrapper'
 
 function getMonthLabel(date: Date): string {
   return date.toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '')
@@ -246,6 +247,11 @@ export default async function AnalyticsPage() {
           </CardContent>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader><CardTitle>Atividade nos ultimos 12 meses</CardTitle></CardHeader>
+        <CardContent><ActivityHeatmapWrapper /></CardContent>
+      </Card>
     </div>
   )
 }

@@ -11,14 +11,23 @@ export function WelcomeOverlay() {
 
   useEffect(() => {
     if (!session?.user?.id) return
-    const dismissed = localStorage.getItem('anderflow_welcome_dismissed')
+
+    const createdAt = (session.user as any).createdAt
+    if (createdAt) {
+      const ageMs = Date.now() - new Date(createdAt).getTime()
+      if (ageMs > 10 * 60 * 1000) return
+    }
+
+    const key = `anderflow_welcome_dismissed_${session.user.id}`
+    const dismissed = localStorage.getItem(key)
     if (!dismissed) {
       setVisible(true)
     }
   }, [session?.user?.id])
 
   const handleDismiss = () => {
-    localStorage.setItem('anderflow_welcome_dismissed', 'true')
+    const key = `anderflow_welcome_dismissed_${session?.user?.id}`
+    localStorage.setItem(key, 'true')
     setVisible(false)
   }
 

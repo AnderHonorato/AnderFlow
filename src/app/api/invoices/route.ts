@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getSessionUser, isAdmin } from '@/lib/auth-utils'
+import { auditLog } from '@/lib/audit'
 
 export async function GET(request: NextRequest) {
   const user = await getSessionUser(request)
@@ -38,6 +39,16 @@ export async function POST(request: NextRequest) {
       data: { number, clientId, projectId, items: JSON.stringify(items), subtotal, tax: tax || 0, discount: discount || 0, total, dueDate: new Date(dueDate), notes },
       include: { client: { select: { id: true, name: true } } },
     })
+
+    auditLog({
+      userId: user.id,
+      userName: user.name,
+      action: 'CREATE',
+      entity: 'Invoice',
+      entityId: invoice.id,
+      description: `Fatura criada: ${invoice.number} - R$ ${total}`,
+    }).catch(() => {})
+
     return NextResponse.json({ data: invoice }, { status: 201 })
   } catch (error: any) {
     return NextResponse.json({ error: error.message || 'Erro ao criar fatura' }, { status: 500 })

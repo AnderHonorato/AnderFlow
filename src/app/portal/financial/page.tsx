@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { toast } from 'sonner'
-import { DollarSign, Clock, TrendingUp, CreditCard, AlertCircle } from 'lucide-react'
+import { DollarSign, Clock, TrendingUp, CreditCard, AlertCircle, ReceiptText as ReceiptIcon } from 'lucide-react'
 
 export default function PortalFinancial() {
   const { data: session } = useSession()
@@ -95,6 +95,11 @@ export default function PortalFinancial() {
                 {i.status !== 'PAID' && (
                   <Button size="sm" variant="outline" className="h-7 text-[11px]" onClick={() => { setSelectedInvoice(i); setPayOpen(true) }}>
                     <CreditCard className="w-[12px] h-[12px]" /> Pagar
+                  </Button>
+                )}
+                {i.status === 'PAID' && (
+                  <Button variant="ghost" size="sm" onClick={() => window.open(`/api/invoices/${i.id}/receipt`, '_blank')} className="h-6 text-[10px]">
+                    <ReceiptIcon className="w-3 h-3" /> Recibo
                   </Button>
                 )}
               </div>

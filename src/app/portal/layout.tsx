@@ -37,6 +37,7 @@ function PortalSidebarContent({ children }: { children: React.ReactNode }) {
   const { data: session } = useSession()
   const initials = (session?.user?.name || 'CL').split(' ').map((n: string) => n[0]).slice(0, 2).join('').toUpperCase()
   const [showOnboarding, setShowOnboarding] = useState(false)
+  const [brandLogo, setBrandLogo] = useState<string | null>(null)
 
   useEffect(() => {
     if (!session?.user?.id) return
@@ -44,6 +45,20 @@ function PortalSidebarContent({ children }: { children: React.ReactNode }) {
     if (!visited) {
       setShowOnboarding(true)
     }
+
+    fetch('/api/portal/branding')
+      .then(r => r.json())
+      .then(json => {
+        const data = json.data
+        if (data?.brandColor) {
+          document.documentElement.style.setProperty('--accent', data.brandColor)
+          document.documentElement.style.setProperty('--primary', data.brandColor)
+        }
+        if (data?.brandLogo) {
+          setBrandLogo(data.brandLogo)
+        }
+      })
+      .catch(() => {})
   }, [session?.user?.id])
 
   const dismissOnboarding = () => {
@@ -57,7 +72,11 @@ function PortalSidebarContent({ children }: { children: React.ReactNode }) {
         <div className="flex h-12 items-center gap-2 border-b border-[var(--border)] px-3">
           <Link href="/portal" className="flex items-center gap-2">
             <div className="flex h-6 w-6 items-center justify-center rounded bg-[var(--primary)]">
-              <span className="text-2xs font-bold text-white">AF</span>
+              {brandLogo ? (
+                <img src={brandLogo} alt="" className="h-5 w-5 object-contain" />
+              ) : (
+                <span className="text-2xs font-bold text-white">AF</span>
+              )}
             </div>
             <span className="text-sm font-medium text-[var(--text)]">ANDERFLOW</span>
           </Link>

@@ -20,6 +20,22 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     const { id } = await params
     const body = await request.json()
     const invoice = await prisma.invoice.update({ where: { id }, data: body })
+
+    if (body.status === 'PAID') {
+      const fullInv = await prisma.invoice.findUnique({ where: { id }, include: { client: { select: { id: true } }, project: { select: { name: true } } } })
+      if (fullInv?.client?.id) {
+        await prisma.notification.create({
+          data: {
+            userId: fullInv.client.id,
+            type: 'FINANCIAL',
+            title: 'Pagamento confirmado',
+            message: `Recibo disponível para a fatura ${fullInv.number}.${fullInv.project ? ' Projeto: ' + fullInv.project.name : ''}`,
+            metadata: JSON.stringify({ invoiceId: id }),
+          },
+        })
+      }
+    }
+
     return NextResponse.json({ data: invoice })
   } catch { return NextResponse.json({ error: 'Erro' }, { status: 200 }) }
 }
