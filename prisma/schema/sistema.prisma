@@ -57,6 +57,10 @@ model Activity {
 
   user    User     @relation(fields: [userId], references: [id])
   project Project? @relation(fields: [projectId], references: [id])
+
+  @@index([userId])
+  @@index([projectId])
+  @@index([createdAt])
 }
 
 model AuditLog {
@@ -71,6 +75,10 @@ model AuditLog {
   ipAddress   String?
   userAgent   String?
   createdAt   DateTime @default(now())
+
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
 }
 
 model Automation {
@@ -177,6 +185,37 @@ model ClientContact {
   phone          String?
   canAccessPortal Boolean  @default(false)
   createdAt      DateTime @default(now())
+}
+
+model StatusComponent {
+  id     String @id @default(cuid())
+  name   String
+  status String @default("operational")
+  order  Int    @default(0)
+}
+
+model StatusIncident {
+  id         String    @id @default(cuid())
+  title      String
+  message    String
+  status     String    @default("investigating")
+  createdAt  DateTime  @default(now())
+  resolvedAt DateTime?
+}
+
+model ContractVersion {
+  id          String   @id @default(cuid())
+  contractId  String
+  content     String
+  version     Int
+  createdAt   DateTime @default(now())
+  createdBy   String
+}
+
+model BriefingSchema {
+  id        String   @id @default(cuid())
+  fields    Json
+  updatedAt DateTime @updatedAt
 }
 
 model ApiKey {

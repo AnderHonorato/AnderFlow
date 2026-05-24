@@ -93,6 +93,15 @@ function BriefingWizardContent() {
     }
   }, [categoryParam])
 
+  const [dynamicSchema, setDynamicSchema] = useState<any[] | null>(null)
+
+  useEffect(() => {
+    fetch('/api/briefing-schema')
+      .then(r => r.json())
+      .then(json => setDynamicSchema(json.data || null))
+      .catch(() => {})
+  }, [])
+
   const handleSelectCategory = (catId: ServiceCategory) => {
     setSelectedCategory(catId)
     const tpl = getTemplateForCategory(catId)
@@ -405,7 +414,60 @@ function BriefingWizardContent() {
           </div>
         )}
 
-        {step === 'category' && (
+        {step === 'category' && dynamicSchema && (
+          <Card>
+            <CardContent className="p-5 space-y-4">
+              <h2 className="text-sm font-medium text-[var(--text)]">Novo Projeto</h2>
+              {dynamicSchema.map(field => (
+                <div key={field.id} className="space-y-1.5">
+                  <label className="text-xs font-medium text-[var(--text)]">
+                    {field.label} {field.required && <span className="text-[var(--destructive)]">*</span>}
+                  </label>
+                  {field.type === 'textarea' ? (
+                    <textarea className="w-full min-h-[80px] rounded-lg bg-[var(--surface)] border border-[var(--border)] px-3 py-2 text-sm text-[var(--text)] focus:outline-none focus:border-[var(--accent)] resize-vertical" placeholder={field.placeholder} onChange={e => handleAnswer(field.id, e.target.value)} />
+                  ) : field.type === 'select' ? (
+                    <select className="w-full h-9 rounded-lg bg-[var(--surface)] border border-[var(--border)] px-3 text-sm text-[var(--text)] focus:outline-none focus:border-[var(--accent)]" onChange={e => handleAnswer(field.id, e.target.value)}>
+                      <option value="">{field.placeholder || 'Selecionar...'}</option>
+                      {field.options?.map((opt: string) => <option key={opt} value={opt}>{opt}</option>)}
+                    </select>
+                  ) : field.type === 'checkbox' ? (
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input type="checkbox" onChange={e => handleAnswer(field.id, e.target.checked)} className="accent-[var(--accent)] h-4 w-4" />
+                      <span className="text-xs text-[var(--text-2)]">{field.placeholder || 'Sim'}</span>
+                    </label>
+                  ) : field.type === 'date' ? (
+                    <Input type="date" onChange={e => handleAnswer(field.id, e.target.value)} className="h-9" />
+                  ) : (
+                    <Input placeholder={field.placeholder} onChange={e => handleAnswer(field.id, e.target.value)} className="h-9" />
+                  )}
+                </div>
+              ))}
+              <Button className="w-full" onClick={async () => {
+                setSubmitting(true)
+                try {
+                  const res = await fetch('/api/projects', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      name: answers['project_name'] || answers[dynamicSchema[0]?.id] || 'Novo Projeto',
+                      description: answers['description'] || Object.entries(answers).map(([k,v]) => `${k}: ${v}`).join('\n'),
+                    }),
+                  })
+                  const json = await res.json()
+                  if (json.data) {
+                    toast.success('Projeto criado!')
+                    router.push(`/portal/projects/${json.data.id}`)
+                  }
+                } catch { toast.error('Erro ao criar projeto') }
+                setSubmitting(false)
+              }} disabled={submitting}>
+                {submitting ? 'Enviando...' : 'Solicitar Projeto'}
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+
+        {step === 'category' && !dynamicSchema && (
           <div className="grid gap-3 grid-cols-2 md:grid-cols-4">
             {SERVICE_CATEGORIES.map(cat => (
               <Card key={cat.id} className="cursor-pointer hover:bg-[var(--surface-hover)] transition-colors"

@@ -19,6 +19,7 @@ import {
 } from '@/components/icons'
 import { cn } from '@/lib/utils'
 import { Send, Download, Layers } from 'lucide-react'
+import { TwoFactorSetup } from '@/components/ui/two-factor-setup'
 
 const categories = [
   { id: 'general', label: 'Geral', icon: IconSettings },
@@ -30,6 +31,7 @@ const categories = [
   { id: 'api-keys', label: 'Chaves de API', icon: IconSettings, href: '/settings/api-keys' },
   { id: 'templates', label: 'Templates', icon: IconFile, href: '/settings/templates' },
   { id: 'webhooks', label: 'Webhooks', icon: IconAutomation, href: '/settings/webhooks' },
+  { id: 'status', label: 'Status', icon: IconAnalytics, href: '/settings/status-page' },
 ] as const
 
 const modules = [
@@ -127,6 +129,8 @@ export default function SettingsPage() {
                         router.push('/settings/templates')
                       } else if (cat.id === 'webhooks') {
                         router.push('/settings/webhooks')
+                      } else if (cat.id === 'status') {
+                        router.push('/settings/status-page')
                       } else {
                         setActiveCategory(cat.id)
                       }
@@ -246,9 +250,10 @@ export default function SettingsPage() {
               <CardHeader>
                 <CardTitle>Segurança</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-1">
+              <CardContent className="space-y-4">
+                <TwoFactorSetup />
+                <div className="border-t border-[var(--border)] pt-3" />
                 {[
-                  { label: 'Autenticação 2FA', desc: 'Adicione uma camada extra de segurança', action: 'Configurar' },
                   { label: 'Sessões Ativas', desc: 'Gerencie dispositivos conectados', action: 'Ver Sessões' },
                   { label: 'Alterar Senha', desc: 'Atualize sua senha de acesso', action: 'Alterar' },
                 ].map((item) => (

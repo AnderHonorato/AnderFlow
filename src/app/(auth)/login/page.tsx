@@ -26,7 +26,17 @@ function LoginForm() {
     setIsLoading(true)
     setError('')
     const result = await signIn('credentials', { email, password, redirect: false, rememberMe: rememberMe ? 'true' : 'false' })
-    if (result?.error) { setError(result.error || 'Email ou senha invalidos'); setIsLoading(false) }
+    if (result?.error) {
+      try {
+        const parsed = JSON.parse(result.error)
+        if (parsed.code === '2FA_REQUIRED') {
+          router.push(`/two-factor?userId=${parsed.userId}&email=${encodeURIComponent(email)}&callbackUrl=${encodeURIComponent(callbackUrl)}`)
+          setIsLoading(false)
+          return
+        }
+      } catch {}
+      setError(result.error || 'Email ou senha invalidos'); setIsLoading(false)
+    }
     else { router.push(callbackUrl); router.refresh() }
   }
 

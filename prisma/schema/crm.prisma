@@ -21,6 +21,9 @@ model Lead {
   updatedAt   DateTime @updatedAt
 
   owner User? @relation("LeadOwner", fields: [ownerId], references: [id])
+
+  @@index([status])
+  @@index([ownerId])
 }
 
 model Ticket {
@@ -46,6 +49,10 @@ model Ticket {
 
   creator  User  @relation("TicketCreator", fields: [creatorId], references: [id])
   assignee User? @relation("TicketAssignee", fields: [assigneeId], references: [id])
+
+  @@index([status])
+  @@index([creatorId])
+  @@index([assigneeId])
 }
 
 model Feedback {

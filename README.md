@@ -68,7 +68,11 @@ npm run dev
 npm run watch
 # → http://localhost:3000
 ```
+Ver arvore de arquivos:
 
+ npx tree-node-cli -L 8 -I "node_modules|dist|build|.next|coverage|.git"
+
+ 
 ### 🔐 Logins Demo
 
 | Perfil | Email | Senha |

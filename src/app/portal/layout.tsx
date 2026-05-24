@@ -15,8 +15,9 @@ import { Header } from '@/components/layout/header'
 import { IconCheck } from '@/components/icons'
 import {
   LayoutDashboard, FolderKanban, MessageSquare,
-  CreditCard, FileText, LogOut, Headphones,
+  CreditCard, FileText, LogOut, Headphones, Sun, Moon,
 } from 'lucide-react'
+import { useTheme } from 'next-themes'
 import { WelcomeOverlay } from '@/components/ui/welcome-overlay'
 import { PushPermission } from '@/components/ui/push-permission'
 import { PwaInstallPrompt } from '@/components/ui/pwa-install-prompt'
@@ -35,6 +36,7 @@ const navItemsSupport = [
 function PortalSidebarContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const { data: session } = useSession()
+  const { theme, setTheme } = useTheme()
   const initials = (session?.user?.name || 'CL').split(' ').map((n: string) => n[0]).slice(0, 2).join('').toUpperCase()
   const [showOnboarding, setShowOnboarding] = useState(false)
   const [brandLogo, setBrandLogo] = useState<string | null>(null)
@@ -128,6 +130,11 @@ function PortalSidebarContent({ children }: { children: React.ReactNode }) {
           </nav>
         </ScrollArea>
         <div className="border-t border-[var(--border)] p-2 space-y-1">
+          <button onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} title="Alternar tema"
+            className="flex w-full items-center gap-2.5 rounded-md px-3 py-1.5 text-xs text-[var(--text-muted)] hover:bg-[var(--surface-hover)] hover:text-[var(--text)] transition-colors">
+            {theme === 'dark' ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />}
+            <span>{theme === 'dark' ? 'Modo claro' : 'Modo escuro'}</span>
+          </button>
           <button onClick={() => signOut({ callbackUrl: '/login' })}
             className="flex w-full items-center gap-2.5 rounded-md px-3 py-1.5 text-xs text-[var(--text-muted)] hover:bg-[var(--surface-hover)] hover:text-[var(--text)] transition-colors">
             <LogOut className="h-3.5 w-3.5" /><span>Sair</span>

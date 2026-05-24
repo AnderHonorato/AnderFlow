@@ -17,7 +17,7 @@ import { ProjectTimeline, type NodeStatus } from '@/components/projects/project-
 import { TimeTracker } from '@/components/ui/time-tracker'
 import { CsvImportModal } from '@/components/ui/csv-import-modal'
 import { IconArrowLeft, IconThumbsUp, IconThumbsDown, IconCheck, IconClose, IconLoader, IconFile, IconClock, IconSparkles } from '@/components/icons'
-import { Target } from 'lucide-react'
+import { Target, Link2, Copy, Presentation } from 'lucide-react'
 
 const DEFAULT_STEPS = [
   { id: 1, label: 'Briefing', description: 'Coleta de requisitos e entendimento do projeto' },
@@ -70,6 +70,9 @@ export default function ProjectDetailPage() {
   const [proposalHistory, setProposalHistory] = useState<{ value: string; date: string; author: string }[]>([])
   const [aiLoading, setAiLoading] = useState(false)
   const [csvImportOpen, setCsvImportOpen] = useState(false)
+  const [approvalLinkOpen, setApprovalLinkOpen] = useState(false)
+  const [approvalLink, setApprovalLink] = useState('')
+  const [approvalLoading, setApprovalLoading] = useState(false)
 
   const handlePrintModal = (modalSelector: string) => {
     const modal = document.querySelector(modalSelector)
@@ -150,6 +153,30 @@ export default function ProjectDetailPage() {
       })
       .catch(() => setLoading(false))
   }, [id])
+
+  useEffect(() => {
+    if (!id || !isAdmin) return
+    fetch('/api/presence', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ projectId: id }),
+    }).catch(() => {})
+    const interval = setInterval(() => {
+      fetch('/api/presence', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ projectId: id }),
+      }).catch(() => {})
+    }, 30000)
+    return () => {
+      clearInterval(interval)
+      fetch('/api/presence', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ projectId: id, clear: true }),
+      }).catch(() => {})
+    }
+  }, [id, isAdmin])
 
   // Polling para atualizacao em tempo real
   useEffect(() => {
@@ -340,6 +367,29 @@ export default function ProjectDetailPage() {
     } else {
       toast.error(json.error || 'Erro ao importar tarefas')
     }
+  }
+
+  const handleGenerateApprovalLink = async (stepId: number) => {
+    setApprovalLoading(true)
+    try {
+      const res = await fetch(`/api/quick-approve?projectId=${id}&stepId=${stepId}`)
+      const json = await res.json()
+      if (json.data?.link) {
+        const fullLink = `${window.location.origin}${json.data.link}`
+        setApprovalLink(fullLink)
+        setApprovalLinkOpen(true)
+      } else {
+        toast.error('Erro ao gerar link')
+      }
+    } catch {
+      toast.error('Erro ao gerar link')
+    }
+    setApprovalLoading(false)
+  }
+
+  const handleCopyApprovalLink = () => {
+    navigator.clipboard.writeText(approvalLink)
+    toast.success('Link copiado!')
   }
 
   const handleInfoRequest = async () => {
@@ -583,6 +633,17 @@ export default function ProjectDetailPage() {
         </div>
       )
     }
+    if (nodeId >= 6 && isAdmin) {
+      const stepLabel = DEFAULT_STEPS.find(s => s.id === nodeId)?.label || ''
+      return (
+        <div className="space-y-2">
+          <Button variant="outline" size="sm" onClick={() => handleGenerateApprovalLink(nodeId)} disabled={approvalLoading} className="h-7 text-[11px] gap-1">
+            <Link2 className="h-3 w-3" /> {approvalLoading ? 'Gerando...' : `Pedir aprovação`}
+          </Button>
+          {trackerEl}
+        </div>
+      )
+    }
     return trackerEl
   }
 
@@ -595,6 +656,9 @@ export default function ProjectDetailPage() {
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" asChild className="h-7 text-[11px]">
             <a href={`/projects/${id}/okrs`}><Target className="mr-1 h-3 w-3" /> OKRs</a>
+          </Button>
+          <Button variant="outline" size="sm" asChild className="h-7 text-[11px]">
+            <a href={`/projects/${id}/present`}><Presentation className="mr-1 h-3 w-3" /> Apresentar</a>
           </Button>
           {isAdmin && (
             <Button variant="outline" size="sm" onClick={() => setCsvImportOpen(true)} className="h-7 text-[11px] gap-1.5">
@@ -1144,6 +1208,42 @@ export default function ProjectDetailPage() {
               {infoRequestLoading && <IconLoader className="w-[14px] h-[14px] animate-spin" />}
               Enviar solicitacao
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={approvalLinkOpen} onOpenChange={setApprovalLinkOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Link de aprovação gerado</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <p className="text-[12px] text-[var(--text-3)]">
+              Compartilhe este link com o cliente. Ele poderá aprovar ou reprovar sem precisar de login. O link expira em 48 horas.
+            </p>
+            <div className="flex items-center gap-2">
+              <Input value={approvalLink} readOnly className="flex-1 text-[11px] font-mono h-8" />
+              <Button size="sm" onClick={handleCopyApprovalLink} className="h-8 text-[11px]">
+                <Copy className="mr-1 h-3 w-3" /> Copiar
+              </Button>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full h-8 text-[11px]"
+              asChild
+            >
+              <a
+                href={`https://wa.me/?text=Olá! Preciso da sua aprovação: ${encodeURIComponent(approvalLink)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Enviar por WhatsApp
+              </a>
+            </Button>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" size="sm" onClick={() => setApprovalLinkOpen(false)}>Fechar</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

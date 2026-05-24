@@ -26,6 +26,10 @@ model Invoice {
   project      Project?      @relation(fields: [projectId], references: [id])
   organization Organization? @relation("OrgInvoices", fields: [organizationId], references: [id])
   payments     Payment[]
+
+  @@index([clientId])
+  @@index([projectId])
+  @@index([status])
 }
 
 model Payment {

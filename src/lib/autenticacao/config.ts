@@ -40,6 +40,28 @@ export const authOptions: NextAuthOptions = {
         rememberMe: { label: 'RememberMe', type: 'text' },
       },
       async authorize(credentials) {
+        const creds = credentials as any
+        // Bypass for 2FA completion - trust the userId
+        if (creds?.bypassAuth === 'true' && creds?.userId) {
+          const user = await prisma.user.findUnique({
+            where: { id: creds.userId },
+          })
+          if (!user || !user.isActive || !user.isAccountActive) {
+            throw new Error('Conta inválida ou desativada')
+          }
+          return {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            image: user.image,
+            role: user.role || 'USER',
+            roleLevel: getRoleLevel(user.role),
+            permissions: user.permissions,
+            rememberUntil: null,
+            createdAt: user.createdAt?.toISOString() || null,
+          }
+        }
+
         if (!credentials?.email || !credentials?.password) {
           throw new Error('Email e senha são obrigatórios')
         }
@@ -64,6 +86,10 @@ export const authOptions: NextAuthOptions = {
 
         if (!user.isAccountActive) {
           throw new Error('Conta nao verificada. Verifique seu email para o codigo de confirmacao.')
+        }
+
+        if (user.twoFactorEnabled && creds.bypass2FA !== 'true') {
+          throw new Error(JSON.stringify({ code: '2FA_REQUIRED', userId: user.id }))
         }
 
         const rememberMe = credentials.rememberMe === 'true'

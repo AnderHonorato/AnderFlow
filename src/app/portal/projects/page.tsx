@@ -9,6 +9,7 @@ import { Progress } from '@/components/ui/progress'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
 import { IconArrowRight } from '@/components/icons'
+import { AdminPresence } from '@/components/ui/admin-presence'
 
 export default function PortalProjects() {
   const { data: session } = useSession()
@@ -52,6 +53,7 @@ export default function PortalProjects() {
                   )}
                 </div>
                 <p className="text-[12px] text-[var(--text-3)] mt-1">{p.description}</p>
+                {p.status === 'IN_PROGRESS' && <AdminPresence projectId={p.id} />}
                 {p.status === 'PENDING' ? (
                   <p className="text-[11px] text-[var(--warning)] mt-1">
                     Sua solicitacao esta em analise. Aguarde ate 24 horas que retornamos com uma resposta.

@@ -97,3 +97,24 @@
   --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
   --ease-bounce: cubic-bezier(0.68, -0.55, 0.265, 1.55);
 }
+
+.light, [data-theme='light'] {
+  --bg: #F5F5F0;
+  --bg-secondary: #EDEDE8;
+  --surface: #FFFFFF;
+  --surface-2: #F0F0EB;
+  --surface-3: #E8E8E3;
+  --surface-hover: #F5F5F0;
+  --text: #1A1A14;
+  --text-2: #4A4A44;
+  --text-3: #8A8A84;
+  --border: rgba(0,0,0,0.08);
+  --border-2: rgba(0,0,0,0.12);
+  --sidebar-bg: #FFFFFF;
+  --header-bg: #F5F5F0;
+  --input-bg: #F0F0EB;
+  --input-bg-hover: #E8E8E3;
+  --placeholder: #8A8A84;
+  --text-muted: #8A8A84;
+  --text-secondary: #4A4A44;
+}

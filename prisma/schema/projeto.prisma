@@ -54,6 +54,11 @@ model Project {
   npsResponses  NpsResponse[]
   briefingDrafts BriefingDraft[]
   achievements   Achievement[]
+
+  @@index([clientId])
+  @@index([status])
+  @@index([type])
+  @@index([createdAt])
 }
 
 model Task {
@@ -89,6 +94,11 @@ model Task {
   timeEntries  TimeEntry[]
   dependencies TaskDependency[] @relation("DependentTask")
   dependents   TaskDependency[] @relation("DependencyTask")
+
+  @@index([projectId])
+  @@index([status])
+  @@index([assigneeId])
+  @@index([creatorId])
 }
 
 model TaskDependency {
@@ -147,6 +157,10 @@ model TimeEntry {
   user    User    @relation(fields: [userId], references: [id])
   project Project @relation(fields: [projectId], references: [id])
   task    Task?   @relation(fields: [taskId], references: [id])
+
+  @@index([userId])
+  @@index([projectId])
+  @@index([taskId])
 }
 
 model ProjectUpdate {

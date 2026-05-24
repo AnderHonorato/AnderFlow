@@ -21,6 +21,7 @@ const adminNavSections = [
       { name: 'Dashboard', href: '/dashboard', icon: IconDashboard },
       { name: 'Projetos', href: '/projects', icon: IconProject },
       { name: 'Clientes', href: '/clients', icon: IconClient },
+      { name: 'Inbox', href: '/inbox', icon: IconNotification },
     ]
   },
   {
@@ -128,6 +129,15 @@ export function SidebarClient() {
     return () => clearInterval(interval)
   }, [setStats, isModOrAbove])
 
+  const [inboxUnread, setInboxUnread] = useState(0)
+  useEffect(() => {
+    if (!isModOrAbove) return
+    const fetchInbox = () => fetch('/api/inbox?count=true').then(r => r.json()).then(j => setInboxUnread(j.totalUnread || 0))
+    fetchInbox()
+    const interval = setInterval(fetchInbox, 30000)
+    return () => clearInterval(interval)
+  }, [isModOrAbove])
+
   const isActive = (href: string) => {
     if (href === '/dashboard') return pathname === '/dashboard'
     return pathname === href || pathname.startsWith(href + '/')
@@ -204,6 +214,9 @@ export function SidebarClient() {
                     )}
                     <item.icon className="w-[16px] h-[16px] shrink-0" />
                     {!collapsed && <span className="truncate">{item.name}</span>}
+                    {!collapsed && item.name === 'Inbox' && inboxUnread > 0 && (
+                      <span className="ml-auto text-[10px] font-[500] text-white bg-[var(--accent)] rounded-full px-1.5 py-0.5">{inboxUnread}</span>
+                    )}
                   </Link>
                 )
               })}

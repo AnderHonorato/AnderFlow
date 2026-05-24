@@ -10,9 +10,25 @@ const dmSans = DM_Sans({ subsets: ['latin'], weight: ['400','500','600','700'], 
 export const metadata: Metadata = {
   title: 'ANDERFLOW Sistemas | Fluxo inteligente para empresas modernas',
   description: 'Plataforma SaaS premium: gestão de projetos, CRM, portal do cliente e automações.',
+  keywords: ['gestão de projetos', 'CRM', 'SaaS', 'portal do cliente', 'automação'],
   icons: { icon: '/branding/favicon.svg', apple: '/branding/icon.svg' },
   manifest: '/manifest.json',
   appleWebApp: { capable: true, statusBarStyle: 'black-translucent' },
+  openGraph: {
+    title: 'ANDERFLOW Sistemas | Fluxo inteligente para empresas modernas',
+    description: 'Plataforma SaaS premium: gestão de projetos, CRM, portal do cliente e automações.',
+    type: 'website',
+    locale: 'pt_BR',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'ANDERFLOW Sistemas',
+    description: 'Gestão de projetos, CRM, portal do cliente e automações.',
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
 }
 
 export const viewport: Viewport = {
