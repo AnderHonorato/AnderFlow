@@ -13,11 +13,14 @@ export default function FeedbacksIAPage() {
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<'all'|'ai_feedback'|'ai_error'|'bot'>('all')
   const [expanded, setExpanded] = useState<string|null>(null)
+  const [uiFeedbacks, setUiFeedbacks] = useState<any[]>([])
+  const [uiLoading, setUiLoading] = useState(false)
   const [botReports, setBotReports] = useState<any[]>([])
 
   useEffect(() => {
     fetch('/api/ai/feedback').then(r=>r.json()).then(j=>{setFeedbacks(j.data||[]);setLoading(false)}).catch(()=>setLoading(false))
     fetch('/api/bots/activity').then(r=>r.json()).then(j=>setBotReports(j.data||[])).catch(()=>{})
+    fetch('/api/ui-feedback').then(r=>r.json()).then(j=>{setUiFeedbacks(j.data?.pages||[]);setUiLoading(false)}).catch(()=>setUiLoading(false))
     const iv = setInterval(() => {
       fetch('/api/bots/activity').then(r=>r.json()).then(j=>setBotReports(j.data||[])).catch(()=>{})
     }, 15000)
@@ -148,6 +151,32 @@ export default function FeedbacksIAPage() {
           </Card>
         )})}
       </div>
+
+      {uiFeedbacks.length > 0 && (
+        <div className="mt-8">
+          <h2 className="text-[14px] font-[500] mb-3">Feedback de UI (Páginas)</h2>
+          <div className="space-y-2">
+            {uiFeedbacks.map((f: any, i: number) => (
+              <Card key={i}>
+                <CardContent className="p-3 flex items-center justify-between">
+                  <div>
+                    <p className="text-[13px] font-[500]">{f.page}</p>
+                    <p className="text-[11px] text-[var(--text-3)]">{f.total} votos &middot; {f.positivePercent}% positivo</p>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] bg-[var(--success-subtle)] text-[var(--success)]">
+                      <ThumbsUp className="h-3 w-3" /> {f.positive}
+                    </span>
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] bg-[var(--destructive-subtle)] text-[var(--destructive)]">
+                      <ThumbsDown className="h-3 w-3" /> {f.negative}
+                    </span>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

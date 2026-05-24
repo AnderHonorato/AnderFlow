@@ -55,6 +55,8 @@ model Project {
   briefingDrafts BriefingDraft[]
   achievements   Achievement[]
   ProjectNote    ProjectNote[]
+  proposalVersions ProposalVersion[]
+  DeliveryChecklist DeliveryChecklist?
 
   @@index([clientId])
   @@index([status])

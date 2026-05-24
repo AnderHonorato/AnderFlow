@@ -11,6 +11,7 @@ import {
 } from 'lucide-react'
 import { AnalyticsCharts } from './analytics-charts'
 import { ActivityHeatmapWrapper } from './heatmap-wrapper'
+import { TicketHeatmapClient } from './ticket-heatmap-client'
 
 function getMonthLabel(date: Date): string {
   return date.toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '')
@@ -197,7 +198,15 @@ export default async function AnalyticsPage() {
           </CardContent>
         </Card>
 
-        <Card>
+      <Card>
+        <CardHeader>
+          <CardTitle>Quando os clientes abrem tickets</CardTitle>
+          <p className="text-[12px] text-[var(--text-3)] mt-1">Use para escalar seu suporte nos horarios de pico</p>
+        </CardHeader>
+        <CardContent><TicketHeatmapClient /></CardContent>
+      </Card>
+
+      <Card>
           <CardHeader className="pb-4">
             <CardTitle className="text-base font-medium">Resumo do Sistema</CardTitle>
           </CardHeader>

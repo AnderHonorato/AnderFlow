@@ -10,6 +10,8 @@ import { useDebounce } from '@/hooks/use-debounce'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import { MessageSquare, MoreHorizontal, ThumbsUp, Reply, Send, AtSign } from 'lucide-react'
+import { RichTextEditor } from '@/components/ui/rich-text-editor'
+import { sanitize } from '@/lib/utils/sanitize'
 
 interface Comment {
   id: string
@@ -23,6 +25,18 @@ interface CommentThreadProps {
   comments: Comment[]
   onAddComment: (content: string, parentId?: string) => void
   className?: string
+}
+
+function renderCommentContent(content: string): React.ReactNode {
+  if (content.includes('<') && content.includes('>')) {
+    const basicSanitize = content
+      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+      .replace(/on\w+\s*=\s*"[^"]*"/gi, '')
+      .replace(/on\w+\s*=\s*'[^']*'/gi, '')
+      .replace(/javascript\s*:/gi, '')
+    return <div dangerouslySetInnerHTML={{ __html: basicSanitize }} className="whitespace-pre-wrap [&_a]:text-[var(--accent)] [&_a]:underline [&_strong]:font-semibold [&_em]:italic [&_u]:underline [&_pre]:bg-[var(--surface-2)] [&_pre]:rounded-md [&_pre]:p-2 [&_pre]:text-[11px] [&_code]:bg-[var(--surface-2)] [&_code]:px-1 [&_code]:py-0.5 [&_code]:rounded [&_code]:text-[11px]" />
+  }
+  return renderMarkdown(content)
 }
 
 function renderMarkdown(text: string): React.ReactNode {
@@ -112,7 +126,7 @@ function CommentItem({ comment, onReply }: { comment: Comment; onReply: (parentI
         <div className="flex-1 min-w-0">
           <div className="rounded-lg bg-muted px-3 py-2">
             <p className="text-sm font-medium">{comment.user.name}</p>
-            <div className="text-sm mt-0.5">{renderMarkdown(comment.content)}</div>
+            <div className="text-sm mt-0.5">{renderCommentContent(comment.content)}</div>
           </div>
           <div className="flex items-center gap-3 mt-1 px-1">
             <span className="text-xs text-muted-foreground">{formatRelativeTime(comment.createdAt)}</span>
@@ -135,7 +149,7 @@ function CommentItem({ comment, onReply }: { comment: Comment; onReply: (parentI
                   <div className="flex-1">
                     <div className="rounded-lg bg-muted px-3 py-1.5">
                       <p className="text-sm font-medium">{reply.user.name}</p>
-                      <div className="text-sm">{renderMarkdown(reply.content)}</div>
+                      <div className="text-sm">{renderCommentContent(reply.content)}</div>
                     </div>
                     <span className="text-xs text-muted-foreground mt-0.5 px-1">{formatRelativeTime(reply.createdAt)}</span>
                   </div>
@@ -199,7 +213,8 @@ export function CommentThread({ comments, onAddComment, className }: CommentThre
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!newComment.trim()) return
-    onAddComment(newComment, replyTo || undefined)
+    const plainText = newComment.replace(/<[^>]*>/g, '')
+    onAddComment(plainText || newComment, replyTo || undefined)
     setNewComment('')
     if (replyTo) setReplyTo(null)
   }
@@ -220,41 +235,24 @@ export function CommentThread({ comments, onAddComment, className }: CommentThre
               Respondendo... <button className="text-primary hover:underline" onClick={() => setReplyTo(null)}>Cancelar</button>
             </div>
           )}
-          <div className="relative">
-            <div className="flex gap-2">
-              <Input
-                ref={inputRef}
-                placeholder="Adicione um comentário... (@ para mencionar)"
-                value={newComment}
-                onChange={handleCommentChange}
-                className="flex-1"
-              />
-              <Button type="submit" size="sm" disabled={!newComment.trim()}>
-                <Send className="h-4 w-4" />
-              </Button>
-            </div>
-            {showMentionDropdown && (
-              <div
-                className="absolute z-50 w-48 rounded-lg border border-[var(--border)] bg-[var(--surface)] shadow-lg overflow-hidden"
-                style={{ bottom: '100%', left: 0, marginBottom: 4 }}
-              >
-                {mentionUsers.length === 0 ? (
-                  <p className="p-3 text-xs text-[var(--text-3)] text-center">Nenhum usuario encontrado</p>
-                ) : (
-                  mentionUsers.map((u: any) => (
-                    <button
-                      key={u.id}
-                      type="button"
-                      className="w-full flex items-center gap-2 px-3 py-2 text-left text-xs hover:bg-[var(--surface-hover)] transition-colors"
-                      onClick={() => handleMentionSelect(u)}
-                    >
-                      <Avatar className="h-6 w-6"><AvatarFallback className="text-2xs">{getInitials(u.name)}</AvatarFallback></Avatar>
-                      <div><p className="font-medium text-[var(--text)]">{u.name}</p><p className="text-2xs text-[var(--text-3)]">{u.role || 'Membro'}</p></div>
-                    </button>
-                  ))
-                )}
-              </div>
-            )}
+          <div className="flex gap-2 items-end">
+            <RichTextEditor
+              value={newComment}
+              onChange={setNewComment}
+              placeholder={replyTo ? "Escreva sua resposta... (@ para mencionar)" : "Adicione um comentario... (@ para mencionar)"}
+              className="flex-1"
+              onSubmit={() => {
+                if (newComment.trim()) {
+                  const plainText = newComment.replace(/<[^>]*>/g, '')
+                  onAddComment(plainText || newComment, replyTo || undefined)
+                  setNewComment('')
+                  if (replyTo) setReplyTo(null)
+                }
+              }}
+            />
+            <Button type="submit" size="sm" disabled={!newComment.trim()}>
+              <Send className="h-4 w-4" />
+            </Button>
           </div>
         </div>
       </form>

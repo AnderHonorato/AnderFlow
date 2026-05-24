@@ -139,6 +139,13 @@ export default function PortalContracts() {
                   {contract.status === 'ACTIVE' && contract.signatureUrl && (
                     <Button variant="outline" size="sm" className="h-8 text-[11px]" asChild><a href={contract.signatureUrl} target="_blank" rel="noopener"><Check className="w-[12px] h-[12px]" /> Ver assinado</a></Button>
                   )}
+                  {contract.status === 'SIGNED' && (
+                    <Button variant="outline" size="sm" className="h-8 text-[11px]" asChild>
+                      <a href={`/api/contracts/${contract.id}/signed-pdf`} target="_blank" rel="noopener">
+                        <Download className="w-[12px] h-[12px]" /> Baixar comprovante
+                      </a>
+                    </Button>
+                  )}
                 </div>
               </div>
             </CardContent></Card>

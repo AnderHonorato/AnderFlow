@@ -20,8 +20,33 @@ import { IconProject, IconFinancial, IconClient, IconAnalytics, IconPlus, IconCh
 import { cn } from '@/lib/utils'
 import { AnimatedCounter } from '@/components/ui/animated-counter'
 import { GripVertical, RotateCcw, LayoutDashboard } from 'lucide-react'
+import { StreakWidget } from '@/components/ui/streak-widget'
 
 const DEFAULT_WIDGETS = ['stats', 'active-project', 'projects', 'revenue']
+
+function TaskItem({ task, daysOverdue }: { task: any; daysOverdue?: number }) {
+  const handleToggle = async () => {
+    await fetch(`/api/tasks/${task.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'DONE' }),
+    })
+    window.location.reload()
+  }
+
+  return (
+    <div className="flex items-center gap-2 py-1 text-[12px]">
+      <button onClick={handleToggle} className="h-4 w-4 rounded border border-[var(--border)] hover:border-[var(--accent)] transition-colors shrink-0" title="Marcar concluida" />
+      <span className="flex-1 truncate text-[var(--text)]">{task.title}</span>
+      {task.project && (
+        <a href={`/projects/${task.project.id}`} className="text-[var(--accent)] hover:opacity-80 shrink-0 text-[10px] truncate max-w-[100px]">{task.project.name}</a>
+      )}
+      {daysOverdue !== undefined && daysOverdue > 0 && (
+        <span className="text-[10px] text-[var(--destructive)] shrink-0">{daysOverdue}d atraso</span>
+      )}
+    </div>
+  )
+}
 
 function SortableWidget({ id, children, editMode }: { id: string; children: React.ReactNode; editMode: boolean }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id })
@@ -81,9 +106,23 @@ export default function DashboardPage() {
         setLoading(false)
       })
       .catch(() => setLoading(false))
+
+    if (isAdmin) {
+      fetch('/api/admin/streak')
+        .then(r => r.json())
+        .then(json => { if (json.data) setStreakData(json.data) })
+        .catch(() => {})
+
+      fetch('/api/dashboard/today-tasks')
+        .then(r => r.json())
+        .then(json => { if (json.data) setTodayTasks(json.data) })
+        .catch(() => {})
+    }
   }, [])
 
   const [revenueIdx, setRevenueIdx] = useState(0)
+  const [streakData, setStreakData] = useState<any>(null)
+  const [todayTasks, setTodayTasks] = useState<any>({ overdue: [], today: [] })
 
   const revenueMetric = useMemo(() => [
     { label: 'Hoje', value: data?.stats?.revenueToday || 0 },
@@ -382,6 +421,53 @@ export default function DashboardPage() {
             </div>
           </SortableContext>
         </DndContext>
+      )}
+
+      {isAdmin && streakData && (
+        <StreakWidget
+          currentStreak={streakData.currentStreak}
+          longestStreak={streakData.longestStreak}
+          today={streakData.today}
+          last7Days={streakData.last7Days}
+        />
+      )}
+
+      {isAdmin && (todayTasks.overdue?.length > 0 || todayTasks.today?.length > 0) && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-[12px] font-[500] text-[var(--text-3)] uppercase tracking-wider">
+              Tarefas de Hoje ({(todayTasks.overdue?.length || 0) + (todayTasks.today?.length || 0)})
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {todayTasks.overdue?.length > 0 && (
+              <div>
+                <p className="text-[11px] font-[600] text-[var(--destructive)] mb-1.5 flex items-center gap-1">
+                  ⚠️ Vencidas ({todayTasks.overdue.length})
+                </p>
+                {todayTasks.overdue.slice(0, 5).map((task: any) => {
+                  const daysOverdue = task.dueDate ? Math.floor((Date.now() - new Date(task.dueDate).getTime()) / 86400000) : 0
+                  return (
+                    <TaskItem key={task.id} task={task} daysOverdue={daysOverdue} />
+                  )
+                })}
+              </div>
+            )}
+            {todayTasks.today?.length > 0 && (
+              <div>
+                <p className="text-[11px] font-[600] text-[var(--accent)] mb-1.5 flex items-center gap-1">
+                  📋 Para hoje ({todayTasks.today.length})
+                </p>
+                {todayTasks.today.map((task: any) => (
+                  <TaskItem key={task.id} task={task} />
+                ))}
+              </div>
+            )}
+            {(todayTasks.overdue?.length || 0) + (todayTasks.today?.length || 0) === 0 && (
+              <p className="text-[12px] text-[var(--text-3)] text-center py-4">Nenhuma tarefa para hoje 🎉</p>
+            )}
+          </CardContent>
+        </Card>
       )}
 
       {!isAdmin && (

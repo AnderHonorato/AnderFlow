@@ -14,6 +14,7 @@ import {
   FolderKanban,
   Download,
 } from 'lucide-react'
+import { getFeriadosBR } from '@/lib/feriados-br'
 
 interface CalendarEvent {
   id: string
@@ -107,6 +108,13 @@ export default function CalendarPage() {
     .sort((a, b) => a.date.localeCompare(b.date))
     .slice(0, 6)
 
+  const holidays = useMemo(() => getFeriadosBR(currentYear), [currentYear])
+  const holidaysByDate = useMemo(() => {
+    const map = new Map<string, string>()
+    holidays.forEach(h => map.set(h.date, h.name))
+    return map
+  }, [holidays])
+
   const goToToday = () => {
     setCurrentMonth(today.getMonth())
     setCurrentYear(today.getFullYear())
@@ -187,29 +195,40 @@ export default function CalendarPage() {
                   {day}
                 </div>
               ))}
-              {calendarCells.map((cell, i) => {
-                const dayEvents = cell.dateStr ? (eventsByDay.get(cell.dateStr) || []) : []
-                const cellIsToday = cell.day !== null && isToday(cell.day, currentMonth, currentYear)
-                return (
-                  <div
-                    key={i}
-                    className={`relative h-[90px] p-1.5 border border-[var(--border)] rounded-md ${
-                      cellIsToday
-                        ? 'bg-[var(--accent-subtle)] border-[var(--accent)]/30'
-                        : cell.day
-                          ? 'hover:bg-[var(--surface-hover)] cursor-pointer'
-                          : 'bg-[var(--surface-2)]/30 opacity-40'
-                    }`}
-                  >
-                    {cell.day && (
-                      <>
-                        <span className={`text-[12px] font-[500] ${
-                          cellIsToday
-                            ? 'flex h-6 w-6 items-center justify-center rounded-full bg-[var(--accent)] text-white'
-                            : 'text-[var(--text-2)]'
-                        }`}>
-                          {cell.day}
-                        </span>
+               {calendarCells.map((cell, i) => {
+                 const dayEvents = cell.dateStr ? (eventsByDay.get(cell.dateStr) || []) : []
+                 const cellIsToday = cell.day !== null && isToday(cell.day, currentMonth, currentYear)
+                 const holidayName = cell.dateStr ? holidaysByDate.get(cell.dateStr) : null
+                 return (
+                   <div
+                     key={i}
+                     className={`relative h-[90px] p-1.5 border border-[var(--border)] rounded-md ${
+                       cellIsToday
+                         ? 'bg-[var(--accent-subtle)] border-[var(--accent)]/30'
+                         : cell.day
+                           ? 'hover:bg-[var(--surface-hover)] cursor-pointer'
+                           : 'bg-[var(--surface-2)]/30 opacity-40'
+                     }`}
+                   >
+                     {cell.day && (
+                       <>
+                         <span className={`text-[12px] font-[500] ${
+                           cellIsToday
+                             ? 'flex h-6 w-6 items-center justify-center rounded-full bg-[var(--accent)] text-white'
+                             : 'text-[var(--text-2)]'
+                         }`}>
+                           {cell.day}
+                         </span>
+                         {holidayName && (
+                           <div className="absolute top-1 right-1" title={holidayName}>
+                             <span className="text-[10px]">🇧🇷</span>
+                           </div>
+                         )}
+                         {holidayName && dayEvents.length === 0 && (
+                           <div className="absolute bottom-1.5 left-1.5 right-1.5">
+                             <span className="text-[8px] text-[var(--accent)] truncate block leading-tight">{holidayName}</span>
+                           </div>
+                         )}
                         {dayEvents.length > 0 && (
                           <div className="absolute bottom-1.5 left-1.5 right-1.5 flex flex-col gap-0.5">
                             {dayEvents.slice(0, 2).map((evt) => (

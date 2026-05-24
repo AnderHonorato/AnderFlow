@@ -16,8 +16,8 @@ import { toast } from 'sonner'
 import { ProjectTimeline, type NodeStatus } from '@/components/projects/project-timeline'
 import { TimeTracker } from '@/components/ui/time-tracker'
 import { CsvImportModal } from '@/components/ui/csv-import-modal'
-import { IconArrowLeft, IconThumbsUp, IconThumbsDown, IconCheck, IconClose, IconLoader, IconFile, IconClock, IconSparkles } from '@/components/icons'
-import { Target, Link2, Copy, Presentation, GitBranch, AlertTriangle } from 'lucide-react'
+import { IconArrowLeft, IconThumbsUp, IconThumbsDown, IconCheck, IconClose, IconLoader, IconFile, IconClock, IconSparkles, IconPlus } from '@/components/icons'
+import { Target, Link2, Copy, Presentation, GitBranch, AlertTriangle, History, ClipboardCheck } from 'lucide-react'
 
 const DEFAULT_STEPS = [
   { id: 1, label: 'Briefing', description: 'Coleta de requisitos e entendimento do projeto' },
@@ -86,6 +86,23 @@ export default function ProjectDetailPage() {
   const [expandedTaskId, setExpandedTaskId] = useState<string | null>(null)
   const [addDepTaskId, setAddDepTaskId] = useState<string | null>(null)
   const [depLoading, setDepLoading] = useState(false)
+  const [proposalVersions, setProposalVersions] = useState<any[]>([])
+  const [versionHistoryOpen, setVersionHistoryOpen] = useState(false)
+  const [deliveryChecklistOpen, setDeliveryChecklistOpen] = useState(false)
+  const [checklistItems, setChecklistItems] = useState([
+    { id: '1', label: 'Todos os requisitos do briefing foram atendidos', checked: false },
+    { id: '2', label: 'Testes realizados e aprovados', checked: false },
+    { id: '3', label: 'Cliente foi notificado', checked: false },
+    { id: '4', label: 'Documentacao entregue', checked: false },
+    { id: '5', label: 'Arquivos finais salvos', checked: false },
+    { id: '6', label: 'Contrato quitado', checked: false },
+  ])
+  const [taskDialogOpen, setTaskDialogOpen] = useState(false)
+  const [taskForm, setTaskForm] = useState({ title: '', description: '' })
+  const [aiEstimate, setAiEstimate] = useState<any>(null)
+  const [aiEstimateLoading, setAiEstimateLoading] = useState(false)
+  const [completingStepId, setCompletingStepId] = useState<number | null>(null)
+  const [checklistLoading, setChecklistLoading] = useState(false)
 
   const handlePrintModal = (modalSelector: string) => {
     const modal = document.querySelector(modalSelector)
@@ -336,6 +353,41 @@ export default function ProjectDetailPage() {
     )
   }
 
+  const fetchProposalVersions = () => {
+    fetch(`/api/proposal-versions?projectId=${id}`)
+      .then(r => r.json())
+      .then(j => setProposalVersions(j.data || []))
+      .catch(() => {})
+  }
+
+  const handleChecklistConfirm = async () => {
+    if (!completingStepId || checklistItems.some(i => !i.checked)) return
+    setChecklistLoading(true)
+    await fetch('/api/delivery-checklist', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ projectId: id, items: checklistItems, completedAt: new Date().toISOString(), completedBy: (session?.user as any)?.name }) }).catch(() => {})
+    setDeliveryChecklistOpen(false)
+    setChecklistLoading(false)
+    updateStepStatus(completingStepId, 'completed')
+    setCompletingStepId(null)
+  }
+
+  const handleAiEstimateTask = async () => {
+    if (!taskForm.title) return
+    setAiEstimateLoading(true)
+    try {
+      const res = await fetch('/api/ai/estimate-task', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title: taskForm.title, description: taskForm.description, projectType: project?.type }) })
+      const json = await res.json()
+      if (json.data) setAiEstimate(json.data)
+    } catch {}
+    setAiEstimateLoading(false)
+  }
+
+  const handleCreateTask = async () => {
+    if (!taskForm.title) return
+    const res = await fetch('/api/tasks', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title: taskForm.title, description: taskForm.description, projectId: id }) })
+    if (res.ok) { toast.success('Tarefa criada'); setTaskDialogOpen(false); setTaskForm({ title: '', description: '' }); setAiEstimate(null); fetchTasks() }
+    else toast.error('Erro ao criar tarefa')
+  }
+
   const handleCreateSprint = async () => {
     if (!sprintForm.name || !sprintForm.startDate || !sprintForm.endDate) { toast.error('Preencha nome e datas'); return }
     setSprintSaving(true)
@@ -392,6 +444,13 @@ export default function ProjectDetailPage() {
   const updateStepStatus = (stepId: number, status: NodeStatus) => {
     const currentStep = steps.find(s => s.id === stepId)
     if (!currentStep) return
+
+    if (status === 'completed' && stepId >= 11) {
+      setCompletingStepId(stepId)
+      setChecklistItems(checklistItems.map(i => ({ ...i, checked: false })))
+      setDeliveryChecklistOpen(true)
+      return
+    }
 
     if (currentStep.status === 'completed') {
       toast.error('Etapas concluídas não podem ser alteradas')
@@ -470,6 +529,7 @@ export default function ProjectDetailPage() {
       }
       persistProject(newSteps, [entry, ...history])
       toast.success(isUpdate ? 'Proposta atualizada!' : 'Proposta enviada ao cliente!')
+      fetch(`/api/proposal-versions`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ projectId: id, value: parseFloat(proposalValue), message: proposalMsg }) }).catch(() => {})
       setApproveOpen(false)
       setProposalMsg('')
       setProposalValue('')
@@ -771,6 +831,7 @@ export default function ProjectDetailPage() {
           </div>
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={() => setProposalViewOpen(true)} className="h-7 text-[11px]">Ver Detalhes</Button>
+            <Button variant="outline" size="sm" onClick={() => { fetchProposalVersions(); setVersionHistoryOpen(true) }} className="h-7 text-[11px]"><History className="h-3 w-3 mr-1" /> Historico</Button>
             {isAdmin && isReview && (
               <Button variant="outline" size="sm" onClick={() => setApproveOpen(true)} className="h-7 text-[11px] text-[var(--warning)]">Alterar Proposta</Button>
             )}
@@ -827,6 +888,9 @@ export default function ProjectDetailPage() {
             <>
               <Button variant="outline" size="sm" onClick={() => setDepDiagramOpen(true)} className="h-7 text-[11px] gap-1">
                 <GitBranch className="h-3 w-3" /> Ver dependencias
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => setTaskDialogOpen(true)} className="h-7 text-[11px] gap-1">
+                <IconPlus className="h-3 w-3" /> Nova Tarefa
               </Button>
               <Button variant="outline" size="sm" onClick={() => setCsvImportOpen(true)} className="h-7 text-[11px] gap-1.5">
                 <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M8 2v10M4 8l4 4 4-4M2 14h12"/></svg>
@@ -1634,6 +1698,93 @@ export default function ProjectDetailPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <Dialog open={versionHistoryOpen} onOpenChange={setVersionHistoryOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader><DialogTitle>Historico de Propostas</DialogTitle></DialogHeader>
+          <div className="max-h-[60vh] overflow-y-auto">
+            {proposalVersions.length === 0 ? (
+              <p className="text-[12px] text-[var(--text-3)] text-center py-8">Nenhuma versao de proposta enviada</p>
+            ) : (
+              <div>
+                <table className="w-full text-[12px]">
+                  <thead><tr className="text-[var(--text-3)] text-[10px] uppercase"><th className="text-left pb-2">Versao</th><th className="text-left pb-2">Valor</th><th className="text-left pb-2">Data</th><th className="text-left pb-2">Resposta</th><th className="text-left pb-2"></th></tr></thead>
+                  <tbody>{proposalVersions.map((v: any) => (
+                    <tr key={v.id} className="border-t border-[var(--border)]">
+                      <td className="py-2 font-[500]">v{v.version}</td>
+                      <td className="py-2 text-[var(--accent)]">R$ {v.value?.toLocaleString?.('pt-BR') || v.value}</td>
+                      <td className="py-2 text-[var(--text-3)]">{new Date(v.sentAt).toLocaleDateString('pt-BR')}</td>
+                      <td className="py-2">{v.response ? <span className={v.response === 'accepted' ? 'text-[var(--success)]' : 'text-[var(--destructive)]'}>{v.response === 'accepted' ? 'Aceita' : 'Recusada'}</span> : <span className="text-[var(--text-3)]">Aguardando</span>}</td>
+                      <td className="py-2">{isAdmin && <Button variant="ghost" size="sm" className="h-6 text-[10px]" onClick={() => { setProposalValue(String(v.value)); setProposalMsg(v.message); setVersionHistoryOpen(false); setApproveOpen(true) }}>Reenviar</Button>}</td>
+                    </tr>
+                  ))}</tbody>
+                </table>
+                {proposalVersions.length >= 2 && (
+                  <div className="mt-4 pt-3 border-t border-[var(--border)]">
+                    <p className="text-[10px] text-[var(--text-3)] uppercase mb-2">Evolucao dos valores</p>
+                    <div className="flex items-end gap-1 h-16">
+                      {proposalVersions.slice().reverse().map((v: any) => {
+                        const maxVal = Math.max(...proposalVersions.map((p: any) => p.value))
+                        return <div key={v.id} className="flex-1 flex flex-col items-center justify-end gap-0.5"><span className="text-[8px] text-[var(--text-3)]">R${Math.round(v.value)}</span><div className="w-full bg-[var(--accent)] rounded-t" style={{ height: `${Math.max((v.value / maxVal) * 100, 4)}%`, opacity: 0.7 }} /><span className="text-[7px] text-[var(--text-3)]">v{v.version}</span></div>
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+          <DialogFooter><Button variant="outline" onClick={() => setVersionHistoryOpen(false)}>Fechar</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={deliveryChecklistOpen} onOpenChange={setDeliveryChecklistOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle className="flex items-center gap-2"><ClipboardCheck className="h-5 w-5" /> Checklist de Qualidade</DialogTitle></DialogHeader>
+          <div className="py-2 space-y-3">
+            <p className="text-[12px] text-[var(--text-2)]">Marque todos os itens antes de concluir:</p>
+            {checklistItems.map(item => (
+              <label key={item.id} className="flex items-center gap-3 py-1.5 cursor-pointer">
+                <input type="checkbox" checked={item.checked} onChange={() => setChecklistItems(prev => prev.map(i => i.id === item.id ? { ...i, checked: !i.checked } : i))} className="h-4 w-4 rounded border-[var(--border)] accent-[var(--accent)]" />
+                <span className={`text-[13px] ${item.checked ? 'text-[var(--text)]' : 'text-[var(--text-2)]'}`}>{item.label}</span>
+              </label>
+            ))}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setDeliveryChecklistOpen(false); setCompletingStepId(null) }}>Cancelar</Button>
+            <Button onClick={handleChecklistConfirm} disabled={checklistItems.some(i => !i.checked) || checklistLoading}>
+              {checklistLoading && <IconLoader className="w-[14px] h-[14px] animate-spin mr-1" />}Confirmar Conclusao
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {isAdmin && (
+        <Dialog open={taskDialogOpen} onOpenChange={setTaskDialogOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader><DialogTitle>Nova Tarefa</DialogTitle></DialogHeader>
+            <div className="space-y-3 py-2">
+              <Input placeholder="Titulo da tarefa" value={taskForm.title} onChange={e => setTaskForm({ ...taskForm, title: e.target.value })} className="h-8 text-[12px]" />
+              <textarea placeholder="Descricao (opcional)" value={taskForm.description} onChange={e => setTaskForm({ ...taskForm, description: e.target.value })} className="w-full min-h-[60px] rounded-lg bg-[var(--surface-2)] border border-[var(--border)] px-3 py-2 text-[12px] text-[var(--text)] placeholder:text-[var(--text-3)] focus:outline-none focus:border-[var(--accent)] resize-vertical" />
+              {taskForm.title && (
+                <div>
+                  <Button variant="ghost" size="sm" onClick={handleAiEstimateTask} disabled={aiEstimateLoading} className="h-7 text-[11px] gap-1"><IconSparkles className="w-[12px] h-[12px]" />{aiEstimateLoading ? 'Estimando...' : 'Estimar com IA'}</Button>
+                  {aiEstimate && (
+                    <div className="p-2 mt-1 rounded-lg bg-[var(--accent-subtle)] border border-[var(--accent)]/20 text-[11px]">
+                      <span className="text-[var(--accent)] font-[500]">Estimativa IA: {aiEstimate.estimatedHours}h</span>
+                      <span className="text-[var(--text-3)] ml-2">({aiEstimate.confidence === 'high' ? 'alta' : 'media'} confianca)</span>
+                      {aiEstimate.reasoning && <p className="text-[var(--text-3)] mt-0.5 text-[10px]">{aiEstimate.reasoning}</p>}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => { setTaskDialogOpen(false); setAiEstimate(null); setTaskForm({ title: '', description: '' }) }}>Cancelar</Button>
+              <Button onClick={handleCreateTask} disabled={!taskForm.title.trim()}>Criar Tarefa</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   )
 }

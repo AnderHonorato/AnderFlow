@@ -211,8 +211,37 @@ export default function PortalDashboard() {
     setOnboardingHidden(true)
   }
 
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartY.current = e.touches[0].clientY
+  }
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (refreshing) return
+    const delta = e.touches[0].clientY - touchStartY.current
+    if (delta > 80 && window.scrollY === 0) {
+      setRefreshing(true)
+      setTimeout(() => {
+        window.location.reload()
+      }, 1200)
+    }
+  }
+
+  const handleRefresh = async () => {
+    setRefreshing(true)
+    const projRes = await fetch('/api/projects', { credentials: 'include' })
+    const projJson = await projRes.json()
+    setProjects(projJson.data || [])
+    setRefreshing(false)
+  }
+
   return (
-    <div className="p-6 space-y-5 animate-page-enter">
+    <div className="p-6 space-y-5 animate-page-enter" onTouchStart={handleTouchStart} onTouchMove={handleTouchMove}>
+      {refreshing && (
+        <div className="flex items-center justify-center gap-2 py-3 animate-fade-in">
+          <div className="h-5 w-5 border-2 border-[var(--accent)] border-t-transparent rounded-full animate-spin" />
+          <span className="text-[12px] text-[var(--text-3)]">Atualizando...</span>
+        </div>
+      )}
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-[17px] font-[500] tracking-[-0.015em]">
@@ -229,19 +258,57 @@ export default function PortalDashboard() {
         </Button>
       </div>
 
-      {aiSummary !== null && (
-        <Card className="border-[var(--accent)]/20 bg-[var(--accent-subtle)] animate-card-pop">
-          <CardContent className="p-4 flex items-start gap-3">
-            <Sparkles className="w-4 h-4 text-[var(--accent)] mt-0.5 shrink-0" />
+      {isAnniversary && (
+        <Card className="border-[var(--accent)]/30 bg-gradient-to-r from-[var(--accent-subtle)] to-[var(--surface)] animate-card-pop">
+          <CardContent className="p-4 flex items-center gap-4">
+            <span className="text-3xl">🎂</span>
             <div>
-              <p className="text-[11px] font-[500] text-[var(--accent)] uppercase tracking-wider mb-1">Resumo Inteligente</p>
-              <p className="text-[13px] text-[var(--text-2)] leading-relaxed">{aiSummary}</p>
+              <p className="text-[14px] font-[500] text-[var(--text)]">
+                {anniversaryYears} ano(s) de parceria com ANDERFLOW!
+              </p>
+              <p className="text-[12px] text-[var(--text-2)] mt-0.5">Obrigado pela confianca. E um prazer ter voce conosco.</p>
             </div>
           </CardContent>
         </Card>
       )}
 
-      <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
+      {planNearLimit && (
+        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[var(--warning-subtle)] border border-[var(--warning)]/20 text-[12px] text-[var(--warning)]">
+          <span className="text-sm">📊</span>
+          <span>Voce esta proximo do limite de projetos do seu plano. Considere fazer upgrade.</span>
+        </div>
+      )}
+
+      {aiSummary !== null && (
+        <Card className="border-[var(--accent)]/20 bg-[var(--accent-subtle)] animate-card-pop">
+          <CardContent className="p-4">
+            <div className="flex items-start gap-3">
+              <Sparkles className="w-4 h-4 text-[var(--accent)] mt-0.5 shrink-0" />
+              <div className="flex-1 min-w-0">
+                <button
+                  className="flex items-center gap-2 w-full text-left"
+                  onClick={() => setAiSummaryExpanded(!aiSummaryExpanded)}
+                >
+                  <p className="text-[11px] font-[500] text-[var(--accent)] uppercase tracking-wider">Resumo Inteligente</p>
+                  {isMobile && (
+                    aiSummaryExpanded ? <ChevronUp className="h-3 w-3 text-[var(--accent)]" /> : <ChevronDown className="h-3 w-3 text-[var(--accent)]" />
+                  )}
+                </button>
+                {(!isMobile || aiSummaryExpanded) && (
+                  <p className="text-[13px] text-[var(--text-2)] leading-relaxed mt-1">{aiSummary}</p>
+                )}
+                {isMobile && !aiSummaryExpanded && (
+                  <Button variant="ghost" size="sm" className="h-6 text-[10px] mt-1 p-0" onClick={() => setAiSummaryExpanded(true)}>
+                    Ver resumo
+                  </Button>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      <div className={`grid gap-3 ${isMobile ? 'grid-cols-2' : 'md:grid-cols-2 lg:grid-cols-4'}`}>
         <Card className="animate-card-pop stagger-1"><CardContent className="p-4 flex items-center gap-3">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--accent-subtle)]"><IconProject className="w-[16px] h-[16px] text-[var(--accent)]" /></div>
           <div><p className="text-[17px] font-[500]"><AnimatedCounter value={active} /></p><p className="text-[11px] text-[var(--text-3)]">Projetos ativos</p></div>

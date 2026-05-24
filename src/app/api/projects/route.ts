@@ -10,6 +10,8 @@ import { sendWebhook } from '@/lib/webhook-sender'
 import { sanitize } from '@/lib/utils/sanitize'
 import { getPlan } from '@/lib/plans'
 
+const HIGH_VALUE_THRESHOLD = parseInt(process.env.APPROVAL_THRESHOLD || '10000')
+
 export async function GET(request: NextRequest) {
   try {
     const user = await getSessionUser(request)
@@ -145,6 +147,34 @@ export async function POST(request: NextRequest) {
       status: project.status,
       createdAt: project.createdAt?.toISOString(),
     }).catch((err) => { console.error('[webhook]', err?.message || err) })
+
+    const proposalValue = parseFloat(body.proposalValue || '0')
+    if (proposalValue > HIGH_VALUE_THRESHOLD) {
+      const owner = await prisma.user.findFirst({
+        where: { role: 'OWNER' },
+        select: { id: true },
+      })
+      if (owner) {
+        await prisma.approvalFlow.create({
+          data: {
+            entityType: 'project',
+            entityId: project.id,
+            requiredBy: owner.id,
+            comment: `Projeto de alto valor: R$ ${proposalValue.toLocaleString('pt-BR')}`,
+          },
+        }).catch((err) => { console.error('[approval]', err?.message || err) })
+
+        await prisma.notification.create({
+          data: {
+            userId: owner.id,
+            type: 'SYSTEM',
+            title: 'Aprovacao necessaria',
+            message: `Projeto "${project.name}" (R$ ${proposalValue.toLocaleString('pt-BR')}) precisa de sua aprovacao.`,
+            metadata: JSON.stringify({ projectId: project.id, type: 'approval' }),
+          },
+        }).catch((err) => { console.error('[notification]', err?.message || err) })
+      }
+    }
 
     return NextResponse.json({ data: project }, { status: 201 })
   } catch (error: any) {

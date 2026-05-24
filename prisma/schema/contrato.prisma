@@ -32,3 +32,47 @@ model Contract {
   @@index([projectId])
   @@index([status])
 }
+
+model ProposalVersion {
+  id          String    @id @default(cuid())
+  projectId   String
+  value       Float
+  message     String
+  version     Int
+  sentAt      DateTime  @default(now())
+  response    String?
+  respondedAt DateTime?
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+}
+
+model DeliveryChecklist {
+  id          String    @id @default(cuid())
+  projectId   String    @unique
+  items       Json
+  completedAt DateTime?
+  completedBy String?
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+
+model DeadlineAlert {
+  id        String   @id @default(cuid())
+  projectId String
+  type      String
+  sentAt    DateTime @default(now())
+
+  @@unique([projectId, type])
+}
+
+model UiFeedback {
+  id        String   @id @default(cuid())
+  page      String
+  helpful   Boolean
+  userId    String
+  createdAt DateTime @default(now())
+
+  @@index([page])
+}

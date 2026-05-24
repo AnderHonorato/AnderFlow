@@ -5,14 +5,19 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
+import { Switch } from '@/components/ui/switch'
 import { toast } from 'sonner'
 import { IconCheck, IconEdit, IconSearch, IconFile, IconClose, IconLoader } from '@/components/icons'
+import { Sparkles } from 'lucide-react'
 
 export function KnowledgeClient({ projects: initialProjects }: { projects: any[] }) {
   const [projects, setProjects] = useState(initialProjects)
   const [search, setSearch] = useState('')
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editValues, setEditValues] = useState({ image: '', link: '', summary: '' })
+  const [semanticMode, setSemanticMode] = useState(false)
+  const [semanticLoading, setSemanticLoading] = useState(false)
+  const [semanticResults, setSemanticResults] = useState<any[] | null>(null)
 
   const startEditing = (project: any) => {
     setEditValues({
@@ -39,12 +44,38 @@ export function KnowledgeClient({ projects: initialProjects }: { projects: any[]
     toast.success('Informacoes salvas!')
   }
 
-  const filtered = projects.filter(p =>
-    !search || p.name.toLowerCase().includes(search.toLowerCase()) || p.client?.name?.toLowerCase().includes(search.toLowerCase())
-  )
+  const handleSemanticSearch = async () => {
+    if (!search.trim()) return
+    setSemanticLoading(true)
+    setSemanticResults(null)
+    try {
+      const res = await fetch('/api/knowledge/semantic-search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: search }),
+      })
+      const json = await res.json()
+      if (res.ok && json.data) {
+        setSemanticResults(json.data)
+      } else {
+        toast.error(json.error || 'Erro na busca semantica')
+      }
+    } catch {
+      toast.error('Erro ao conectar com IA')
+    }
+    setSemanticLoading(false)
+  }
+
+  const filtered = semanticMode
+    ? (semanticResults || [])
+    : projects.filter(p =>
+        !search || p.name.toLowerCase().includes(search.toLowerCase()) || p.client?.name?.toLowerCase().includes(search.toLowerCase())
+      )
+
+  const displayProjects = semanticMode && semanticResults ? semanticResults : filtered
 
   const yearsSet = new Set<number>()
-  filtered.forEach(p => {
+  displayProjects.forEach((p: any) => {
     const d = p.completedAt || p.updatedAt || p.createdAt
     yearsSet.add(new Date(d).getFullYear())
   })
@@ -57,11 +88,50 @@ export function KnowledgeClient({ projects: initialProjects }: { projects: any[]
           <h1 className="text-[17px] font-[500] tracking-[-0.015em]">Meu Conhecimento</h1>
           <p className="text-[12px] text-[var(--text-3)] mt-1">{projects.length} projetos concluidos</p>
         </div>
-        <div className="relative w-64">
-          <IconSearch className="absolute left-3 top-1/2 w-[14px] h-[14px] -translate-y-1/2 text-[var(--text-3)]" />
-          <Input placeholder="Buscar conhecimento..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <label className="text-[11px] text-[var(--text-3)] cursor-pointer select-none">
+              Busca semantica
+            </label>
+            <Switch checked={semanticMode} onCheckedChange={(v: boolean) => { setSemanticMode(v); if (!v) setSemanticResults(null) }} />
+          </div>
+          <div className="relative w-64">
+            <IconSearch className="absolute left-3 top-1/2 w-[14px] h-[14px] -translate-y-1/2 text-[var(--text-3)]" />
+            <Input
+              placeholder={semanticMode ? 'Descreva o que procura...' : 'Buscar conhecimento...'}
+              value={search}
+              onChange={e => { setSearch(e.target.value); if (semanticMode) setSemanticResults(null) }}
+              onKeyDown={e => { if (e.key === 'Enter' && semanticMode) handleSemanticSearch() }}
+              className="pl-9"
+            />
+          </div>
+          {semanticMode && (
+            <Button size="sm" onClick={handleSemanticSearch} disabled={semanticLoading || !search.trim()} className="h-8 text-[11px] gap-1">
+              {semanticLoading ? (
+                <IconLoader className="w-[12px] h-[12px] animate-spin" />
+              ) : (
+                <Sparkles className="h-3 w-3" />
+              )}
+              Buscar
+            </Button>
+          )}
         </div>
       </div>
+
+      {semanticMode && (
+        <p className="text-[11px] text-[var(--accent)] flex items-center gap-1">
+          <Sparkles className="h-3 w-3" /> Powered by IA ✨
+        </p>
+      )}
+
+      {semanticLoading && (
+        <Card className="border-[var(--accent)]/20 bg-[var(--accent-subtle)] animate-card-pop">
+          <CardContent className="p-8 flex items-center justify-center gap-3">
+            <div className="h-5 w-5 border-2 border-[var(--accent)] border-t-transparent rounded-full animate-spin" />
+            <span className="text-[13px] text-[var(--accent)]">Analisando artigos com IA...</span>
+          </CardContent>
+        </Card>
+      )}
 
       <div>
         {completedYears.map((year, yi) => (
@@ -69,14 +139,19 @@ export function KnowledgeClient({ projects: initialProjects }: { projects: any[]
             <div className="flex items-center gap-3 mb-4 sticky top-[48px] bg-[var(--bg)] py-2 z-10">
               <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--accent)] text-white text-[13px] font-[500] shrink-0">{year}</div>
               <div className="h-px flex-1 bg-[var(--border)]" />
-              <span className="text-[11px] text-[var(--text-3)]">{filtered.filter(p => new Date(p.completedAt || p.updatedAt || p.createdAt).getFullYear() === year).length} projetos</span>
+              <span className="text-[11px] text-[var(--text-3)]">{displayProjects.filter((p: any) => new Date(p.completedAt || p.updatedAt || p.createdAt).getFullYear() === year).length} projetos</span>
             </div>
 
-            {filtered.filter(p => new Date(p.completedAt || p.updatedAt || p.createdAt).getFullYear() === year)
-              .sort((a, b) => new Date(b.completedAt || b.updatedAt || b.createdAt).getTime() - new Date(a.completedAt || a.updatedAt || a.createdAt).getTime())
-              .map((project) => {
+            {displayProjects.filter((p: any) => new Date(p.completedAt || p.updatedAt || p.createdAt).getFullYear() === year)
+              .sort((a: any, b: any) => new Date(b.completedAt || b.updatedAt || b.createdAt).getTime() - new Date(a.completedAt || a.updatedAt || a.createdAt).getTime())
+              .map((project: any) => {
                 const isEditing = editingId === project.id
-                const meta = { summary: project.completedSummary || '', link: project.completedLink || '', image: project.headerImage || '' }
+                const meta = {
+                  summary: project.completedSummary || project.summary || '',
+                  link: project.completedLink || '',
+                  image: project.headerImage || '',
+                  score: (project as any).score,
+                }
                 const date = new Date(project.completedAt || project.updatedAt || project.createdAt)
 
                 return (
@@ -90,7 +165,12 @@ export function KnowledgeClient({ projects: initialProjects }: { projects: any[]
                         )}
                         <div>
                           <div className="flex items-center gap-2 mb-1">
-                            <h3 className="text-[14px] font-[500]">{project.name}</h3>
+                            <h3 className="text-[14px] font-[500]">{project.title || project.name}</h3>
+                            {meta.score !== undefined && (
+                              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-[500] bg-[var(--accent-subtle)] text-[var(--accent)]">
+                                {meta.score}% relevante
+                              </span>
+                            )}
                             <Badge variant="success">Concluido</Badge>
                           </div>
                           <div className="flex items-center gap-3 text-[11px] text-[var(--text-3)] mb-3">
@@ -100,7 +180,7 @@ export function KnowledgeClient({ projects: initialProjects }: { projects: any[]
                           {!isEditing ? (
                             <div className="space-y-2">
                               {meta.summary ? (
-                                <p className="text-[12px] text-[var(--text-2)] bg-[var(--surface-2)] rounded-lg p-3 leading-relaxed">{meta.summary}</p>
+                                <p className="text-[12px] text-[var(--text-2)] bg-[var(--surface-2)] rounded-lg p-3 leading-relaxed">{(meta.summary || '').slice(0, 300)}</p>
                               ) : (
                                 <p className="text-[12px] text-[var(--text-3)] italic">Sem resumo. Clique em editar para adicionar.</p>
                               )}
@@ -137,8 +217,8 @@ export function KnowledgeClient({ projects: initialProjects }: { projects: any[]
               })}
           </div>
         ))}
-        {filtered.length === 0 && (
-          <Card><CardContent className="p-12 text-center space-y-3"><p className="text-[var(--text-3)]">Nenhum projeto concluido ainda.</p></CardContent></Card>
+        {displayProjects.length === 0 && (
+          <Card><CardContent className="p-12 text-center space-y-3"><p className="text-[var(--text-3)]">{semanticMode ? 'Nenhum resultado encontrado. Tente outra descricao.' : 'Nenhum projeto concluido ainda.'}</p></CardContent></Card>
         )}
       </div>
     </div>

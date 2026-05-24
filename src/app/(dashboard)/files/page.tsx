@@ -26,6 +26,7 @@ function getFileIcon(mimeType: string) {
   if (mimeType.startsWith('video/')) return <Film className="h-5 w-5 text-info" />
   if (mimeType.includes('pdf') || mimeType.includes('document')) return <FileText className="h-5 w-5 text-warning" />
   if (mimeType.includes('figma') || mimeType.includes('design')) return <File className="h-5 w-5 text-primary" />
+  if (mimeType.includes('google-apps')) return <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M7.487 1l6.912 12H14.4L7.487 1z" fill="#4285F4"/><path d="M9.6 7.444L2.688 19.296C2.347 19.879 2.8 21 3.467 21h13.845c.67 0 1.12-1.121.78-1.704L11.18 7.444c-.341-.576-1.237-.576-1.58 0z" fill="#34A853"/><path d="M15.467 14.534l-3.467-6 3.467-6c.34-.576 1.237-.576 1.579 0l6.913 12c.34.583-.11 1.304-.78 1.304h-6.933" fill="#FBBC04"/><path d="M21.78 20.779c.34-.583-.11-1.304-.78-1.304H8.533l3.467 6h6.934" fill="#EA4335"/></svg>
   return <File className="h-5 w-5 text-muted-foreground" />
 }
 
@@ -126,12 +127,18 @@ export default async function FilesPage() {
           <CardContent className="p-0">
             <div className="divide-y">
               {recentFiles.map((file) => (
-                <div key={file.id} className="flex items-center gap-4 p-3 hover:bg-muted/50 transition-colors cursor-pointer">
+                <div key={file.id} className="flex items-center gap-4 p-3 hover:bg-muted/50 transition-colors cursor-pointer"
+                  onClick={() => { if (file.mimeType?.includes('google-apps') || file.url) { window.open(file.url, '_blank') } }}>
                   <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-muted">
                     {getFileIcon(file.mimeType)}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{file.originalName || file.name}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-medium truncate">{file.originalName || file.name}</p>
+                      {file.mimeType?.includes('google-apps') && (
+                        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-[500] bg-blue-500/10 text-blue-500 shrink-0">Drive</span>
+                      )}
+                    </div>
                     <p className="text-xs text-muted-foreground">
                       {file.project?.name || 'Sem projeto'} &middot; {formatSize(file.size)}
                     </p>

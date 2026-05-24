@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { signOut, useSession } from 'next-auth/react'
 import { SessionProvider } from '@/providers/session-provider'
+import { I18nProvider } from '@/providers/i18n-provider'
 import { cn } from '@/lib/utils'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
@@ -16,16 +17,21 @@ import { IconCheck } from '@/components/icons'
 import {
   LayoutDashboard, FolderKanban, MessageSquare,
   CreditCard, FileText, LogOut, Headphones, Sun, Moon,
+  Home, Bell, Globe,
 } from 'lucide-react'
 import { useTheme } from 'next-themes'
 import { WelcomeOverlay } from '@/components/ui/welcome-overlay'
 import { PushPermission } from '@/components/ui/push-permission'
 import { PwaInstallPrompt } from '@/components/ui/pwa-install-prompt'
 import { BotChat } from '@/components/portal/bot-chat'
+import { useMediaQuery } from '@/hooks/use-media-query'
+
+import { useI18n } from '@/providers/i18n-provider'
 
 const navItems = [
-  { name: 'Início', href: '/portal', icon: LayoutDashboard },
+  { name: 'Inicio', href: '/portal', icon: LayoutDashboard },
   { name: 'Meus Projetos', href: '/portal/projects', icon: FolderKanban },
+  { name: 'Tickets', href: '/portal/tickets', icon: MessageSquare },
 ]
 
 const navItemsSupport = [
@@ -39,9 +45,18 @@ function PortalSidebarContent({ children }: { children: React.ReactNode }) {
   const { data: session, status } = useSession()
   const router = useRouter()
   const { theme, setTheme } = useTheme()
+  const { language, setLanguage, t } = useI18n()
   const initials = (session?.user?.name || 'CL').split(' ').map((n: string) => n[0]).slice(0, 2).join('').toUpperCase()
   const [showOnboarding, setShowOnboarding] = useState(false)
   const [brandLogo, setBrandLogo] = useState<string | null>(null)
+  const isMobile = useMediaQuery('(max-width: 767px)')
+
+  const bottomNavItems = [
+    { name: t('portal.welcome').split(' ')[0] || 'Home', href: '/portal', icon: Home },
+    { name: 'Projetos', href: '/portal/projects', icon: FolderKanban },
+    { name: 'Tickets', href: '/portal/tickets', icon: MessageSquare },
+    { name: 'Notif.', href: '/notifications', icon: Bell },
+  ]
 
   useEffect(() => {
     if (status === 'unauthenticated') router.push('/login')
@@ -81,7 +96,7 @@ function PortalSidebarContent({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex h-screen overflow-hidden bg-[var(--bg)]">
-      <aside className="w-[220px] flex flex-col border-r border-[var(--border)] bg-[var(--sidebar-bg)]">
+      <aside className={cn('w-[220px] flex-col border-r border-[var(--border)] bg-[var(--sidebar-bg)]', isMobile ? 'hidden' : 'flex')}>
         <div className="flex h-12 items-center gap-2 border-b border-[var(--border)] px-3">
           <Link href="/portal" className="flex items-center gap-2">
             <div className="flex h-6 w-6 items-center justify-center rounded bg-[var(--primary)]">
@@ -141,6 +156,16 @@ function PortalSidebarContent({ children }: { children: React.ReactNode }) {
           </nav>
         </ScrollArea>
         <div className="border-t border-[var(--border)] p-2 space-y-1">
+          <div className="flex items-center justify-between px-3 py-1">
+            <button
+              onClick={() => setLanguage(language === 'pt-BR' ? 'en' : 'pt-BR')}
+              className="flex items-center gap-2 text-[10px] text-[var(--text-3)] hover:text-[var(--text)] transition-colors"
+              title={language === 'pt-BR' ? 'Switch to English' : 'Mudar para Portugues'}
+            >
+              <Globe className="h-3.5 w-3.5" />
+              <span>{language === 'pt-BR' ? '🇧🇷 PT' : '🇺🇸 EN'}</span>
+            </button>
+          </div>
           <button onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} title="Alternar tema"
             className="flex w-full items-center gap-2.5 rounded-md px-3 py-1.5 text-xs text-[var(--text-muted)] hover:bg-[var(--surface-hover)] hover:text-[var(--text)] transition-colors">
             {theme === 'dark' ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />}
@@ -158,9 +183,33 @@ function PortalSidebarContent({ children }: { children: React.ReactNode }) {
       </aside>
       <div className="flex-1 flex flex-col min-w-0 overflow-y-auto scroll-area">
           <Header />
-          <main className="flex-1">{children}</main>
+          <main className={cn('flex-1', isMobile && 'pb-16')}>{children}</main>
         </div>
       <PushPermission />
+
+      {isMobile && (
+        <nav
+          className="fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around bg-[var(--surface)] border-t border-[var(--border)]"
+          style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+        >
+          {bottomNavItems.map((item) => {
+            const isActive = pathname === item.href || (item.href !== '/portal' && pathname.startsWith(item.href))
+            return (
+              <Link
+                key={item.name}
+                href={item.href}
+                className={cn(
+                  'flex flex-col items-center gap-0.5 py-2 px-3 text-[10px] transition-colors',
+                  isActive ? 'text-[var(--accent)]' : 'text-[var(--text-3)] hover:text-[var(--text)]'
+                )}
+              >
+                <item.icon className={cn('h-5 w-5', isActive && 'text-[var(--accent)]')} />
+                <span>{item.name}</span>
+              </Link>
+            )
+          })}
+        </nav>
+      )}
 
       <Dialog open={showOnboarding} onOpenChange={setShowOnboarding}>
         <DialogContent className="sm:max-w-[440px]">
@@ -213,11 +262,13 @@ function PortalSidebarContent({ children }: { children: React.ReactNode }) {
 
 export default function PortalLayout({ children }: { children: React.ReactNode }) {
   return (
-    <SessionProvider>
-      <PortalSidebarContent>{children}</PortalSidebarContent>
-      <WelcomeOverlay />
-      <PwaInstallPrompt />
-      <BotChat />
-    </SessionProvider>
+    <I18nProvider>
+      <SessionProvider>
+        <PortalSidebarContent>{children}</PortalSidebarContent>
+        <WelcomeOverlay />
+        <PwaInstallPrompt />
+        <BotChat />
+      </SessionProvider>
+    </I18nProvider>
   )
 }

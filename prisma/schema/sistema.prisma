@@ -229,3 +229,19 @@ model ApiKey {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
+
+model ApprovalFlow {
+  id          String    @id @default(cuid())
+  entityType  String
+  entityId    String
+  status      String    @default("pending")
+  requiredBy  String
+  approvedAt  DateTime?
+  rejectedAt  DateTime?
+  comment     String?
+  createdAt   DateTime  @default(now())
+
+  @@index([entityType, entityId])
+  @@index([requiredBy])
+  @@index([status])
+}

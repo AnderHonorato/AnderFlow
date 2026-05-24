@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
 
     const articles = await prisma.knowledgeBase.findMany({
       where: { isPublished: true },
-      select: { id: true, title: true, content: true, category: true, tags: true },
+      select: { id: true, title: true, content: true, category: true },
       orderBy: { updatedAt: 'desc' },
       take: 100,
     })
@@ -32,7 +32,6 @@ export async function POST(request: NextRequest) {
       title: a.title,
       preview: (a.content || '').slice(0, 300),
       category: a.category,
-      tags: a.tags,
     }))
 
     const prompt = `Dado estes artigos de knowledge base, qual e o mais relevante para a pergunta: '${query}'? 
@@ -67,7 +66,6 @@ Responda APENAS com JSON valido: { "results": [{ "id": "article_id", "score": 95
         title: a.title,
         content: a.content,
         category: a.category,
-        tags: a.tags,
         score: scoreMap.get(a.id) || 0,
       }))
       .sort((a, b) => b.score - a.score)
