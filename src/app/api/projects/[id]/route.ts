@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { getSessionUser, isAdmin } from '@/lib/auth-utils'
 import { auditLog } from '@/lib/audit'
 import { sendWebhook } from '@/lib/webhook-sender'
 
@@ -8,6 +9,12 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params
+
+  const user = await getSessionUser(request)
+  if (!user) {
+    return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
+  }
+
   try {
     const project = await prisma.project.findUnique({
       where: { id },
@@ -27,6 +34,10 @@ export async function GET(
 
     if (!project) {
       return NextResponse.json({ error: 'Projeto não encontrado' }, { status: 404 })
+    }
+
+    if (!isAdmin(user) && project.clientId !== user.id) {
+      return NextResponse.json({ error: 'Acesso negado' }, { status: 403 })
     }
 
     return NextResponse.json({ data: project })
@@ -77,7 +88,7 @@ export async function PATCH(
         name: project.name,
         clientId: project.clientId,
         completedAt: project.completedAt?.toISOString() || new Date().toISOString(),
-      }).catch(() => {})
+      }).catch((err) => { console.error('[webhook]', err?.message || err) })
     }
 
     auditLog({
@@ -86,7 +97,7 @@ export async function PATCH(
       entity: 'Project',
       entityId: project.id,
       description: body.status ? `Status atualizado para ${body.status}` : 'Projeto atualizado',
-    }).catch(() => {})
+    }).catch((err) => { console.error('[audit]', err?.message || err) })
 
     return NextResponse.json({ data: project })
   } catch (error) {

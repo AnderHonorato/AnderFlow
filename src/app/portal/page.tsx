@@ -13,7 +13,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { AchievementBadge, achievementConfig } from '@/components/ui/achievement-badge'
 import { ProjectCompleteModal } from '@/components/ui/project-complete-modal'
 import { IconProject, IconCheck, IconAnalytics, IconPlus, IconFinancial, IconNotification, IconArrowRight, IconArrowUpRight } from '@/components/icons'
-import { CheckCircle2, Circle, X, Sparkles } from 'lucide-react'
+import { CheckCircle2, Circle, X, Sparkles, TrendingUp, ChevronDown, ChevronUp } from 'lucide-react'
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
+import { getPlan } from '@/lib/plans'
 
 const ONBOARDING_STEPS = [
   { id: 'profile', label: 'Complete seu perfil', description: 'Adicione seus dados de contato', href: '/portal/profile', icon: null },
@@ -66,10 +68,25 @@ export default function PortalDashboard() {
   const [contracts, setContracts] = useState<any[]>([])
   const [onboardingHidden, setOnboardingHidden] = useState(false)
   const [aiSummary, setAiSummary] = useState<string | null>(null)
+  const [progressHistory, setProgressHistory] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [greeting, setGreeting] = useState('Ola')
+  const [aiSummaryExpanded, setAiSummaryExpanded] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
+  const [refreshing, setRefreshing] = useState(false)
+  const [planNearLimit, setPlanNearLimit] = useState(false)
+  const [isAnniversary, setIsAnniversary] = useState(false)
+  const [anniversaryYears, setAnniversaryYears] = useState(0)
+  const touchStartY = useRef(0)
 
   useEffect(() => { setGreeting(getGreeting()) }, [])
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768)
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
 
   useEffect(() => {
     const hidden = localStorage.getItem('onboarding_checklist_hidden')
@@ -124,11 +141,37 @@ export default function PortalDashboard() {
           }
         }
         sessionStorage.setItem('lastProjectStatuses', JSON.stringify(currentStatuses))
+
+        const u = session?.user as any
+        if (u?.plan) {
+          const plan = getPlan(u.plan)
+          const activeProjects = projData.filter((p: any) => p.status !== 'COMPLETED' && p.status !== 'CANCELLED').length
+          if (plan.maxProjects !== -1 && activeProjects >= plan.maxProjects - 1 && activeProjects < plan.maxProjects) {
+            setPlanNearLimit(true)
+          }
+        }
+
+        const currentUser = session?.user as any
+        if (currentUser?.createdAt) {
+          const created = new Date(currentUser.createdAt)
+          const now = new Date()
+          if (created.getMonth() === now.getMonth()) {
+            const years = now.getFullYear() - created.getFullYear()
+            if (years >= 1) {
+              setIsAnniversary(true)
+              setAnniversaryYears(years)
+            }
+          }
+        }
       } catch {}
       setLoading(false)
       fetch('/api/portal/ai-summary', { credentials: 'include' })
         .then(r => r.json())
         .then(json => { if (json.data?.summary) setAiSummary(json.data.summary) })
+        .catch(() => {})
+      fetch('/api/portal/progress-history', { credentials: 'include' })
+        .then(r => r.json())
+        .then(json => { setProgressHistory(json.data?.history || []) })
         .catch(() => {})
     }
     loadAll()
@@ -235,6 +278,44 @@ export default function PortalDashboard() {
             {Object.keys(achievementConfig).filter(t => !achievements.some((a: any) => a.type === t)).map(t => (
               <AchievementBadge key={t} type={t} locked />
             ))}
+          </CardContent>
+          </Card>
+        )}
+
+      {progressHistory.length > 0 && (
+        <Card className="animate-card-pop">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-[12px] font-[500] text-[var(--text-3)] uppercase tracking-wider flex items-center gap-2">
+              <TrendingUp className="h-3.5 w-3.5" />
+              Progresso ao longo do tempo
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="h-[160px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={progressHistory} margin={{ top: 5, right: 5, left: 0, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="progressGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="var(--accent)" stopOpacity={0.3} />
+                      <stop offset="100%" stopColor="var(--accent)" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+                  <XAxis dataKey="week" tick={{ fontSize: 10, fill: 'var(--text-3)' }} axisLine={false} tickLine={false} tickFormatter={(w: string) => { const parts = w.split('-W'); return `S${parts[1] || ''}` }} />
+                  <YAxis domain={[0, 100]} tick={{ fontSize: 10, fill: 'var(--text-3)' }} axisLine={false} tickLine={false} tickFormatter={(v: number) => `${v}%`} width={35} />
+                  <Tooltip content={({ active, payload, label }: any) => {
+                    if (!active || !payload?.length) return null
+                    return (
+                      <div className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 shadow-lg">
+                        <p className="text-xs font-medium text-[var(--text)]">{label}</p>
+                        <p className="text-xs font-mono text-[var(--accent)]">{payload[0].value}%</p>
+                      </div>
+                    )
+                  }} />
+                  <Area type="monotone" dataKey="avgProgress" stroke="var(--accent)" strokeWidth={2} fill="url(#progressGradient)" />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
           </CardContent>
         </Card>
       )}

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { signOut, useSession } from 'next-auth/react'
 import { SessionProvider } from '@/providers/session-provider'
 import { cn } from '@/lib/utils'
@@ -21,6 +21,7 @@ import { useTheme } from 'next-themes'
 import { WelcomeOverlay } from '@/components/ui/welcome-overlay'
 import { PushPermission } from '@/components/ui/push-permission'
 import { PwaInstallPrompt } from '@/components/ui/pwa-install-prompt'
+import { BotChat } from '@/components/portal/bot-chat'
 
 const navItems = [
   { name: 'Início', href: '/portal', icon: LayoutDashboard },
@@ -35,11 +36,21 @@ const navItemsSupport = [
 
 function PortalSidebarContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
-  const { data: session } = useSession()
+  const { data: session, status } = useSession()
+  const router = useRouter()
   const { theme, setTheme } = useTheme()
   const initials = (session?.user?.name || 'CL').split(' ').map((n: string) => n[0]).slice(0, 2).join('').toUpperCase()
   const [showOnboarding, setShowOnboarding] = useState(false)
   const [brandLogo, setBrandLogo] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (status === 'unauthenticated') router.push('/login')
+    if (status === 'authenticated') {
+      const user = session?.user as any
+      if (!user?.isAccountActive) router.push('/login?error=account_inactive')
+      if (user?.role !== 'CLIENT' && user?.role !== 'ADMIN') router.push('/dashboard')
+    }
+  }, [status, session, router])
 
   useEffect(() => {
     if (!session?.user?.id) return
@@ -206,6 +217,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
       <PortalSidebarContent>{children}</PortalSidebarContent>
       <WelcomeOverlay />
       <PwaInstallPrompt />
+      <BotChat />
     </SessionProvider>
   )
 }

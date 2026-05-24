@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import type { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { getToken } from 'next-auth/jwt'
 import { sendPushToUser } from '@/lib/push'
@@ -14,7 +15,7 @@ export async function GET(request: NextRequest) {
     const userId = token.id as string
     const unreadOnly = searchParams.get('unread') === 'true'
 
-    const where: any = {}
+    const where: Prisma.NotificationWhereInput = {}
     if (userId) where.userId = userId
     if (unreadOnly) where.isRead = false
 
@@ -55,7 +56,7 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    sendPushToUser(userId, title, message || '').catch(() => {})
+    sendPushToUser(userId, title, message || '').catch((err) => { console.error('[push]', err?.message || err) })
 
     return NextResponse.json({ data: notification }, { status: 201 })
   } catch (error) {

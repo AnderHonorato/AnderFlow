@@ -1,8 +1,11 @@
 'use client'
 
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useMemo, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { DndContext, DragEndEvent, PointerSensor, useSensor, useSensors, closestCenter } from '@dnd-kit/core'
+import { SortableContext, useSortable, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
@@ -12,18 +15,63 @@ import { PageHeader } from '@/components/ui/page-header'
 import { StatCard } from '@/components/ui/stat-card'
 import { OnboardingTip } from '@/components/ui/onboarding-tip'
 import { GlassCard } from '@/components/ui/glass-card'
-import { GradientText } from '@/components/ui/gradient-text'
 import { PageWrapper } from '@/components/layout/PageWrapper'
-import { IconProject, IconFinancial, IconClient, IconAnalytics, IconPlus, IconChat, IconFile, IconCheck, IconArrowRight, IconKnowledge } from '@/components/icons'
+import { IconProject, IconFinancial, IconClient, IconAnalytics, IconPlus, IconChat, IconCheck, IconKnowledge } from '@/components/icons'
 import { cn } from '@/lib/utils'
 import { AnimatedCounter } from '@/components/ui/animated-counter'
+import { GripVertical, RotateCcw, LayoutDashboard } from 'lucide-react'
+
+const DEFAULT_WIDGETS = ['stats', 'active-project', 'projects', 'revenue']
+
+function SortableWidget({ id, children, editMode }: { id: string; children: React.ReactNode; editMode: boolean }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 50 : 'auto',
+  }
+
+  return (
+    <motion.div
+      ref={setNodeRef}
+      style={style}
+      layout
+      initial={false}
+      className="relative group"
+    >
+      {editMode && (
+        <button
+          {...attributes}
+          {...listeners}
+          className="absolute top-2 right-2 z-10 p-1.5 rounded-md opacity-0 group-hover:opacity-100 hover:bg-[var(--surface-hover)] transition-opacity cursor-grab active:cursor-grabbing"
+        >
+          <GripVertical className="h-4 w-4 text-[var(--text-3)]" />
+        </button>
+      )}
+      {children}
+    </motion.div>
+  )
+}
 
 export default function DashboardPage() {
   const { data: session } = useSession()
   const [data, setData] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+  const [editMode, setEditMode] = useState(false)
   const roleLevel = (session?.user as any)?.roleLevel || 0
   const isAdmin = roleLevel >= 80
+
+  const [widgetOrder, setWidgetOrder] = useState<string[]>(() => {
+    if (typeof window === 'undefined') return DEFAULT_WIDGETS
+    try {
+      const saved = localStorage.getItem('dashboard-widgets')
+      return saved ? JSON.parse(saved) : DEFAULT_WIDGETS
+    } catch {
+      return DEFAULT_WIDGETS
+    }
+  })
 
   useEffect(() => {
     fetch('/api/dashboard')
@@ -35,20 +83,13 @@ export default function DashboardPage() {
       .catch(() => setLoading(false))
   }, [])
 
-  const revenueMetric = useRef([
+  const [revenueIdx, setRevenueIdx] = useState(0)
+
+  const revenueMetric = useMemo(() => [
     { label: 'Hoje', value: data?.stats?.revenueToday || 0 },
     { label: 'Esta semana', value: data?.stats?.revenueWeek || 0 },
     { label: 'Este mês', value: data?.stats?.totalRevenue || 0 },
-  ])
-  const [revenueIdx, setRevenueIdx] = useState(0)
-
-  useEffect(() => {
-    revenueMetric.current = [
-      { label: 'Hoje', value: data?.stats?.revenueToday || 0 },
-      { label: 'Esta semana', value: data?.stats?.revenueWeek || 0 },
-      { label: 'Este mês', value: data?.stats?.totalRevenue || 0 },
-    ]
-  }, [data])
+  ], [data?.stats])
 
   useEffect(() => {
     if (!isAdmin) return
@@ -57,6 +98,28 @@ export default function DashboardPage() {
     }, 4000)
     return () => clearInterval(timer)
   }, [isAdmin])
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
+  )
+
+  const handleDragEnd = useCallback((event: DragEndEvent) => {
+    const { active, over } = event
+    if (!over || active.id === over.id) return
+
+    setWidgetOrder((prev) => {
+      const oldIndex = prev.indexOf(active.id as string)
+      const newIndex = prev.indexOf(over.id as string)
+      const next = arrayMove(prev, oldIndex, newIndex)
+      try { localStorage.setItem('dashboard-widgets', JSON.stringify(next)) } catch {}
+      return next
+    })
+  }, [])
+
+  const resetLayout = useCallback(() => {
+    setWidgetOrder(DEFAULT_WIDGETS)
+    try { localStorage.setItem('dashboard-widgets', JSON.stringify(DEFAULT_WIDGETS)) } catch {}
+  }, [])
 
   if (loading) {
     return (
@@ -100,7 +163,168 @@ export default function DashboardPage() {
     return `R$ ${v.toFixed(0)}`
   }
 
-  const currentRevenue = revenueMetric.current[revenueIdx]
+  const currentRevenue = revenueMetric[revenueIdx]
+
+  const renderWidget = (widgetId: string) => {
+    switch (widgetId) {
+      case 'stats':
+        return (
+          <div className="grid gap-3 grid-cols-2 md:grid-cols-4">
+            {stats.slice(0, 1).map((stat) => (
+              <GlassCard key={stat.label} className="p-0">
+                <motion.div
+                  whileHover={{ y: -2 }}
+                  transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+                  className="flex items-center gap-3 px-3 py-2.5"
+                >
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--accent-subtle)]">
+                    <span className="w-4 h-4 text-[var(--accent)]">{stat.icon}</span>
+                  </div>
+                  <div className="min-w-0">
+                    <AnimatePresence mode="wait">
+                      <motion.span
+                        key={revenueIdx}
+                        initial={{ opacity: 0, y: 6 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -6 }}
+                        transition={{ duration: 0.25 }}
+                        className="font-numeric font-bold text-[15px] text-[var(--text)] tabular-nums block"
+                      >
+                        {formatRevenue(currentRevenue.value)}
+                      </motion.span>
+                    </AnimatePresence>
+                    <AnimatePresence mode="wait">
+                      <motion.span
+                        key={`label-${revenueIdx}`}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="text-[10px] text-[var(--text-3)] uppercase tracking-wide font-sans"
+                      >
+                        {currentRevenue.label}
+                      </motion.span>
+                    </AnimatePresence>
+                  </div>
+                </motion.div>
+              </GlassCard>
+            ))}
+            {stats.slice(1).map((stat, i) => (
+              <motion.div
+                key={stat.label}
+                whileHover={{ y: -2 }}
+                transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+              >
+                <StatCard
+                  {...stat}
+                  index={i + 1}
+                  className="h-[56px]"
+                />
+              </motion.div>
+            ))}
+          </div>
+        )
+
+      case 'active-project':
+        if (!activeProject) return null
+        return (
+          <Card>
+            <CardContent className="p-4 flex items-center gap-4">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--accent-subtle)]">
+                <IconProject className="w-4 h-4 text-[var(--accent)]" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[13px] font-[500] text-[var(--text)] truncate">{activeProject.name}</p>
+                <p className="text-[12px] text-[var(--text-3)] mt-0.5">
+                  Em andamento — {activeProject.progress}% concluido
+                </p>
+              </div>
+              <Progress value={activeProject.progress} className="h-[2px] w-24" />
+              <Button size="sm" variant="ghost" asChild className="h-7 text-[11px] shrink-0">
+                <a href={`/projects/${activeProject.id}`}>Ver projeto</a>
+              </Button>
+            </CardContent>
+          </Card>
+        )
+
+      case 'projects':
+        return (
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-[12px] font-[500] text-[var(--text-3)] uppercase tracking-wider">
+                Projetos Recentes
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-1">
+                {recentProjects.length === 0 && (
+                  <p className="text-[12px] text-[var(--text-3)] text-center py-6">Nenhum projeto ainda.</p>
+                )}
+                {recentProjects.map((project: any) => (
+                  <div key={project.id} className="flex items-center gap-3 rounded-lg px-2 py-2 transition-colors hover:bg-[var(--surface-hover)]">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        {project.number && <span className="text-[10px] font-[500] text-[var(--text-3)]">{project.number}</span>}
+                        <p className="text-[13px] font-[500] truncate">{project.name}</p>
+                        <Badge status={project.status}>
+                          {project.status === 'COMPLETED' ? 'Concluido' : project.status === 'REVIEW' ? 'Revisao' : project.status === 'PENDING' ? 'Solicitacao' : project.status === 'DRAFT' ? 'Rascunho' : 'Em andamento'}
+                        </Badge>
+                      </div>
+                      <p className="text-[12px] text-[var(--text-3)] mt-0.5">{project.client}</p>
+                    </div>
+                    <div className="flex items-center gap-2 min-w-[120px]">
+                      <Progress value={project.progress} className="h-[2px] flex-1" />
+                      <span className="text-[11px] text-[var(--text-3)] w-6">{project.progress}%</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )
+
+      case 'revenue':
+        return (
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-[12px] font-[500] text-[var(--text-3)] uppercase tracking-wider">A Receber</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className={cn(
+                  'flex items-center justify-between p-2 -mx-2 rounded-lg',
+                  (data?.stats?.pendingRevenue || 0) > 0 && 'animate-balance-negative'
+                )}>
+                  <span className="font-numeric text-[13px] font-bold text-[var(--text-2)] tabular-nums">Saldo pendente</span>
+                  <span className={cn(
+                    'font-numeric text-[13px] font-bold',
+                    (data?.stats?.pendingRevenue || 0) > 0 ? 'text-[var(--destructive)]' : 'text-[var(--warning)]'
+                  )}>
+                    R$ {((data?.stats?.pendingRevenue || 0) / 1000).toFixed(1)}k
+                  </span>
+                </div>
+                <div className={cn(
+                  'flex items-center justify-between p-2 -mx-2 rounded-lg',
+                  (data?.stats?.paidThisMonth || 0) > 0 && 'animate-balance-positive'
+                )}>
+                  <span className="text-[13px] text-[var(--text-2)]">Recebido este mes</span>
+                  <span className="font-numeric text-[13px] font-bold text-[var(--success)]">
+                    R$ {((data?.stats?.paidThisMonth || 0) / 1000).toFixed(1)}k
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-[13px] text-[var(--text-2)]">Notificacoes</span>
+                  <span className="font-numeric text-[13px] font-bold">{data?.stats?.unreadNotifications || 0} nao lidas</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )
+
+      default:
+        return null
+    }
+  }
 
   return (
     <PageWrapper>
@@ -115,66 +339,49 @@ export default function DashboardPage() {
         description={isAdmin ? "Visao geral da sua plataforma" : "Acompanhe seus projetos"}
         className="font-display"
       >
-        <Button size="sm" asChild>
-          <a href="/portal/briefing"><IconPlus className="w-[14px] h-[14px]" /> Novo Projeto</a>
-        </Button>
+        <div className="flex items-center gap-2">
+          {isAdmin && (
+            <>
+              <Button
+                size="sm"
+                variant={editMode ? "default" : "outline"}
+                onClick={() => setEditMode(prev => !prev)}
+                className="h-8 text-[11px]"
+              >
+                <LayoutDashboard className="w-[14px] h-[14px]" />
+                {editMode ? 'Concluir' : 'Personalizar'}
+              </Button>
+              {editMode && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={resetLayout}
+                  className="h-8 text-[11px]"
+                >
+                  <RotateCcw className="w-[14px] h-[14px]" />
+                  Resetar
+                </Button>
+              )}
+            </>
+          )}
+          <Button size="sm" asChild>
+            <a href="/portal/briefing"><IconPlus className="w-[14px] h-[14px]" /> Novo Projeto</a>
+          </Button>
+        </div>
       </PageHeader>
 
       {isAdmin && (
-        <div className="grid gap-3 grid-cols-2 md:grid-cols-4">
-          {stats.slice(0, 1).map((stat, i) => (
-            <GlassCard key={stat.label} className="p-0">
-              <motion.div
-                whileHover={{ y: -2 }}
-                transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-                className="flex items-center gap-3 px-3 py-2.5"
-              >
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--accent-subtle)]">
-                  <span className="w-4 h-4 text-[var(--accent)]">{stat.icon}</span>
-                </div>
-                <div className="min-w-0">
-                  <AnimatePresence mode="wait">
-                    <motion.span
-                      key={revenueIdx}
-                      initial={{ opacity: 0, y: 6 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -6 }}
-                      transition={{ duration: 0.25 }}
-                      className="font-numeric font-bold text-[15px] text-[var(--text)] tabular-nums block"
-                    >
-                      {formatRevenue(currentRevenue.value)}
-                    </motion.span>
-                  </AnimatePresence>
-                  <AnimatePresence mode="wait">
-                    <motion.span
-                      key={`label-${revenueIdx}`}
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                      transition={{ duration: 0.2 }}
-                      className="text-[10px] text-[var(--text-3)] uppercase tracking-wide font-sans"
-                    >
-                      {currentRevenue.label}
-                    </motion.span>
-                  </AnimatePresence>
-                </div>
-              </motion.div>
-            </GlassCard>
-          ))}
-          {stats.slice(1).map((stat, i) => (
-            <motion.div
-              key={stat.label}
-              whileHover={{ y: -2 }}
-              transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-            >
-              <StatCard
-                {...stat}
-                index={i + 1}
-                className="h-[56px]"
-              />
-            </motion.div>
-          ))}
-        </div>
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <SortableContext items={widgetOrder} strategy={verticalListSortingStrategy}>
+            <div className="space-y-4">
+              {widgetOrder.map((widgetId) => (
+                <SortableWidget key={widgetId} id={widgetId} editMode={editMode}>
+                  {renderWidget(widgetId)}
+                </SortableWidget>
+              ))}
+            </div>
+          </SortableContext>
+        </DndContext>
       )}
 
       {!isAdmin && (
@@ -259,35 +466,31 @@ export default function DashboardPage() {
               <a href="/knowledge"><IconKnowledge className="w-[14px] h-[14px]" /> Meu Conhecimento</a>
             </Button>
           </div>
-        </>
-      )}
 
-      {activeProject && (
-        <Card>
-          <CardContent className="p-4 flex items-center gap-4">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--accent-subtle)]">
-              <IconProject className="w-4 h-4 text-[var(--accent)]" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-[13px] font-[500] text-[var(--text)] truncate">{activeProject.name}</p>
-              <p className="text-[12px] text-[var(--text-3)] mt-0.5">
-                Em andamento — {activeProject.progress}% concluido
-              </p>
-            </div>
-            <Progress value={activeProject.progress} className="h-[2px] w-24" />
-            <Button size="sm" variant="ghost" asChild className="h-7 text-[11px] shrink-0">
-              <a href={`/projects/${activeProject.id}`}>Ver projeto</a>
-            </Button>
-          </CardContent>
-        </Card>
-      )}
+          {activeProject && (
+            <Card>
+              <CardContent className="p-4 flex items-center gap-4">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--accent-subtle)]">
+                  <IconProject className="w-4 h-4 text-[var(--accent)]" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[13px] font-[500] text-[var(--text)] truncate">{activeProject.name}</p>
+                  <p className="text-[12px] text-[var(--text-3)] mt-0.5">
+                    Em andamento — {activeProject.progress}% concluido
+                  </p>
+                </div>
+                <Progress value={activeProject.progress} className="h-[2px] w-24" />
+                <Button size="sm" variant="ghost" asChild className="h-7 text-[11px] shrink-0">
+                  <a href={`/projects/${activeProject.id}`}>Ver projeto</a>
+                </Button>
+              </CardContent>
+            </Card>
+          )}
 
-      <div className="grid gap-5 lg:grid-cols-3 items-start">
-        <div className={isAdmin ? "lg:col-span-2" : "lg:col-span-3"}>
-          <Card>
+          <Card className="lg:col-span-3">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-[12px] font-[500] text-[var(--text-3)] uppercase tracking-wider">
-                {isAdmin ? "Projetos Recentes" : "Meus Projetos"}
+                Meus Projetos
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -316,47 +519,8 @@ export default function DashboardPage() {
               </div>
             </CardContent>
           </Card>
-        </div>
-
-        {isAdmin && (
-        <div>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-[12px] font-[500] text-[var(--text-3)] uppercase tracking-wider">A Receber</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className={cn(
-                  'flex items-center justify-between p-2 -mx-2 rounded-lg',
-                  (data?.stats?.pendingRevenue || 0) > 0 && 'animate-balance-negative'
-                )}>
-                  <span className="font-numeric text-[13px] font-bold text-[var(--text-2)] tabular-nums">Saldo pendente</span>
-                  <span className={cn(
-                    'font-numeric text-[13px] font-bold',
-                    (data?.stats?.pendingRevenue || 0) > 0 ? 'text-[var(--destructive)]' : 'text-[var(--warning)]'
-                  )}>
-                    R$ {((data?.stats?.pendingRevenue || 0) / 1000).toFixed(1)}k
-                  </span>
-                </div>
-                <div className={cn(
-                  'flex items-center justify-between p-2 -mx-2 rounded-lg',
-                  (data?.stats?.paidThisMonth || 0) > 0 && 'animate-balance-positive'
-                )}>
-                  <span className="text-[13px] text-[var(--text-2)]">Recebido este mes</span>
-                  <span className="font-numeric text-[13px] font-bold text-[var(--success)]">
-                    R$ {((data?.stats?.paidThisMonth || 0) / 1000).toFixed(1)}k
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-[13px] text-[var(--text-2)]">Notificacoes</span>
-                  <span className="font-numeric text-[13px] font-bold">{data?.stats?.unreadNotifications || 0} nao lidas</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-        )}
-      </div>
+        </>
+      )}
       </div>
     </PageWrapper>
   )

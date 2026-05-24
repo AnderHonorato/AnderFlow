@@ -1,10 +1,10 @@
 import { prisma } from '@/lib/prisma'
 
-const EVOLUTION_URL = process.env.WHATSAPP_API_URL || ''
-const EVOLUTION_KEY = process.env.WHATSAPP_API_KEY || ''
-const INSTANCE = process.env.WHATSAPP_INSTANCE || 'anderflow'
-
 export async function sendWhatsApp(phone: string, message: string) {
+  const EVOLUTION_URL = process.env.WHATSAPP_API_URL || ''
+  const EVOLUTION_KEY = process.env.WHATSAPP_API_KEY || ''
+  const INSTANCE = process.env.WHATSAPP_INSTANCE || 'anderflow'
+
   if (!EVOLUTION_URL || !EVOLUTION_KEY) return { sent: false, error: 'WhatsApp não configurado' }
 
   const number = phone.replace(/\D/g, '')
@@ -34,6 +34,8 @@ export async function sendWhatsApp(phone: string, message: string) {
 }
 
 export function isWhatsAppConfigured(): boolean {
+  const EVOLUTION_URL = process.env.WHATSAPP_API_URL || ''
+  const EVOLUTION_KEY = process.env.WHATSAPP_API_KEY || ''
   return !!(EVOLUTION_URL && EVOLUTION_KEY)
 }
 

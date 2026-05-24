@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { getSessionUser, isAdmin } from '@/lib/auth-utils'
 
 export async function POST(request: NextRequest) {
   try {
+    const user = await getSessionUser(request)
+    if (!user || !isAdmin(user)) {
+      return NextResponse.json({ error: 'Acesso negado' }, { status: 403 })
+    }
+
     const bots = await prisma.user.findMany({
       where: { isBot: true, botStatus: 'ACTIVE', isActive: true },
       select: { id: true, name: true, email: true, role: true, botContext: true, botLastActionAt: true },

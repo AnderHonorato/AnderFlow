@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getToken } from 'next-auth/jwt'
 import { cargoEhDeveloperOuSuperior } from '@/lib/hierarquia'
+import { sanitize } from '@/lib/utils/sanitize'
 
 async function getUserId(request: NextRequest): Promise<string | null> {
   const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET })
@@ -65,7 +66,7 @@ export async function POST(request: NextRequest) {
     }
 
     const data: any = {
-      content: content.trim(),
+      content: sanitize.text(content.trim()),
       senderId: userId,
       type: body.type || 'text',
       channelId: body.channelId || null,

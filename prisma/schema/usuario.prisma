@@ -3,72 +3,73 @@
 // ============================================
 
 model User {
-  id               String    @id @default(cuid())
-  name             String
-  email            String    @unique
-  emailVerified    DateTime?
-  password         String?
-  image            String?
-  phone            String?
-  role             String    @default("CLIENT")
-  company          String?
-  position         String?
-  bio              String?
-  timezone         String    @default("America/Sao_Paulo")
-  language         String    @default("pt-BR")
-  twoFactorEnabled Boolean   @default(false)
-  twoFactorSecret  String?
-  isActive         Boolean   @default(true)
-  isAccountActive  Boolean   @default(false)
-  verificationCode String?
-  codeExpiresAt    DateTime?
+  id                 String    @id @default(cuid())
+  name               String
+  email              String    @unique
+  emailVerified      DateTime?
+  password           String?
+  image              String?
+  phone              String?
+  role               String    @default("CLIENT")
+  company            String?
+  position           String?
+  bio                String?
+  timezone           String    @default("America/Sao_Paulo")
+  language           String    @default("pt-BR")
+  twoFactorEnabled   Boolean   @default(false)
+  twoFactorSecret    String?
+  isActive           Boolean   @default(true)
+  isAccountActive    Boolean   @default(false)
+  verificationCode   String?
+  codeExpiresAt      DateTime?
   verificationMethod String?
-  isOnline         Boolean   @default(false)
-  lastSeen         DateTime?
-  rememberUntil    DateTime?
-  theme            String    @default("system")
-  plan             String    @default("BASIC")
-  brandColor       String?
-  brandLogo        String?
-  permissions      String    @default("[]")
-  deleteRequestedAt DateTime?
-  deleteScheduledAt DateTime?
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
-  isBot            Boolean   @default(false)
-  botStatus        String?
-  botContext       String?
-  botActivatedBy   String?
-  botLastActionAt  DateTime?
+  isOnline           Boolean   @default(false)
+  lastSeen           DateTime?
+  rememberUntil      DateTime?
+  theme              String    @default("system")
+  plan               String    @default("BASIC")
+  brandColor         String?
+  brandLogo          String?
+  permissions        String    @default("[]")
+  deleteRequestedAt  DateTime?
+  deleteScheduledAt  DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  isBot              Boolean   @default(false)
+  botStatus          String?
+  botContext         String?
+  botActivatedBy     String?
+  botLastActionAt    DateTime?
 
   accounts           Account[]
   sessions           Session[]
-  projects           Project[]       @relation("ProjectOwner")
-  assignedTasks      Task[]          @relation("TaskAssignee")
-  createdTasks       Task[]          @relation("TaskCreator")
+  projects           Project[]           @relation("ProjectOwner")
+  assignedTasks      Task[]              @relation("TaskAssignee")
+  createdTasks       Task[]              @relation("TaskCreator")
   messages           Message[]
   notifications      Notification[]
-  tickets            Ticket[]        @relation("TicketCreator")
-  assignedTickets    Ticket[]        @relation("TicketAssignee")
+  tickets            Ticket[]            @relation("TicketCreator")
+  assignedTickets    Ticket[]            @relation("TicketAssignee")
   comments           Comment[]
   files              File[]
-  contracts          Contract[]      @relation("ContractClient")
+  contracts          Contract[]          @relation("ContractClient")
   invoices           Invoice[]
   payments           Payment[]
   activities         Activity[]
-  leads              Lead[]          @relation("LeadOwner")
+  leads              Lead[]              @relation("LeadOwner")
   feedbacks          Feedback[]
   preferences        UserPreference?
   teamMembers        TeamMember[]
   timeEntries        TimeEntry[]
   projectUpdates     ProjectUpdate[]
   aiConversations    AiConversation[]
-  clientChannels     Channel[]       @relation("ClientChannel")
+  clientChannels     Channel[]           @relation("ClientChannel")
   pushSubscriptions  PushSubscription[]
   permissionRequests PermissionRequest[]
   bans               UserBan[]
   briefingDrafts     BriefingDraft[]
   achievements       Achievement[]
+  ProjectNote        ProjectNote[]
 }
 
 model Account {
@@ -123,15 +124,15 @@ model UserPreference {
 }
 
 model PermissionRequest {
-  id           String   @id @default(cuid())
+  id           String    @id @default(cuid())
   userId       String
   permission   String
   reason       String
-  status       String   @default("pending")
+  status       String    @default("pending")
   resolvedAt   DateTime?
   resolvedBy   String?
-  isDefinitive Boolean  @default(false)
-  createdAt    DateTime @default(now())
+  isDefinitive Boolean   @default(false)
+  createdAt    DateTime  @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

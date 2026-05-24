@@ -3,24 +3,24 @@
 // ============================================
 
 model Invoice {
-  id             String   @id @default(cuid())
-  number         String   @unique
+  id             String    @id @default(cuid())
+  number         String    @unique
   clientId       String
   projectId      String?
   organizationId String?
-  status         String   @default("DRAFT")
+  status         String    @default("DRAFT")
   subtotal       Float
-  tax            Float    @default(0)
-  discount       Float    @default(0)
+  tax            Float     @default(0)
+  discount       Float     @default(0)
   total          Float
-  currency       String   @default("BRL")
+  currency       String    @default("BRL")
   dueDate        DateTime
   paidAt         DateTime?
   notes          String?
   items          String
   metadata       String?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
   client       User          @relation(fields: [clientId], references: [id])
   project      Project?      @relation(fields: [projectId], references: [id])
@@ -33,20 +33,20 @@ model Invoice {
 }
 
 model Payment {
-  id           String   @id @default(cuid())
+  id           String    @id @default(cuid())
   invoiceId    String?
   clientId     String
   amount       Float
   method       String
-  status       String   @default("PENDING")
+  status       String    @default("PENDING")
   gateway      String?
   gatewayId    String?
-  installments Int      @default(1)
-  installment  Int      @default(1)
+  installments Int       @default(1)
+  installment  Int       @default(1)
   metadata     String?
   paidAt       DateTime?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
   invoice Invoice? @relation(fields: [invoiceId], references: [id])
   client  User     @relation(fields: [clientId], references: [id])

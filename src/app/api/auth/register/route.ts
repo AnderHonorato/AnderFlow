@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
 import { sendVerificationEmail } from '@/lib/email'
+import { rateLimit } from '@/lib/middlewares/rate-limit'
 
 function generateCode(): string {
   const chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ'
@@ -13,6 +14,11 @@ function generateCode(): string {
 }
 
 export async function POST(request: NextRequest) {
+  const ip = request.headers.get('x-forwarded-for') || 'unknown'
+  if (!rateLimit('register:' + ip, 5, 60_000)) {
+    return NextResponse.json({ error: 'Muitas tentativas. Aguarde 1 minuto.' }, { status: 429 })
+  }
+
   try {
     const body = await request.json()
     const { name, email, password, company, phone } = body

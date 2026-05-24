@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getSessionUser, isAdmin } from '@/lib/auth-utils'
 import { sendWhatsApp } from '@/lib/whatsapp'
+import { sanitize } from '@/lib/utils/sanitize'
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -21,6 +22,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     const { id } = await params
     const body = await request.json()
     const updateData: any = { ...body }
+    if (body.reply) updateData.reply = sanitize.text(body.reply)
     if (body.status === 'RESOLVED') {
       updateData.resolvedAt = new Date()
     }
@@ -29,7 +31,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     if (body.status === 'RESOLVED' && ticket.creatorId) {
       const creator = await prisma.user.findUnique({ where: { id: ticket.creatorId }, select: { phone: true } })
       if (creator?.phone) {
-        sendWhatsApp(creator.phone, `Ticket #${ticket.number} resolvido: "${ticket.title}".`).catch(() => {})
+        sendWhatsApp(creator.phone, `Ticket #${ticket.number} resolvido: "${ticket.title}".`).catch((err) => { console.error('[whatsapp]', err?.message || err) })
       }
     }
 

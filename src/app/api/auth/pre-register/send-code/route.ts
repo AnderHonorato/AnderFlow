@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { randomBytes } from 'crypto'
+import { rateLimit } from '@/lib/middlewares/rate-limit'
 
 export async function POST(request: NextRequest) {
+  const ip = request.headers.get('x-forwarded-for') || 'unknown'
+  if (!rateLimit('send-code:' + ip, 3, 5 * 60_000)) {
+    return NextResponse.json({ error: 'Muitas tentativas. Aguarde 5 minutos.' }, { status: 429 })
+  }
+
   try {
     const { email } = await request.json()
     if (!email) return NextResponse.json({ error: 'Email obrigatorio' }, { status: 400 })

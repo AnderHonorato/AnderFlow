@@ -3,7 +3,7 @@
 // ============================================
 
 model File {
-  id           String   @id @default(cuid())
+  id           String    @id @default(cuid())
   name         String
   originalName String
   mimeType     String
@@ -15,10 +15,10 @@ model File {
   taskId       String?
   messageId    String?
   uploadedBy   String
-  version      Int      @default(1)
-  isPublic     Boolean  @default(false)
+  version      Int       @default(1)
+  isPublic     Boolean   @default(false)
   expiresAt    DateTime?
-  createdAt    DateTime @default(now())
+  createdAt    DateTime  @default(now())
 
   folder  FileFolder? @relation(fields: [folderId], references: [id])
   project Project?    @relation(fields: [projectId], references: [id])
@@ -82,17 +82,17 @@ model AuditLog {
 }
 
 model Automation {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   name        String
   description String?
   trigger     String
   conditions  String?
   actions     String
-  isActive    Boolean  @default(true)
+  isActive    Boolean   @default(true)
   lastRunAt   DateTime?
-  runCount    Int      @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  runCount    Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 }
 
 model KnowledgeBase {
@@ -125,12 +125,12 @@ model ProjectTemplate {
 }
 
 model WebhookEndpoint {
-  id        String   @id @default(cuid())
-  url       String
-  secret    String
-  events    String[]
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
+  id         String            @id @default(cuid())
+  url        String
+  secret     String
+  events     String[]
+  isActive   Boolean           @default(true)
+  createdAt  DateTime          @default(now())
   deliveries WebhookDelivery[]
 }
 
@@ -147,10 +147,10 @@ model WebhookDelivery {
 }
 
 model OKR {
-  id        String      @id @default(cuid())
+  id        String   @id @default(cuid())
   projectId String
   objective String
-  createdAt DateTime    @default(now())
+  createdAt DateTime @default(now())
 
   keyResults KeyResult[]
 }
@@ -177,14 +177,14 @@ model TaskFeedback {
 }
 
 model ClientContact {
-  id             String   @id @default(cuid())
-  clientId       String
-  name           String
-  email          String
-  role           String   @default("Contato")
-  phone          String?
+  id              String   @id @default(cuid())
+  clientId        String
+  name            String
+  email           String
+  role            String   @default("Contato")
+  phone           String?
   canAccessPortal Boolean  @default(false)
-  createdAt      DateTime @default(now())
+  createdAt       DateTime @default(now())
 }
 
 model StatusComponent {
@@ -204,12 +204,12 @@ model StatusIncident {
 }
 
 model ContractVersion {
-  id          String   @id @default(cuid())
-  contractId  String
-  content     String
-  version     Int
-  createdAt   DateTime @default(now())
-  createdBy   String
+  id         String   @id @default(cuid())
+  contractId String
+  content    String
+  version    Int
+  createdAt  DateTime @default(now())
+  createdBy  String
 }
 
 model BriefingSchema {

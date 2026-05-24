@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
+import type { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { getSessionUser, isAdmin, unauthorizedResponse } from '@/lib/auth-utils'
 import { sendWebhook } from '@/lib/webhook-sender'
+import { sanitize } from '@/lib/utils/sanitize'
 
 export async function GET(request: NextRequest) {
   const user = await getSessionUser(request)
@@ -13,7 +15,7 @@ export async function GET(request: NextRequest) {
     const page = parseInt(searchParams.get('page') || '1')
     const limit = parseInt(searchParams.get('limit') || '20')
 
-    const where: any = {}
+    const where: Prisma.TicketWhereInput = {}
     if (status) where.status = status
     if (priority) where.priority = priority
 
@@ -49,8 +51,8 @@ export async function POST(request: NextRequest) {
 
     const ticket = await prisma.ticket.create({
       data: {
-        title,
-        description,
+        title: sanitize.text(title || ''),
+        description: sanitize.text(description || ''),
         priority: priority || 'MEDIUM',
         category,
         creatorId: user.id,
@@ -66,7 +68,7 @@ export async function POST(request: NextRequest) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Cookie': request.headers.get('cookie') || '' },
       body: JSON.stringify({ ticketId: ticket.id }),
-    }).catch(() => {})
+    }).catch((err) => { console.error('[ai:analyze-ticket]', err?.message || err) })
 
     sendWebhook('ticket_created', {
       id: ticket.id,
@@ -74,7 +76,7 @@ export async function POST(request: NextRequest) {
       priority: ticket.priority,
       category: ticket.category,
       createdAt: ticket.createdAt?.toISOString(),
-    }).catch(() => {})
+    }).catch((err) => { console.error('[webhook]', err?.message || err) })
 
     return NextResponse.json({ data: ticket }, { status: 201 })
   } catch (error) {

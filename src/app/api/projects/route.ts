@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
+import type { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { getSessionUser, isAdmin } from '@/lib/auth-utils'
+import { z } from 'zod'
 import { sendWhatsApp } from '@/lib/whatsapp'
 import { checkAndGrantAchievements } from '@/lib/achievements'
 import { auditLog } from '@/lib/audit'
 import { sendWebhook } from '@/lib/webhook-sender'
+import { sanitize } from '@/lib/utils/sanitize'
+import { getPlan } from '@/lib/plans'
 
 export async function GET(request: NextRequest) {
   try {
@@ -13,7 +17,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Nao autenticado' }, { status: 401 })
     }
     const { searchParams } = new URL(request.url)
-    const where: any = { isArchived: false }
+    const where: Prisma.ProjectWhereInput = { isArchived: false }
     const status = searchParams.get('status')
     if (status) where.status = status
 
@@ -46,13 +50,31 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json().catch(() => ({}))
-    const { name, description, type } = body
 
-    if (!name?.trim()) {
-      return NextResponse.json({ error: 'Nome do projeto obrigatorio' }, { status: 400 })
+    const createProjectSchema = z.object({
+      name: z.string().min(1, 'Nome obrigatório').max(200),
+      description: z.string().max(2000).optional(),
+      type: z.string().optional(),
+      clientId: z.string().cuid().optional(),
+    })
+
+    const parsed = createProjectSchema.safeParse(body)
+    if (!parsed.success) {
+      return NextResponse.json({ error: 'Dados inválidos', details: parsed.error.flatten() }, { status: 400 })
     }
 
+    const { name, description, type } = parsed.data
+
     const clientId = isAdmin(user) ? (body.clientId || user.id) : user.id
+
+    const plan = getPlan((user as any).plan)
+    if (plan.maxProjects !== -1) {
+      const count = await prisma.project.count({ where: { clientId, isArchived: false } })
+      if (count >= plan.maxProjects) {
+        return NextResponse.json({ error: `Limite de projetos atingido no seu plano (${plan.name}: ${plan.maxProjects} projetos)` }, { status: 403 })
+      }
+    }
+
     const status = isAdmin(user) ? (body.status || undefined) : 'PENDING'
 
     const slug = name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') + '-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6)
@@ -61,7 +83,7 @@ export async function POST(request: NextRequest) {
       data: {
         name: name.trim(),
         slug,
-        description: description || '',
+        description: sanitize.text(description || ''),
         type: type || 'CUSTOM',
         clientId,
         status,
@@ -102,10 +124,10 @@ export async function POST(request: NextRequest) {
     // Notificar via WhatsApp
     const client = await prisma.user.findUnique({ where: { id: clientId }, select: { phone: true } })
     if (client?.phone) {
-      sendWhatsApp(client.phone, `Novo projeto criado: "${name}". Acompanhe pelo portal.`).catch(() => {})
+      sendWhatsApp(client.phone, `Novo projeto criado: "${name}". Acompanhe pelo portal.`).catch((err) => { console.error('[whatsapp]', err?.message || err) })
     }
 
-    checkAndGrantAchievements(clientId, 'first_project', project.id).catch(() => {})
+    checkAndGrantAchievements(clientId, 'first_project', project.id).catch((err) => { console.error('[achievements]', err?.message || err) })
 
     auditLog({
       userId: user.id,
@@ -114,7 +136,7 @@ export async function POST(request: NextRequest) {
       entity: 'Project',
       entityId: project.id,
       description: `Projeto criado: ${project.name}`,
-    }).catch(() => {})
+    }).catch((err) => { console.error('[audit]', err?.message || err) })
 
     sendWebhook('project_created', {
       id: project.id,
@@ -122,7 +144,7 @@ export async function POST(request: NextRequest) {
       clientId: project.clientId,
       status: project.status,
       createdAt: project.createdAt?.toISOString(),
-    }).catch(() => {})
+    }).catch((err) => { console.error('[webhook]', err?.message || err) })
 
     return NextResponse.json({ data: project }, { status: 201 })
   } catch (error: any) {

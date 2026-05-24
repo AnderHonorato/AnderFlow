@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
@@ -17,7 +17,7 @@ import { ProjectTimeline, type NodeStatus } from '@/components/projects/project-
 import { TimeTracker } from '@/components/ui/time-tracker'
 import { CsvImportModal } from '@/components/ui/csv-import-modal'
 import { IconArrowLeft, IconThumbsUp, IconThumbsDown, IconCheck, IconClose, IconLoader, IconFile, IconClock, IconSparkles } from '@/components/icons'
-import { Target, Link2, Copy, Presentation } from 'lucide-react'
+import { Target, Link2, Copy, Presentation, GitBranch, AlertTriangle } from 'lucide-react'
 
 const DEFAULT_STEPS = [
   { id: 1, label: 'Briefing', description: 'Coleta de requisitos e entendimento do projeto' },
@@ -73,6 +73,19 @@ export default function ProjectDetailPage() {
   const [approvalLinkOpen, setApprovalLinkOpen] = useState(false)
   const [approvalLink, setApprovalLink] = useState('')
   const [approvalLoading, setApprovalLoading] = useState(false)
+
+  const [sprints, setSprints] = useState<any[]>([])
+  const [activeSprint, setActiveSprint] = useState<any>(null)
+  const [sprintDialogOpen, setSprintDialogOpen] = useState(false)
+  const [sprintForm, setSprintForm] = useState({ name: '', goal: '', startDate: '', endDate: '' })
+  const [sprintSaving, setSprintSaving] = useState(false)
+
+  const [tasks, setTasks] = useState<any[]>([])
+  const [taskDeps, setTaskDeps] = useState<Record<string, any[]>>({})
+  const [depDiagramOpen, setDepDiagramOpen] = useState(false)
+  const [expandedTaskId, setExpandedTaskId] = useState<string | null>(null)
+  const [addDepTaskId, setAddDepTaskId] = useState<string | null>(null)
+  const [depLoading, setDepLoading] = useState(false)
 
   const handlePrintModal = (modalSelector: string) => {
     const modal = document.querySelector(modalSelector)
@@ -198,6 +211,156 @@ export default function ProjectDetailPage() {
     }, 7000)
     return () => clearInterval(interval)
   }, [id])
+
+  const fetchSprints = useCallback(() => {
+    if (!id) return
+    fetch(`/api/sprints?projectId=${id}`)
+      .then(r => r.json())
+      .then(json => {
+        setSprints(json.data || [])
+        setActiveSprint((json.data || []).find((s: any) => s.isActive) || null)
+      })
+      .catch(() => { setSprints([]); setActiveSprint(null) })
+  }, [id])
+
+  useEffect(() => { fetchSprints() }, [fetchSprints])
+
+  const fetchTasks = useCallback(() => {
+    if (!id) return
+    fetch(`/api/tasks?projectId=${id}`)
+      .then(r => r.json())
+      .then(json => { setTasks(json.data || []) })
+      .catch(() => { setTasks([]) })
+    fetch(`/api/task-dependencies?projectId=${id}`)
+      .then(r => r.json())
+      .then(json => {
+        const depsMap: Record<string, any[]> = {}
+        if (Array.isArray(json.data)) {
+          json.data.forEach((t: any) => {
+            if (t.dependencies?.length) depsMap[t.id] = t.dependencies.map((d: any) => d.dependsOn)
+          })
+        }
+        setTaskDeps(depsMap)
+      })
+      .catch(() => { setTaskDeps({}) })
+  }, [id])
+
+  useEffect(() => { fetchTasks() }, [fetchTasks])
+
+  const handleAddDependency = async (taskId: string, dependsOnId: string) => {
+    setDepLoading(true)
+    const res = await fetch('/api/task-dependencies', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ taskId, dependsOnId }),
+    })
+    if (res.ok) {
+      toast.success('Dependencia adicionada')
+      fetchTasks()
+    } else {
+      const json = await res.json()
+      toast.error(json.error || 'Erro ao adicionar dependencia')
+    }
+    setDepLoading(false)
+    setAddDepTaskId(null)
+  }
+
+  const handleRemoveDependency = async (taskId: string, dependsOnId: string) => {
+    const res = await fetch(`/api/task-dependencies?taskId=${taskId}&dependsOnId=${dependsOnId}`, { method: 'DELETE' })
+    if (res.ok) {
+      toast.success('Dependencia removida')
+      fetchTasks()
+    } else {
+      toast.error('Erro ao remover dependencia')
+    }
+  }
+
+  const hasUnmetDeps = (task: any) => {
+    const deps = taskDeps[task.id] || []
+    return deps.some((d: any) => d.status !== 'COMPLETED' && d.status !== 'DONE')
+  }
+
+  const renderDepDiagram = () => {
+    const allDeps: { from: any; to: any }[] = []
+    Object.entries(taskDeps).forEach(([taskId, deps]) => {
+      deps.forEach((d: any) => {
+        allDeps.push({ from: tasks.find(t => t.id === d.id) || d, to: tasks.find(t => t.id === taskId) })
+      })
+    })
+    if (allDeps.length === 0) return null
+
+    const nodeMap = new Map<string, { x: number; y: number; label: string; status: string }>()
+    const involvedTasks = new Set<string>()
+    allDeps.forEach(d => { involvedTasks.add(d.from.id); involvedTasks.add(d.to.id) })
+
+    const involved = tasks.filter(t => involvedTasks.has(t.id))
+    involved.forEach((t, i) => {
+      const col = i % 4
+      const row = Math.floor(i / 4)
+      nodeMap.set(t.id, { x: 80 + col * 200, y: 60 + row * 80, label: t.title.slice(0, 25), status: t.status })
+    })
+
+    const statusColors: Record<string, string> = {
+      DONE: 'var(--success)', COMPLETED: 'var(--success)',
+      IN_PROGRESS: 'var(--accent)', TODO: 'var(--text-3)',
+      BLOCKED: 'var(--destructive)',
+    }
+
+    return (
+      <svg width="100%" height={Math.max(200, Math.ceil(involved.length / 4) * 80 + 40)} className="overflow-visible">
+        <defs>
+          <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="var(--text-3)" />
+          </marker>
+        </defs>
+        {allDeps.map((dep, i) => {
+          const from = nodeMap.get(dep.from.id)
+          const to = nodeMap.get(dep.to.id)
+          if (!from || !to) return null
+          return (
+            <line key={i} x1={from.x + 60} y1={from.y + 15} x2={to.x} y2={to.y + 15}
+              stroke="var(--text-3)" strokeWidth="1.5" markerEnd="url(#arrowhead)" strokeDasharray="4,2" />
+          )
+        })}
+        {Array.from(nodeMap.entries()).map(([id, node]) => (
+          <g key={id}>
+            <rect x={node.x} y={node.y} width="120" height="30" rx="4"
+              fill={statusColors[node.status] || 'var(--surface-2)'} opacity="0.15"
+              stroke={statusColors[node.status] || 'var(--border)'} strokeWidth="1" />
+            <text x={node.x + 5} y={node.y + 19} fontSize="10" fill="var(--text)" fontFamily="inherit">
+              {node.label}
+            </text>
+          </g>
+        ))}
+      </svg>
+    )
+  }
+
+  const handleCreateSprint = async () => {
+    if (!sprintForm.name || !sprintForm.startDate || !sprintForm.endDate) { toast.error('Preencha nome e datas'); return }
+    setSprintSaving(true)
+    const res = await fetch('/api/sprints', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...sprintForm, projectId: id }),
+    })
+    if (res.ok) { toast.success('Sprint criada'); setSprintForm({ name: '', goal: '', startDate: '', endDate: '' }); fetchSprints() }
+    else toast.error('Erro ao criar sprint')
+    setSprintSaving(false)
+  }
+
+  const handleToggleSprint = async (sprintId: string, isActive: boolean) => {
+    await fetch(`/api/sprints/${sprintId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ isActive: !isActive }),
+    })
+    fetchSprints()
+  }
+
+  const sprintProgress = activeSprint?._count?.tasks
+    ? Math.round((activeSprint._count.tasks / Math.max(activeSprint._count.tasks || 1, 10)) * 100)
+    : 0
 
   const persistProject = (newSteps: StepState[], newHistory?: any[]) => {
     setSteps(newSteps)
@@ -661,10 +824,15 @@ export default function ProjectDetailPage() {
             <a href={`/projects/${id}/present`}><Presentation className="mr-1 h-3 w-3" /> Apresentar</a>
           </Button>
           {isAdmin && (
-            <Button variant="outline" size="sm" onClick={() => setCsvImportOpen(true)} className="h-7 text-[11px] gap-1.5">
-              <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M8 2v10M4 8l4 4 4-4M2 14h12"/></svg>
-              Importar CSV
-            </Button>
+            <>
+              <Button variant="outline" size="sm" onClick={() => setDepDiagramOpen(true)} className="h-7 text-[11px] gap-1">
+                <GitBranch className="h-3 w-3" /> Ver dependencias
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => setCsvImportOpen(true)} className="h-7 text-[11px] gap-1.5">
+                <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M8 2v10M4 8l4 4 4-4M2 14h12"/></svg>
+                Importar CSV
+              </Button>
+            </>
           )}
         </div>
       </div>
@@ -824,6 +992,9 @@ export default function ProjectDetailPage() {
                     <IconClock className="w-[12px] h-[12px]" />
                   </Link>
                 </Button>
+                <Button variant="ghost" size="sm" className="h-6 text-[10px] gap-1 px-1.5" title="Relatorio PDF" onClick={() => window.open(`/api/projects/${id}/report`, '_blank')}>
+                  <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M14 10v3a1 1 0 01-1 1H3a1 1 0 01-1-1v-3M4 6l4 4 4-4M8 10V2"/></svg>
+                </Button>
               </div>
             </div>
           </div>
@@ -832,6 +1003,27 @@ export default function ProjectDetailPage() {
 
       <div className="grid gap-6 lg:grid-cols-[1fr_300px] items-start">
           <div>
+            {activeSprint && (
+              <Card className="mb-4 border-l-[3px]" style={{ borderLeftColor: 'var(--accent)' }}>
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <span className="h-2 w-2 rounded-full bg-[var(--success)]" />
+                      <p className="text-[13px] font-[600] text-[var(--text)]">Sprint Ativo</p>
+                    </div>
+                    <Button variant="ghost" size="sm" onClick={() => setSprintDialogOpen(true)} className="h-6 text-[10px]">
+                      Gerenciar
+                    </Button>
+                  </div>
+                  <p className="text-[14px] font-[500] text-[var(--accent)] mb-1">{activeSprint.name}</p>
+                  {activeSprint.goal && <p className="text-[11px] text-[var(--text-3)] mb-2">{activeSprint.goal}</p>}
+                  <div className="flex items-center gap-4 text-[11px] text-[var(--text-2)]">
+                    <span>{new Date(activeSprint.startDate).toLocaleDateString('pt-BR')} — {new Date(activeSprint.endDate).toLocaleDateString('pt-BR')}</span>
+                    <span>{activeSprint._count?.tasks || 0} tarefas</span>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
             <h3 className="text-[11px] font-[500] text-[var(--text-3)] uppercase tracking-wider mb-4">Fluxo do Projeto</h3>
             <ProjectTimeline
               nodes={timelineNodes}
@@ -923,6 +1115,140 @@ export default function ProjectDetailPage() {
             </Card>
           </div>
         </div>
+
+      {tasks.length > 0 && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-[12px] font-[500] text-[var(--text-3)] uppercase tracking-wider flex items-center gap-2">
+              <GitBranch className="h-3.5 w-3.5" /> Tarefas ({tasks.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {tasks.map((task: any) => {
+              const deps = taskDeps[task.id] || []
+              const hasUnmet = hasUnmetDeps(task)
+              const isExpanded = expandedTaskId === task.id
+              return (
+                <div key={task.id} className="border border-[var(--border)] rounded-lg overflow-hidden">
+                  <button
+                    className="w-full flex items-center gap-3 p-3 hover:bg-[var(--surface-hover)] transition-colors text-left"
+                    onClick={() => setExpandedTaskId(isExpanded ? null : task.id)}
+                  >
+                    <span className={`h-2 w-2 rounded-full shrink-0 ${
+                      task.status === 'DONE' || task.status === 'COMPLETED' ? 'bg-[var(--success)]' :
+                      task.status === 'IN_PROGRESS' ? 'bg-[var(--accent)] animate-pulse' :
+                      'bg-[var(--text-3)]'
+                    }`} />
+                    <span className="flex-1 text-[13px] font-[500] text-[var(--text)] truncate">{task.title}</span>
+                    {hasUnmet && (
+                      <span className="shrink-0" title={`Aguardando: ${deps.filter((d: any) => d.status !== 'DONE' && d.status !== 'COMPLETED').map((d: any) => d.title).join(', ')}`}>
+                        <AlertTriangle className="h-3.5 w-3.5 text-[var(--warning)]" />
+                      </span>
+                    )}
+                    <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-[500] ${
+                      task.status === 'DONE' || task.status === 'COMPLETED' ? 'bg-[var(--success-subtle)] text-[var(--success)]' :
+                      task.status === 'IN_PROGRESS' ? 'bg-[var(--accent-subtle)] text-[var(--accent)]' :
+                      'bg-[var(--surface-2)] text-[var(--text-3)]'
+                    }`}>
+                      {task.status === 'DONE' ? 'Concluida' : task.status === 'COMPLETED' ? 'Concluida' : task.status === 'IN_PROGRESS' ? 'Em andamento' : task.status === 'TODO' ? 'A fazer' : task.status}
+                    </span>
+                    <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"
+                      className={`transition-transform text-[var(--text-3)] ${isExpanded ? 'rotate-180' : ''}`}>
+                      <path d="M4 6l4 4 4-4"/>
+                    </svg>
+                  </button>
+                  {isExpanded && (
+                    <div className="px-4 pb-3 border-t border-[var(--border)] pt-3 space-y-2 animate-expand">
+                      {task.description && (
+                        <p className="text-[12px] text-[var(--text-2)]">{task.description}</p>
+                      )}
+                      <div>
+                        <p className="text-[11px] font-[500] text-[var(--text-3)] mb-1">Depende de:</p>
+                        {deps.length === 0 ? (
+                          <p className="text-[11px] text-[var(--text-3)] italic">Nenhuma dependencia</p>
+                        ) : (
+                          <div className="space-y-1">
+                            {deps.map((dep: any) => (
+                              <div key={dep.id} className="flex items-center gap-2 text-[12px]">
+                                <span className={`h-1.5 w-1.5 rounded-full ${
+                                  dep.status === 'DONE' || dep.status === 'COMPLETED' ? 'bg-[var(--success)]' :
+                                  dep.status === 'IN_PROGRESS' ? 'bg-[var(--accent)]' : 'bg-[var(--text-3)]'
+                                }`} />
+                                <span className="flex-1 text-[var(--text)]">{dep.title}</span>
+                                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-[500] bg-[var(--surface-2)] text-[var(--text-3)]">
+                                  {dep.status === 'DONE' ? 'OK' : dep.status === 'COMPLETED' ? 'OK' : dep.status}
+                                </span>
+                                {isAdmin && (
+                                  <button onClick={() => handleRemoveDependency(task.id, dep.id)}
+                                    className="text-[var(--text-3)] hover:text-[var(--destructive)] transition-colors">
+                                    <IconClose className="w-[12px] h-[12px]" />
+                                  </button>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        {isAdmin && (
+                          <div className="mt-2">
+                            {addDepTaskId === task.id ? (
+                              <div className="flex items-center gap-2">
+                                <select
+                                  className="flex-1 h-7 text-[11px] rounded border border-[var(--border)] bg-[var(--surface)] px-2 focus:outline-none focus:border-[var(--accent)]"
+                                  onChange={(e) => {
+                                    if (e.target.value) handleAddDependency(task.id, e.target.value)
+                                  }}
+                                  value=""
+                                >
+                                  <option value="">Selecione uma task...</option>
+                                  {tasks.filter(t => t.id !== task.id && !deps.some((d: any) => d.id === t.id))
+                                    .map(t => (
+                                      <option key={t.id} value={t.id}>{t.title}</option>
+                                    ))}
+                                </select>
+                                <Button variant="ghost" size="sm" onClick={() => setAddDepTaskId(null)}
+                                  className="h-7 text-[10px]">Cancelar</Button>
+                              </div>
+                            ) : (
+                              <Button variant="outline" size="sm" onClick={() => setAddDepTaskId(task.id)}
+                                className="h-7 text-[10px]">+ Adicionar dependencia</Button>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </CardContent>
+        </Card>
+      )}
+
+      <Dialog open={depDiagramOpen} onOpenChange={setDepDiagramOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Diagrama de Dependencias</DialogTitle>
+          </DialogHeader>
+          <div className="py-2">
+            {Object.keys(taskDeps).length === 0 ? (
+              <p className="text-[12px] text-[var(--text-3)] text-center py-8">Nenhuma dependencia configurada</p>
+            ) : (
+              <div className="rounded-lg bg-[var(--surface-2)] border border-[var(--border)] p-4 overflow-x-auto">
+                {renderDepDiagram()}
+                <div className="flex items-center gap-4 mt-4 pt-3 border-t border-[var(--border)] text-[10px] text-[var(--text-3)]">
+                  <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-[var(--success)]" /> Concluida</span>
+                  <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-[var(--accent)]" /> Em andamento</span>
+                  <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-[var(--text-3)]" /> Pendente</span>
+                  <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-[var(--destructive)]" /> Bloqueada</span>
+                </div>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDepDiagramOpen(false)}>Fechar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={approveOpen} onOpenChange={(v) => { if (!v) setApproveOpen(false) }}>
         <DialogContent className="max-w-md">
@@ -1253,6 +1579,61 @@ export default function ProjectDetailPage() {
         onClose={() => setCsvImportOpen(false)}
         onImport={handleCsvImport}
       />
+
+      <Dialog open={sprintDialogOpen} onOpenChange={setSprintDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Gerenciar Sprints</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2 max-h-[60vh] overflow-y-auto">
+            {sprints.length === 0 && (
+              <p className="text-[12px] text-[var(--text-3)] text-center py-4">Nenhuma sprint criada</p>
+            )}
+            {sprints.map((s: any) => (
+              <div key={s.id} className={`p-3 rounded-lg border ${s.isActive ? 'border-[var(--accent)] bg-[var(--accent-subtle)]' : 'border-[var(--border)] bg-[var(--surface-2)]'}`}>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-[13px] font-[500] text-[var(--text)]">{s.name}</p>
+                    {s.goal && <p className="text-[11px] text-[var(--text-3)] mt-0.5">{s.goal}</p>}
+                    <p className="text-[10px] text-[var(--text-3)] mt-1">
+                      {new Date(s.startDate).toLocaleDateString('pt-BR')} — {new Date(s.endDate).toLocaleDateString('pt-BR')} · {s._count?.tasks || 0} tarefas
+                    </p>
+                  </div>
+                  {isAdmin && (
+                    <Button
+                      variant={s.isActive ? 'secondary' : 'outline'}
+                      size="sm"
+                      onClick={() => handleToggleSprint(s.id, s.isActive)}
+                      className="h-7 text-[10px]"
+                    >
+                      {s.isActive ? 'Ativa' : 'Ativar'}
+                    </Button>
+                  )}
+                </div>
+              </div>
+            ))}
+
+            {isAdmin && (
+              <div className="border-t border-[var(--border)] pt-4 space-y-3">
+                <p className="text-[12px] font-[500] text-[var(--text)]">Nova Sprint</p>
+                <Input placeholder="Nome da sprint" value={sprintForm.name} onChange={e => setSprintForm({ ...sprintForm, name: e.target.value })} className="h-8 text-[12px]" />
+                <Input placeholder="Objetivo (opcional)" value={sprintForm.goal} onChange={e => setSprintForm({ ...sprintForm, goal: e.target.value })} className="h-8 text-[12px]" />
+                <div className="flex gap-2">
+                  <Input type="date" value={sprintForm.startDate} onChange={e => setSprintForm({ ...sprintForm, startDate: e.target.value })} className="h-8 text-[12px]" />
+                  <Input type="date" value={sprintForm.endDate} onChange={e => setSprintForm({ ...sprintForm, endDate: e.target.value })} className="h-8 text-[12px]" />
+                </div>
+                <Button onClick={handleCreateSprint} disabled={sprintSaving} className="w-full h-8 text-[12px]">
+                  {sprintSaving && <IconLoader className="w-3 h-3 animate-spin mr-1" />}
+                  Criar Sprint
+                </Button>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSprintDialogOpen(false)}>Fechar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

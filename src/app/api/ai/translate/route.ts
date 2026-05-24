@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getSessionUser } from '@/lib/auth-utils'
 
 const DEEPSEEK_URL = 'https://api.deepseek.com/v1/chat/completions'
 
@@ -14,6 +15,11 @@ function detectIsEnglish(text: string): boolean {
 
 export async function POST(request: NextRequest) {
   try {
+    const user = await getSessionUser(request)
+    if (!user) {
+      return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
+    }
+
     const body = await request.json()
     const { text } = body
 

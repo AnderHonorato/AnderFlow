@@ -1,6 +1,15 @@
 import { NextRequest } from 'next/server'
+import { getSessionUser } from '@/lib/auth-utils'
 
 export async function GET(request: NextRequest) {
+  const user = await getSessionUser(request)
+  if (!user) {
+    return new Response(JSON.stringify({ error: 'Não autenticado' }), {
+      status: 401,
+      headers: { 'Content-Type': 'application/json' },
+    })
+  }
+
   const encoder = new TextEncoder()
   const stream = new ReadableStream({
     start(controller) {

@@ -128,7 +128,7 @@ export async function POST(request: NextRequest) {
         })
       }
 
-      checkAndGrantAchievements(userId, 'briefing_sent', project.id).catch(() => {})
+      checkAndGrantAchievements(userId, 'briefing_sent', project.id).catch((err) => { console.error('[achievements]', err?.message || err) })
 
       return NextResponse.json({
         data: { project, summary },

@@ -3,8 +3,11 @@ import { prisma } from '@/lib/prisma'
 import { getSessionUser } from '@/lib/auth-utils'
 import { checkAndGrantAchievements } from '@/lib/achievements'
 import { auditLog } from '@/lib/audit'
+import { checkCsrf } from '@/lib/middlewares/csrf'
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  if (!checkCsrf(request)) return NextResponse.json({ error: 'Requisição inválida' }, { status: 403 })
+
   try {
     const user = await getSessionUser(request)
     if (!user?.id) {
@@ -48,7 +51,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       }
     }
 
-    checkAndGrantAchievements(user.id, 'contract_signed', contract.projectId || undefined).catch(() => {})
+    checkAndGrantAchievements(user.id, 'contract_signed', contract.projectId || undefined).catch((err) => { console.error('[achievements]', err?.message || err) })
 
     auditLog({
       userId: user.id,
@@ -57,7 +60,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       entity: 'Contract',
       entityId: contract.id,
       description: `Contrato assinado: ${contract.project?.name || contract.id}`,
-    }).catch(() => {})
+    }).catch((err) => { console.error('[audit]', err?.message || err) })
 
     return NextResponse.json({ message: 'Contrato assinado com sucesso!' })
   } catch (error: any) {

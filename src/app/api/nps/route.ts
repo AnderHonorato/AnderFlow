@@ -38,35 +38,48 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
   try {
     const user = await getSessionUser(request)
-    if (!user?.id) {
-      return NextResponse.json({ error: 'Nao autenticado' }, { status: 401 })
-    }
+    if (!user?.id) return NextResponse.json({ error: 'Nao autenticado' }, { status: 401 })
 
     const responses = await prisma.npsResponse.findMany({
-      include: {
-        project: { select: { id: true, name: true } },
-      },
+      include: { project: { select: { id: true, name: true } } },
       orderBy: { createdAt: 'desc' },
     })
 
     const scores = responses.map((r: { score: number }) => r.score)
-    const average = scores.length > 0 ? (scores.reduce((a: number, b: number) => a + b, 0) / scores.length).toFixed(1) : '0'
+    const average = scores.length > 0 ? parseFloat((scores.reduce((a: number, b: number) => a + b, 0) / scores.length).toFixed(1)) : 0
     const promoters = scores.filter((s: number) => s >= 9).length
     const neutrals = scores.filter((s: number) => s >= 7 && s <= 8).length
     const detractors = scores.filter((s: number) => s <= 6).length
     const total = scores.length
     const npsScore = total > 0 ? Math.round(((promoters - detractors) / total) * 100) : 0
 
+    const monthlyMap: Record<string, { promoters: number; neutrals: number; detractors: number; total: number }> = {}
+    responses.forEach(r => {
+      const key = r.createdAt.toISOString().slice(0, 7)
+      if (!monthlyMap[key]) monthlyMap[key] = { promoters: 0, neutrals: 0, detractors: 0, total: 0 }
+      const s = r.score
+      if (s >= 9) monthlyMap[key].promoters++
+      else if (s >= 7) monthlyMap[key].neutrals++
+      else monthlyMap[key].detractors++
+      monthlyMap[key].total++
+    })
+
+    const monthly = Object.entries(monthlyMap)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .slice(-12)
+      .map(([month, d]) => ({
+        month,
+        nps: d.total > 0 ? Math.round(((d.promoters - d.detractors) / d.total) * 100) : 0,
+        total: d.total,
+      }))
+
     return NextResponse.json({
       data: responses,
-      metrics: {
-        average: parseFloat(average),
-        npsScore,
-        promoters,
-        neutrals,
-        detractors,
-        total,
-      },
+      metrics: { average, npsScore, promoters, neutrals, detractors, total },
+      monthly,
+      recentComments: responses.filter(r => r.comment).slice(0, 10).map(r => ({
+        id: r.id, projectName: r.project?.name, score: r.score, comment: r.comment, date: r.createdAt,
+      })),
     })
   } catch (error: any) {
     return NextResponse.json({ error: error?.message || 'Erro ao buscar NPS' }, { status: 500 })

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -9,7 +9,7 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Skeleton } from '@/components/ui/skeleton'
 import { toast } from 'sonner'
 import {
-  Search, Send, Phone, Video, Check, CheckCheck, Loader2, Copy, Code,
+  Search, Send, Phone, Video, Check, CheckCheck, Loader2, Copy, Code, X,
 } from 'lucide-react'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism'
@@ -25,6 +25,44 @@ export default function ChatPage() {
   const [sending, setSending] = useState(false)
   const [isOtherTyping, setIsOtherTyping] = useState(false)
   const lastTypingRef = useRef(0)
+  const [searchOpen, setSearchOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [searchResults, setSearchResults] = useState<any[]>([])
+  const [searching, setSearching] = useState(false)
+  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const handleSearch = useCallback((q: string) => {
+    if (!q.trim() || !selectedChannel) { setSearchResults([]); return }
+    setSearching(true)
+    fetch(`/api/messages/search?q=${encodeURIComponent(q)}&channelId=${selectedChannel}`)
+      .then(r => r.json())
+      .then(json => { setSearchResults(json.data?.results || []); setSearching(false) })
+      .catch(() => setSearching(false))
+  }, [selectedChannel])
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value
+    setSearchQuery(val)
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current)
+    searchTimerRef.current = setTimeout(() => handleSearch(val), 500)
+  }
+
+  const handleSearchResultClick = (msgId: string) => {
+    const el = document.getElementById(`msg-${msgId}`)
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      el.style.background = 'var(--accent-subtle)'
+      el.style.transition = 'background 0.3s'
+      setTimeout(() => { el.style.background = '' }, 3000)
+      setSearchOpen(false)
+      setSearchQuery('')
+      setSearchResults([])
+    }
+  }
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Escape') { setSearchOpen(false); setSearchQuery(''); setSearchResults([]) }
+  }
 
   useEffect(() => {
     fetch('/api/channels')
@@ -226,10 +264,52 @@ export default function ChatPage() {
                 </div>
               </div>
               <div className="flex items-center gap-1">
+                <Button variant="ghost" size="icon-sm" onClick={() => setSearchOpen(prev => !prev)} title="Buscar mensagens">
+                  <Search className="h-4 w-4" />
+                </Button>
                 <Button variant="ghost" size="icon-sm"><Phone className="h-4 w-4" /></Button>
                 <Button variant="ghost" size="icon-sm"><Video className="h-4 w-4" /></Button>
               </div>
             </div>
+
+            {searchOpen && (
+              <div className="px-6 py-2 border-b bg-[var(--surface-2)]">
+                <div className="flex items-center gap-2">
+                  <Search className="h-4 w-4 text-[var(--text-3)]" />
+                  <Input
+                    placeholder="Buscar mensagens..."
+                    value={searchQuery}
+                    onChange={handleSearchChange}
+                    onKeyDown={handleKeyDown}
+                    className="flex-1 h-8 text-sm border-0 bg-transparent focus-visible:ring-0"
+                    autoFocus
+                  />
+                  <Button variant="ghost" size="icon-sm" onClick={() => { setSearchOpen(false); setSearchQuery(''); setSearchResults([]) }}>
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+                {searchResults.length > 0 && (
+                  <div className="mt-2 max-h-[200px] overflow-y-auto space-y-1">
+                    {searchResults.map((msg: any) => (
+                      <button
+                        key={msg.id}
+                        className="w-full text-left p-2 rounded-md hover:bg-[var(--surface-hover)] transition-colors"
+                        onClick={() => handleSearchResultClick(msg.id)}
+                      >
+                        <p className="text-xs font-medium text-[var(--text)]">{msg.sender?.name || 'Unknown'}</p>
+                        <p className="text-xs text-[var(--text-3)] truncate">{(msg.content || '').slice(0, 80)}</p>
+                        <p className="text-2xs text-[var(--text-3)] mt-0.5">
+                          {msg.createdAt ? new Date(msg.createdAt).toLocaleDateString('pt-BR') : ''}
+                        </p>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {searchQuery && !searching && searchResults.length === 0 && (
+                  <p className="text-xs text-[var(--text-3)] py-2 text-center">Nenhum resultado</p>
+                )}
+              </div>
+            )}
 
             <div className="flex-1 overflow-y-auto px-6 py-4" ref={scrollRef}>
               <div className="space-y-4 max-w-3xl mx-auto">
@@ -239,7 +319,7 @@ export default function ChatPage() {
                 {messages.map((msg) => {
                   const isMine = msg.sender?.id === session?.user?.id
                   return (
-                    <div key={msg.id} className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}>
+                    <div key={msg.id} id={`msg-${msg.id}`} className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}>
                       <div className={`max-w-[70%]`}>
                         {!isMine && (
                           <p className="text-2xs text-muted-foreground mb-1 px-1">{msg.sender?.name || 'Cliente'}</p>

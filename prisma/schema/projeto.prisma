@@ -3,57 +3,58 @@
 // ============================================
 
 model Project {
-  id               String    @id @default(cuid())
-  number           String?   @unique
-  name             String
-  slug             String
-  description      String?
-  type             String    @default("CUSTOM")
-  status           String    @default("DRAFT")
-  priority         String    @default("MEDIUM")
-  progress         Int       @default(0)
-  budget           Float?
-  estimatedHours   Int?
-  actualHours      Int?
-  startDate        DateTime?
-  endDate          DateTime?
-  deadline         DateTime?
-  completedAt      DateTime?
-  clientId         String
-  organizationId   String?
-  briefing         String?
-  tags             String    @default("[]")
-  headerImage      String?
-  completedSummary String?
-  completedLink    String?
-  isArchived       Boolean   @default(false)
-  proposalMessage  String?
-  proposalValue    Float?
-  clientResponse   String?
-  cancelledReason  String?
-  cancelledAt      DateTime?
-  contractSignedAt DateTime?
+  id                String    @id @default(cuid())
+  number            String?   @unique
+  name              String
+  slug              String
+  description       String?
+  type              String    @default("CUSTOM")
+  status            String    @default("DRAFT")
+  priority          String    @default("MEDIUM")
+  progress          Int       @default(0)
+  budget            Float?
+  estimatedHours    Int?
+  actualHours       Int?
+  startDate         DateTime?
+  endDate           DateTime?
+  deadline          DateTime?
+  completedAt       DateTime?
+  clientId          String
+  organizationId    String?
+  briefing          String?
+  tags              String    @default("[]")
+  headerImage       String?
+  completedSummary  String?
+  completedLink     String?
+  isArchived        Boolean   @default(false)
+  proposalMessage   String?
+  proposalValue     Float?
+  clientResponse    String?
+  cancelledReason   String?
+  cancelledAt       DateTime?
+  contractSignedAt  DateTime?
   contractSignedUrl String?
-  stepsData        String?
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+  stepsData         String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 
-  client        User          @relation("ProjectOwner", fields: [clientId], references: [id])
-  organization  Organization? @relation(fields: [organizationId], references: [id])
-  tasks         Task[]
-  milestones    Milestone[]
-  files         File[]
-  messages      Message[]
-  comments      Comment[]
-  invoices      Invoice[]
-  contracts     Contract[]
-  activities    Activity[]
-  timeEntries   TimeEntry[]
-  sprints       Sprint[]
-  updates       ProjectUpdate[]
-  npsResponses  NpsResponse[]
+  client         User            @relation("ProjectOwner", fields: [clientId], references: [id])
+  organization   Organization?   @relation(fields: [organizationId], references: [id])
+  tasks          Task[]
+  milestones     Milestone[]
+  files          File[]
+  messages       Message[]
+  comments       Comment[]
+  invoices       Invoice[]
+  contracts      Contract[]
+  activities     Activity[]
+  timeEntries    TimeEntry[]
+  sprints        Sprint[]
+  updates        ProjectUpdate[]
+  npsResponses   NpsResponse[]
   briefingDrafts BriefingDraft[]
   achievements   Achievement[]
+  ProjectNote    ProjectNote[]
 
   @@index([clientId])
   @@index([status])
@@ -62,33 +63,33 @@ model Project {
 }
 
 model Task {
-  id             String   @id @default(cuid())
+  id             String    @id @default(cuid())
   title          String
   description    String?
-  status         String   @default("TODO")
-  priority       String   @default("MEDIUM")
+  status         String    @default("TODO")
+  priority       String    @default("MEDIUM")
   projectId      String
   milestoneId    String?
   sprintId       String?
   assigneeId     String?
   creatorId      String
   parentId       String?
-  order          Int      @default(0)
+  order          Int       @default(0)
   dueDate        DateTime?
   completedAt    DateTime?
   estimatedHours Float?
   actualHours    Float?
-  tags           String   @default("[]")
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  tags           String    @default("[]")
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
-  project      Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  milestone    Milestone? @relation(fields: [milestoneId], references: [id])
-  sprint       Sprint?    @relation(fields: [sprintId], references: [id])
-  assignee     User?      @relation("TaskAssignee", fields: [assigneeId], references: [id])
-  creator      User       @relation("TaskCreator", fields: [creatorId], references: [id])
-  parent       Task?      @relation("Subtasks", fields: [parentId], references: [id])
-  subtasks     Task[]     @relation("Subtasks")
+  project      Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  milestone    Milestone?       @relation(fields: [milestoneId], references: [id])
+  sprint       Sprint?          @relation(fields: [sprintId], references: [id])
+  assignee     User?            @relation("TaskAssignee", fields: [assigneeId], references: [id])
+  creator      User             @relation("TaskCreator", fields: [creatorId], references: [id])
+  parent       Task?            @relation("Subtasks", fields: [parentId], references: [id])
+  subtasks     Task[]           @relation("Subtasks")
   comments     Comment[]
   files        File[]
   timeEntries  TimeEntry[]
@@ -190,4 +191,19 @@ model NpsResponse {
   createdAt DateTime @default(now())
 
   project Project @relation(fields: [projectId], references: [id])
+}
+
+model ProjectNote {
+  id        String   @id @default(cuid())
+  projectId String
+  content   String
+  authorId  String
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+
+  project Project @relation(fields: [projectId], references: [id])
+  author  User    @relation(fields: [authorId], references: [id])
+
+  @@index([projectId])
+  @@index([authorId])
 }

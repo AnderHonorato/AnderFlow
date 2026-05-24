@@ -25,7 +25,7 @@ model Organization {
   teams     Team[]
   projects  Project[]
   contracts Contract[]
-  invoices  Invoice[] @relation("OrgInvoices")
+  invoices  Invoice[]  @relation("OrgInvoices")
 }
 
 model Team {

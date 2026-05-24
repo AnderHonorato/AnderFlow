@@ -1,6 +1,9 @@
 import type { Metadata, Viewport } from 'next'
 import { Inter, DM_Sans, Plus_Jakarta_Sans, Space_Grotesk } from 'next/font/google'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
 import './globals.css'
+import { SessionProvider } from '@/providers/session-provider'
 import { ThemeProvider } from '@/providers/theme-provider'
 import { Toaster } from '@/components/ui/toaster'
 
@@ -37,14 +40,18 @@ export const viewport: Viewport = {
   themeColor: '#E8622A',
 }
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const session = await getServerSession(authOptions)
+
   return (
     <html lang="pt-BR" suppressHydrationWarning>
       <body className={`${inter.variable} ${dmSans.variable} ${jakarta.variable} ${spaceGrotesk.variable} font-sans antialiased bg-[var(--bg)] text-[var(--text)]`}>
-        <ThemeProvider defaultTheme="dark">
-          {children}
-          <Toaster />
-        </ThemeProvider>
+        <SessionProvider session={session}>
+          <ThemeProvider defaultTheme="dark">
+            {children}
+            <Toaster />
+          </ThemeProvider>
+        </SessionProvider>
       </body>
     </html>
   )

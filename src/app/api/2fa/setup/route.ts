@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { getSessionUser } from '@/lib/auth-utils'
 import speakeasy from 'speakeasy'
 import QRCode from 'qrcode'
+import { encrypt } from '@/lib/encrypt'
 
 export async function GET(request: NextRequest) {
   const user = await getSessionUser(request)
@@ -35,7 +36,7 @@ export async function POST(request: NextRequest) {
 
     await prisma.user.update({
       where: { id: user.id },
-      data: { twoFactorSecret: userSecret, twoFactorEnabled: true },
+      data: { twoFactorSecret: encrypt(userSecret), twoFactorEnabled: true },
     })
 
     return NextResponse.json({ data: { ok: true } })

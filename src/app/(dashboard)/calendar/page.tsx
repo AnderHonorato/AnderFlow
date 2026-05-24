@@ -12,6 +12,7 @@ import {
   Clock,
   FileText,
   FolderKanban,
+  Download,
 } from 'lucide-react'
 
 interface CalendarEvent {
@@ -154,9 +155,14 @@ export default function CalendarPage() {
           <h1 className="text-[17px] font-[500] tracking-[-0.015em]">Calendario</h1>
           <p className="text-[12px] text-[var(--text-3)] mt-1">Eventos, prazos e reunioes</p>
         </div>
-        <Button size="sm" onClick={goToToday} variant="outline" className="h-8 text-[11px]">
-          Hoje
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button size="sm" variant="outline" className="h-8 text-[11px]" onClick={() => window.open('/api/calendar-events/export', '_blank')}>
+            <Download className="w-[12px] h-[12px]" /> Exportar ICS
+          </Button>
+          <Button size="sm" onClick={goToToday} variant="outline" className="h-8 text-[11px]">
+            Hoje
+          </Button>
+        </div>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
