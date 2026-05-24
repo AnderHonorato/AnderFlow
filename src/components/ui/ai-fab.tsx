@@ -333,7 +333,7 @@ useEffect(()=>{setWelcomeIdx(0);setWelcomeStarKey(p=>p+1)},[cn])
       setMs(p=>[...p,{role:'assistant',content,createdAt:new Date().toISOString(),reasoning:pendingReasoning.current||undefined}])
       pendingBlocks.current=[];pendingReasoning.current=''
     }
-    if(abortRef.current){abortRef.current.abort();abortRef.current=null}
+    if(abortRef.current){try{abortRef.current.abort()}catch{}abortRef.current=null}
     spph.current='done';setSph('done');setLd(false)
     if(st.current)clearInterval(st.current)
     setSbi(-1);setSbs([]);setSReasoning('')
@@ -434,7 +434,7 @@ useEffect(()=>{setWelcomeIdx(0);setWelcomeStarKey(p=>p+1)},[cn])
   const send=async(text?:string)=>{
     const txt=text||inp.trim()
     if((!txt&&pf.length===0)||streamPhase==='typing')return
-    if(streamActive){abortRef.current?.abort();abortRef.current=null}
+    if(streamActive){try{abortRef.current?.abort()}catch{}abortRef.current=null}
     stopStream();setStreamText('');setReasoningLines([]);setErrIdx(null)
     setStreamPhase('idle');setStreamActive(false)
     sStreamContent.current='';sStreamReasoning.current=''
