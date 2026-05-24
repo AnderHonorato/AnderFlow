@@ -254,7 +254,7 @@ export default function SettingsPage() {
                 <TwoFactorSetup />
                 <div className="border-t border-[var(--border)] pt-3" />
                 {[
-                  { label: 'Sessões Ativas', desc: 'Gerencie dispositivos conectados', action: 'Ver Sessões' },
+                  { label: 'Sessoes Ativas', desc: 'Gerencie dispositivos conectados', action: 'Ver Sessoes', href: '/settings/sessions' },
                   { label: 'Alterar Senha', desc: 'Atualize sua senha de acesso', action: 'Alterar' },
                 ].map((item) => (
                   <div key={item.label} className="flex items-center justify-between py-2.5 px-2 rounded-lg hover:bg-[var(--surface-hover)]">
@@ -262,7 +262,7 @@ export default function SettingsPage() {
                       <p className="text-[13px] font-[500]">{item.label}</p>
                       <p className="text-[11px] text-[var(--text-3)] mt-0.5">{item.desc}</p>
                     </div>
-                    <Button variant="outline" size="sm">{item.action}</Button>
+                    <Button variant="outline" size="sm" onClick={() => { if ('href' in item && item.href) router.push(item.href) }}>{item.action}</Button>
                   </div>
                 ))}
               </CardContent>

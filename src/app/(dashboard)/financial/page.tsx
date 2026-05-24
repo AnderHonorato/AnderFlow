@@ -6,6 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
 import { OnboardingTip } from '@/components/ui/onboarding-tip'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
@@ -13,7 +15,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import {
-  Plus, Search, DollarSign, TrendingUp, Clock, MoreHorizontal, Loader2, ArrowUpRight, ReceiptText as ReceiptIcon, Download,
+  Plus, Search, DollarSign, TrendingUp, Clock, MoreHorizontal, Loader2, ArrowUpRight, ReceiptText as ReceiptIcon, Download, QrCode, Copy,
 } from 'lucide-react'
 
 export default function FinancialPage() {
@@ -25,7 +27,7 @@ export default function FinancialPage() {
   const [search, setSearch] = useState('')
   const [showNew, setShowNew] = useState(false)
   const [saving, setSaving] = useState(false)
-  const [form, setForm] = useState({ clientName: '', projectName: '', amount: '', dueDate: '', notes: '', clientId: '' })
+  const [form, setForm] = useState({ clientName: '', projectName: '', amount: '', dueDate: '', notes: '', clientId: '', isRecurring: false })
 
   const [hoursData, setHoursData] = useState<any>(null)
   const [hoursLoading, setHoursLoading] = useState(true)
@@ -34,6 +36,10 @@ export default function FinancialPage() {
   const [hoursClientFilter, setHoursClientFilter] = useState('')
   const [hoursBillableOnly, setHoursBillableOnly] = useState(true)
   const [activeTab, setActiveTab] = useState<'invoices' | 'hours'>('invoices')
+  const [pixOpen, setPixOpen] = useState(false)
+  const [pixInvoiceId, setPixInvoiceId] = useState<string | null>(null)
+  const [pixData, setPixData] = useState<{ pixPayload: string; qrCodeBase64: string; amount: number } | null>(null)
+  const [pixLoading, setPixLoading] = useState(false)
 
   const loadInvoices = useCallback(() => {
     fetch('/api/invoices')
@@ -76,9 +82,10 @@ export default function FinancialPage() {
         notes: form.notes,
         clientId: form.clientId,
         projectId: null,
+        isRecurring: form.isRecurring,
       }),
     })
-    if (res.ok) { toast.success('Fatura criada'); setShowNew(false); loadInvoices(); setForm({ clientName: '', projectName: '', amount: '', dueDate: '', notes: '', clientId: '' }) }
+    if (res.ok) { toast.success('Fatura criada'); setShowNew(false); loadInvoices(); setForm({ clientName: '', projectName: '', amount: '', dueDate: '', notes: '', clientId: '', isRecurring: false }) }
     else toast.error('Erro ao criar fatura')
     setSaving(false)
   }
@@ -155,6 +162,11 @@ export default function FinancialPage() {
                     {i.status === 'PAID' && (
                       <Button variant="ghost" size="sm" onClick={() => window.open(`/api/invoices/${i.id}/receipt`, '_blank')} className="h-6 text-[10px]">
                         <ReceiptIcon className="w-3 h-3" /> Recibo
+                      </Button>
+                    )}
+                    {(i.status === 'SENT' || i.status === 'DRAFT' || i.status === 'OVERDUE') && (
+                      <Button variant="outline" size="sm" onClick={() => { setPixInvoiceId(i.id); setPixOpen(true); setPixData(null) }} className="h-7 text-[11px]">
+                        <QrCode className="w-[12px] h-[12px]" /> Pix
                       </Button>
                     )}
                     <DropdownMenu>
@@ -284,10 +296,82 @@ export default function FinancialPage() {
             <Input placeholder="Valor (R$) *" type="number" value={form.amount} onChange={e => setForm({...form, amount: e.target.value})} />
             <Input placeholder="Vencimento" type="date" value={form.dueDate} onChange={e => setForm({...form, dueDate: e.target.value})} />
             <Input placeholder="Descrição" value={form.notes} onChange={e => setForm({...form, notes: e.target.value})} />
+            <div className="flex items-center gap-2 pt-1">
+              <Checkbox
+                id="isRecurring"
+                checked={form.isRecurring}
+                onCheckedChange={(v) => setForm({...form, isRecurring: !!v})}
+              />
+              <Label htmlFor="isRecurring" className="text-[12px] cursor-pointer">Fatura recorrente (mensalidade)</Label>
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowNew(false)}>Cancelar</Button>
             <Button onClick={handleCreate} disabled={saving || !form.amount || !form.clientId}>{saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Criar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={pixOpen} onOpenChange={setPixOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle>QR Code PIX</DialogTitle></DialogHeader>
+          <div className="space-y-4 py-2">
+            {!pixData && !pixLoading && (
+              <p className="text-[12px] text-[var(--text-3)] text-center">Clique para gerar o QR Code PIX desta fatura</p>
+            )}
+            <div className="flex flex-col items-center gap-3">
+              <Button
+                variant="outline"
+                className="w-full h-9 text-[12px] gap-2"
+                onClick={async () => {
+                  setPixLoading(true)
+                  try {
+                    const res = await fetch(`/api/invoices/${pixInvoiceId}/pix`)
+                    const json = await res.json()
+                    if (json.data) {
+                      setPixData(json.data)
+                    } else {
+                      toast.error(json.error || 'Erro ao gerar PIX')
+                    }
+                  } catch {
+                    toast.error('Erro ao gerar QR Code PIX')
+                  }
+                  setPixLoading(false)
+                }}
+                disabled={pixLoading}
+              >
+                <QrCode className="h-4 w-4" />
+                {pixLoading ? 'Gerando...' : pixData ? 'Regenerar QR Code' : 'Gerar QR Code PIX'}
+              </Button>
+              {pixData && (
+                <>
+                  <div className="bg-white p-3 rounded-xl border border-[var(--border)]">
+                    <img src={pixData.qrCodeBase64} alt="QR Code PIX" className="w-56 h-56" />
+                  </div>
+                  <p className="text-[17px] font-[600] text-[var(--accent)]">R$ {(pixData.amount || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                  <div className="w-full space-y-1.5">
+                    <p className="text-[11px] text-[var(--text-3)]">Codigo PIX (copie e cole):</p>
+                    <div className="flex items-center gap-1 bg-[var(--surface-2)] border border-[var(--border)] rounded-lg p-2">
+                      <code className="flex-1 text-[10px] text-[var(--text)] break-all select-all">{pixData.pixPayload}</code>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-7 w-7 shrink-0"
+                        onClick={() => {
+                          navigator.clipboard.writeText(pixData.pixPayload)
+                          toast.success('Codigo PIX copiado!')
+                        }}
+                      >
+                        <Copy className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setPixOpen(false); setPixData(null) }}>Fechar</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

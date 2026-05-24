@@ -17,7 +17,8 @@ import {
   IconPlus, IconSearch, IconClient, IconProject, IconFinancial,
   IconLoader, IconArrowLeft,
 } from '@/components/icons'
-import { Link2, Copy, Map } from 'lucide-react'
+import { Link2, Copy, Map, Upload, Download, FileText, AlertCircle } from 'lucide-react'
+import Papa from 'papaparse'
 
 export default function ClientsPage() {
   const router = useRouter()
@@ -33,6 +34,30 @@ export default function ClientsPage() {
   const [linkDialogOpen, setLinkDialogOpen] = useState(false)
   const [generatedLink, setGeneratedLink] = useState('')
   const [generatingLink, setGeneratingLink] = useState(false)
+  const [csvOpen, setCsvOpen] = useState(false)
+  const [csvFile, setCsvFile] = useState<File | null>(null)
+  const [csvPreview, setCsvPreview] = useState<any[]>([])
+  const [csvImporting, setCsvImporting] = useState(false)
+  const [inactiveFilter, setInactiveFilter] = useState(false)
+
+  const getDaysInactive = (client: any) => {
+    if (!client.lastSeen) return 999
+    return Math.floor((Date.now() - new Date(client.lastSeen).getTime()) / (24 * 60 * 60 * 1000))
+  }
+
+  const getActivityColor = (days: number) => {
+    if (days <= 7) return 'bg-[var(--success)] text-[var(--success)]'
+    if (days <= 14) return 'bg-[var(--warning)] text-[var(--warning)]'
+    if (days <= 30) return 'bg-orange-500 text-orange-500'
+    return 'bg-[var(--destructive)] text-[var(--destructive)]'
+  }
+
+  const getActivityLabel = (days: number) => {
+    if (days <= 7) return 'Ativo'
+    if (days <= 14) return 'Afastado'
+    if (days <= 30) return 'Inativo'
+    return 'Abandonado'
+  }
 
   useEffect(() => {
     fetch('/api/clients')
@@ -123,10 +148,16 @@ export default function ClientsPage() {
     setSaving(false)
   }
 
-  const filtered = clients.filter(c =>
-    !search || c.name.toLowerCase().includes(search.toLowerCase()) ||
-    (c.company && c.company.toLowerCase().includes(search.toLowerCase()))
-  )
+  const filtered = clients.filter(c => {
+    const matchesSearch = !search || c.name.toLowerCase().includes(search.toLowerCase()) ||
+      (c.company && c.company.toLowerCase().includes(search.toLowerCase()))
+    if (!matchesSearch) return false
+    if (inactiveFilter) {
+      const days = getDaysInactive(c)
+      return days > 14
+    }
+    return true
+  })
 
   const selectedClient = clients.find(c => c.id === selectedClientId)
 
@@ -154,6 +185,9 @@ export default function ClientsPage() {
               <Button size="sm" variant="outline" onClick={() => router.push('/clients/map')} className="h-7 text-[11px] gap-1">
                 <Map className="w-3 h-3" /> Mapa
               </Button>
+              <Button size="sm" variant="outline" onClick={() => setCsvOpen(true)} className="h-7 text-[11px] gap-1">
+                <Upload className="w-3 h-3" /> CSV
+              </Button>
               <Button size="sm" onClick={() => setShowNew(true)} className="h-7 text-[11px]">
                 <IconPlus className="w-[12px] h-[12px]" /> Novo
               </Button>
@@ -168,6 +202,14 @@ export default function ClientsPage() {
               className="pl-9 h-8 text-[12px]"
             />
           </div>
+          <button
+            onClick={() => setInactiveFilter(!inactiveFilter)}
+            className={`w-full text-[11px] font-[500] py-1 px-2 rounded-md transition-colors ${
+              inactiveFilter ? 'bg-[var(--destructive-subtle)] text-[var(--destructive)]' : 'text-[var(--text-3)] hover:text-[var(--text)]'
+            }`}
+          >
+            {inactiveFilter ? 'Mostrando apenas inativos' : 'Filtrar clientes inativos'}
+          </button>
         </div>
         <ScrollArea className="flex-1">
           <div className="p-2 space-y-1">
@@ -201,6 +243,21 @@ export default function ClientsPage() {
                 {client.plan && client.plan !== 'BASIC' && (
                   <Badge variant="warning" className="shrink-0">{client.plan}</Badge>
                 )}
+                {(() => {
+                  const days = getDaysInactive(client)
+                  const colorClass = days <= 7 ? 'bg-[var(--success)]/10 text-[var(--success)] border-[var(--success)]/20' :
+                    days <= 14 ? 'bg-[var(--warning)]/10 text-[var(--warning)] border-[var(--warning)]/20' :
+                    days <= 30 ? 'bg-orange-500/10 text-orange-500 border-orange-500/20' :
+                    'bg-[var(--destructive)]/10 text-[var(--destructive)] border-[var(--destructive)]/20'
+                  return (
+                    <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-[500] border ${colorClass}`}>
+                      <span className={`h-1.5 w-1.5 rounded-full ${
+                        days <= 7 ? 'bg-[var(--success)]' : days <= 14 ? 'bg-[var(--warning)]' : days <= 30 ? 'bg-orange-500' : 'bg-[var(--destructive)]'
+                      }`} />
+                      {getActivityLabel(days)}
+                    </span>
+                  )
+                })()}
               </button>
             ))}
           </div>
@@ -293,6 +350,150 @@ export default function ClientsPage() {
               </Button>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={csvOpen} onOpenChange={setCsvOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Importar Clientes via CSV</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            {!csvFile && (
+              <div
+                className="border-2 border-dashed border-[var(--border)] rounded-xl p-8 text-center cursor-pointer hover:border-[var(--accent)]/50 transition-colors"
+                onClick={() => document.getElementById('csv-client-input')?.click()}
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={(e) => {
+                  e.preventDefault()
+                  const f = e.dataTransfer.files[0]
+                  if (f) {
+                    setCsvFile(f)
+                    Papa.parse(f, {
+                      header: true,
+                      skipEmptyLines: true,
+                      complete: (results) => {
+                        const data = (results.data || []).map((row: any) => ({
+                          name: row.Nome || row.nome || row.Name || row.name || '',
+                          email: row.Email || row.email || '',
+                          company: row.Empresa || row.empresa || row.Company || row.company || '',
+                          phone: row.Telefone || row.telefone || row.Phone || row.phone || '',
+                          city: row.Cidade || row.cidade || row.City || row.city || '',
+                        })).filter((r: any) => r.email)
+                        setCsvPreview(data)
+                      },
+                    })
+                  }
+                }}
+              >
+                <input
+                  id="csv-client-input"
+                  type="file"
+                  accept=".csv,.txt"
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0]
+                    if (f) {
+                      setCsvFile(f)
+                      Papa.parse(f, {
+                        header: true,
+                        skipEmptyLines: true,
+                        complete: (results) => {
+                          const data = (results.data || []).map((row: any) => ({
+                            name: row.Nome || row.nome || row.Name || row.name || '',
+                            email: row.Email || row.email || '',
+                            company: row.Empresa || row.empresa || row.Company || row.company || '',
+                            phone: row.Telefone || row.telefone || row.Phone || row.phone || '',
+                            city: row.Cidade || row.cidade || row.City || row.city || '',
+                          })).filter((r: any) => r.email)
+                          setCsvPreview(data)
+                        },
+                      })
+                    }
+                  }}
+                />
+                <Upload className="h-8 w-8 text-[var(--text-3)] mx-auto mb-2" />
+                <p className="text-[13px] text-[var(--text)]">Arraste um arquivo CSV ou clique para selecionar</p>
+                <p className="text-[11px] text-[var(--text-3)] mt-1">Colunas: Nome*, Email*, Empresa, Telefone, Cidade</p>
+                <Button variant="outline" size="sm" className="mt-3" asChild>
+                  <a href="data:text/csv;charset=utf-8,Nome,Email,Empresa,Telefone,Cidade%0AJo%C3%A3o%20Silva,joao%40email.com,Empresa%20ABC,11999999999,S%C3%A3o%20Paulo" download="template_clientes.csv">
+                    <Download className="h-3 w-3 mr-1" /> Baixar template CSV
+                  </a>
+                </Button>
+              </div>
+            )}
+            {csvFile && csvPreview.length > 0 && (
+              <>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-[13px] font-[500] flex items-center gap-2">
+                      <FileText className="h-4 w-4 text-[var(--accent)]" /> {csvFile.name}
+                    </p>
+                    <p className="text-[11px] text-[var(--text-3)]">{csvPreview.length} clientes encontrados</p>
+                  </div>
+                  <Button variant="ghost" size="sm" onClick={() => { setCsvFile(null); setCsvPreview([]) }}>
+                    Remover
+                  </Button>
+                </div>
+                <ScrollArea className="max-h-[200px] border border-[var(--border)] rounded-lg">
+                  <table className="w-full text-[11px]">
+                    <thead>
+                      <tr className="border-b border-[var(--border)] bg-[var(--surface-2)]">
+                        <th className="p-2 text-left">Nome</th>
+                        <th className="p-2 text-left">Email</th>
+                        <th className="p-2 text-left">Empresa</th>
+                        <th className="p-2 text-left">Telefone</th>
+                        <th className="p-2 text-left">Cidade</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {csvPreview.slice(0, 15).map((row, i) => (
+                        <tr key={i} className="border-b border-[var(--border)] hover:bg-[var(--surface-hover)]">
+                          <td className="p-2">{row.name}</td>
+                          <td className="p-2">{row.email}</td>
+                          <td className="p-2">{row.company || '-'}</td>
+                          <td className="p-2">{row.phone || '-'}</td>
+                          <td className="p-2">{row.city || '-'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </ScrollArea>
+              </>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setCsvOpen(false); setCsvFile(null); setCsvPreview([]) }}>Cancelar</Button>
+            <Button
+              onClick={async () => {
+                setCsvImporting(true)
+                try {
+                  const res = await fetch('/api/clients/import', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ clients: csvPreview }),
+                  })
+                  const json = await res.json()
+                  if (res.ok) {
+                    toast.success(`${json.data.created} clientes criados, ${json.data.skipped} ignorados (ja existiam)`)
+                    const updated = await fetch('/api/clients').then(r => r.json())
+                    setClients(updated.data || [])
+                    setCsvOpen(false)
+                    setCsvFile(null)
+                    setCsvPreview([])
+                  } else {
+                    toast.error(json.error || 'Erro ao importar')
+                  }
+                } catch {
+                  toast.error('Erro ao importar clientes')
+                }
+                setCsvImporting(false)
+              }}
+              disabled={csvImporting || csvPreview.length === 0}
+            >
+              {csvImporting ? 'Importando...' : `Importar ${csvPreview.length} clientes`}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

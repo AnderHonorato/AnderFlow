@@ -16,6 +16,7 @@ import { toast } from 'sonner'
 import { ProjectTimeline, type NodeStatus } from '@/components/projects/project-timeline'
 import { TimeTracker } from '@/components/ui/time-tracker'
 import { CsvImportModal } from '@/components/ui/csv-import-modal'
+import { SatisfactionScorecard } from '@/components/projects/satisfaction-scorecard'
 import { IconArrowLeft, IconThumbsUp, IconThumbsDown, IconCheck, IconClose, IconLoader, IconFile, IconClock, IconSparkles, IconPlus } from '@/components/icons'
 import { Target, Link2, Copy, Presentation, GitBranch, AlertTriangle, History, ClipboardCheck } from 'lucide-react'
 
@@ -900,6 +901,8 @@ export default function ProjectDetailPage() {
           )}
         </div>
       </div>
+
+      {project.status !== 'DRAFT' && <SatisfactionScorecard projectId={id} />}
 
       <Card>
         <CardContent className="p-4">

@@ -22,6 +22,7 @@ const adminNavSections = [
       { name: 'Projetos', href: '/projects', icon: IconProject },
       { name: 'Clientes', href: '/clients', icon: IconClient },
       { name: 'Inbox', href: '/inbox', icon: IconNotification },
+      { name: 'Equipe', href: '/team', icon: IconCRM },
     ]
   },
   {

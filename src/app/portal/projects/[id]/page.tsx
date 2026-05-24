@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Skeleton } from '@/components/ui/skeleton'
+import { SatisfactionScorecard } from '@/components/projects/satisfaction-scorecard'
 import { toast } from 'sonner'
 import { ArrowLeft, Target, CheckCircle2, XCircle } from 'lucide-react'
 
@@ -83,6 +84,8 @@ export default function PortalProjectDetail() {
         <Progress value={project.progress || 0} className="w-32 h-1.5" />
         <span className="text-[12px] text-[var(--text-3)]">{project.progress || 0}%</span>
       </div>
+
+      <SatisfactionScorecard projectId={id} />
 
       {okrs.length > 0 && (
         <Card>

@@ -3,7 +3,7 @@ import { getToken } from 'next-auth/jwt'
 import { cargoParaNivel } from '@/lib/hierarquia'
 
 // Em produção usar Redis, por enquanto em memória
-const onlineUsers = new Map<string, number>()
+const onlineUsers = new Map<string, { lastSeen: number; busy: boolean }>()
 const dailyVisitors = new Set<string>()
 const visitLog: { time: number }[] = []
 
@@ -24,8 +24,8 @@ export async function GET(request: NextRequest) {
 
   // Online agora: últimos 5 minutos
   let onlineCount = 0
-  onlineUsers.forEach(lastSeen => {
-    if (lastSeen > fiveMinutesAgo) onlineCount++
+  onlineUsers.forEach(data => {
+    if (data.lastSeen > fiveMinutesAgo) onlineCount++
   })
 
   // Máximo simultâneo 
@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({}))
-  const { userId, type } = body
+  const { userId, type, busy } = body
 
   // Verify the requesting user matches or is admin
   const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET })
@@ -62,7 +62,7 @@ export async function POST(req: NextRequest) {
   const now = Date.now()
 
   if (type === 'ping' || type === 'heartbeat') {
-    if (userId) onlineUsers.set(userId, now)
+    if (userId) onlineUsers.set(userId, { lastSeen: now, busy: !!busy })
     visitLog.push({ time: now })
     dailyVisitors.add(userId || `anon_${Math.random()}`)
   }

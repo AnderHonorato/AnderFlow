@@ -14,6 +14,7 @@ import { toast } from 'sonner'
 import {
   ArrowLeft, QrCode, Smartphone, Copy, Check, Loader2,
   Send, Power, PowerOff, Link2, RefreshCw, Bot, MessageSquare, UserPlus,
+  Mail, CreditCard, Brain, CircuitBoard, ShieldCheck, AlertCircle, TestTube,
 } from 'lucide-react'
 
 export default function IntegrationsPage() {
@@ -164,6 +165,33 @@ export default function IntegrationsPage() {
     }
   }
 
+  const [testResults, setTestResults] = useState<Record<string, { success: boolean; message: string; latencyMs: number } | null>>({})
+  const [testing, setTesting] = useState<string | null>(null)
+
+  const runTest = async (service: string) => {
+    setTesting(service)
+    try {
+      const res = await fetch('/api/settings/test-integration', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ service }),
+      })
+      const json = await res.json()
+      setTestResults(prev => ({ ...prev, [service]: json.data || { success: false, message: 'Erro', latencyMs: 0 } }))
+    } catch {
+      setTestResults(prev => ({ ...prev, [service]: { success: false, message: 'Erro', latencyMs: 0 } }))
+    }
+    setTesting(null)
+  }
+
+  const integrations = [
+    { key: 'whatsapp', icon: '🟢', name: 'WhatsApp', desc: 'Mensageria e atendimento', envVar: null, configured: true },
+    { key: 'email', icon: '✉️', name: 'Resend', desc: 'Envio de emails transacionais', envVar: 'RESEND_API_KEY', configured: !!process.env.NEXT_PUBLIC_HAS_EMAIL || true },
+    { key: 'stripe', icon: '💳', name: 'Stripe', desc: 'Processamento de pagamentos', envVar: 'STRIPE_SECRET_KEY', configured: !!process.env.NEXT_PUBLIC_HAS_STRIPE || !!process.env.STRIPE_SECRET_KEY },
+    { key: 'anthropic', icon: '🤖', name: 'Anthropic', desc: 'IA Claude para geracao de conteudo', envVar: 'ANTHROPIC_API_KEY', configured: !!process.env.NEXT_PUBLIC_HAS_ANTHROPIC || !!process.env.ANTHROPIC_API_KEY },
+    { key: 'deepseek', icon: '🧠', name: 'DeepSeek', desc: 'IA para analise e transcricao', envVar: 'DEEPSEEK_API_KEY', configured: !!process.env.NEXT_PUBLIC_HAS_DEEPSEEK || !!process.env.DEEPSEEK_API_KEY },
+  ]
+
   if (loading) {
     return (
       <div className="p-6 space-y-4 max-w-2xl mx-auto">
@@ -181,8 +209,56 @@ export default function IntegrationsPage() {
       </button>
 
       <div>
-        <h1 className="text-[17px] font-[500] tracking-[-0.015em]">Integrações</h1>
-        <p className="text-[12px] text-[var(--text-3)] mt-1">Conecte seu WhatsApp pessoal e gerencie a IA</p>
+        <h1 className="text-[17px] font-[500] tracking-[-0.015em]">Integracoes</h1>
+        <p className="text-[12px] text-[var(--text-3)] mt-1">Gerencie as integracoes da plataforma</p>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        {integrations.map(integration => {
+          const result = testResults[integration.key]
+          const isTesting = testing === integration.key
+          return (
+            <Card key={integration.key} className="hover:shadow-sm transition-shadow">
+              <CardContent className="p-4 space-y-3">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <span className="text-xl">{integration.icon}</span>
+                    <div>
+                      <p className="text-[13px] font-[500]">{integration.name}</p>
+                      <p className="text-[11px] text-[var(--text-3)]">{integration.desc}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    {integration.configured ? (
+                      <span className="flex items-center gap-1 text-[10px] text-[var(--success)]">
+                        <ShieldCheck className="h-3 w-3" /> Configurado
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-1 text-[10px] text-[var(--text-3)]">
+                        <AlertCircle className="h-3 w-3" /> Nao configurado
+                      </span>
+                    )}
+                  </div>
+                </div>
+                {result && (
+                  <div className={`p-2 rounded-md text-[11px] ${result.success ? 'bg-[var(--success-subtle)] text-[var(--success)]' : 'bg-[var(--destructive-subtle)] text-[var(--destructive)]'}`}>
+                    {result.success ? '✓' : '✗'} {result.message} ({result.latencyMs}ms)
+                  </div>
+                )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full h-7 text-[11px] gap-1"
+                  onClick={() => runTest(integration.key)}
+                  disabled={isTesting}
+                >
+                  {isTesting ? <Loader2 className="h-3 w-3 animate-spin" /> : <TestTube className="h-3 w-3" />}
+                  {isTesting ? 'Testando...' : 'Testar conexao'}
+                </Button>
+              </CardContent>
+            </Card>
+          )
+        })}
       </div>
 
       <Card>

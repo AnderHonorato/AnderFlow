@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { useUIStore } from '@/stores/app-store'
 import { IconNotification, IconClose, IconMenu, IconArrowRight, IconProject } from '@/components/icons'
+import { FocusModeButton, isFocusActive } from '@/components/ui/focus-mode'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 
@@ -70,9 +71,11 @@ export function Header() {
 
           if (prevCount > 0) {
             const newItems = parsed.filter(p => !prevIdsRef.current.has(p.id))
-            newItems.forEach(item => {
-              toast.info(item.title, { description: item.message.slice(0, 80) })
-            })
+            if (!isFocusActive()) {
+              newItems.forEach(item => {
+                toast.info(item.title, { description: item.message.slice(0, 80) })
+              })
+            }
           }
 
           prevIdsRef.current = currentIds
@@ -213,6 +216,8 @@ export function Header() {
       </div>
 
       <div className="flex items-center gap-1 shrink-0" ref={dropdownRef}>
+        <FocusModeButton />
+
         <button
           onClick={() => setDropdownOpen(!dropdownOpen)}
           className="relative flex items-center justify-center h-7 w-9 rounded-md hover:bg-[var(--surface-hover)] text-[var(--text-2)] hover:text-[var(--text)] transition-colors"
