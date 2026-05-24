@@ -221,9 +221,9 @@ export function Header() {
           {unreadItems.length > 0 && (
             <span
               key={badgeKey}
-              className="absolute top-0.5 right-0 flex h-[15px] min-w-[15px] items-center justify-center rounded-full bg-[var(--accent)] text-[10px] font-[500] text-white px-1 badge-count-update"
+              className="badge-pulse absolute -top-1 -right-1 min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-red-500 text-white text-[10px] font-bold px-1 font-numeric"
             >
-              {unreadItems.length > 9 ? '9+' : unreadItems.length}
+              {unreadItems.length > 99 ? '99+' : unreadItems.length}
             </span>
           )}
         </button>

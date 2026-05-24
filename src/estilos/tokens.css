@@ -12,6 +12,10 @@
   --surface-3: #202026;
   --surface-hover: #1E1E24;
 
+  /* ─── RGB para glass effect ─── */
+  --surface-rgb: 20, 20, 24;
+  --border-rgb: 255, 255, 255;
+
   /* ─── Texto ─── */
   --text: #F0F0EB;
   --text-2: #A8A8A2;
@@ -42,7 +46,7 @@
   --header-height: 48px;
 
   /* ─── Tipografia ─── */
-  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-sans: 'Plus Jakarta Sans', Inter, system-ui, -apple-system, sans-serif;
   --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
 
   /* ─── Cantos ─── */
@@ -105,6 +109,11 @@
   --surface-2: #F0F0EB;
   --surface-3: #E8E8E3;
   --surface-hover: #F5F5F0;
+
+  /* ─── RGB para glass effect ─── */
+  --surface-rgb: 255, 255, 255;
+  --border-rgb: 0, 0, 0;
+
   --text: #1A1A14;
   --text-2: #4A4A44;
   --text-3: #8A8A84;

@@ -1,5 +1,6 @@
 @import '../estilos/tokens.css';
 @import '../estilos/animacoes.css';
+@import url('https://cdn.jsdelivr.net/npm/cal-sans@1.0.1/index.css');
 
 @tailwind base;
 @tailwind components;
@@ -143,6 +144,42 @@
     );
     background-size: 400% 100%;
     animation: md-shimmer 1.8s ease-in-out infinite;
+  }
+
+  /* ─── Liquid Glass ─── */
+  .glass {
+    background: rgba(var(--surface-rgb), 0.6);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border: 1px solid rgba(var(--border-rgb), 0.4);
+    box-shadow:
+      0 8px 32px rgba(0, 0, 0, 0.08),
+      inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  }
+
+  .glass-strong {
+    background: rgba(var(--surface-rgb), 0.8);
+    backdrop-filter: blur(40px) saturate(200%);
+    -webkit-backdrop-filter: blur(40px) saturate(200%);
+    border: 1px solid rgba(var(--border-rgb), 0.5);
+  }
+
+  /* ─── Gradient text ─── */
+  .text-gradient {
+    background: linear-gradient(135deg, var(--accent), #a78bfa, #60a5fa, var(--accent));
+    background-size: 300% 300%;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: gradient-shift 4s ease infinite;
+  }
+
+  .text-gradient-static {
+    background: linear-gradient(135deg, var(--accent), #a78bfa, #60a5fa);
+    background-size: 100% 100%;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
   }
 }
 

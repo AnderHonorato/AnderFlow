@@ -130,6 +130,7 @@ export function SidebarClient() {
   }, [setStats, isModOrAbove])
 
   const [inboxUnread, setInboxUnread] = useState(0)
+  const [notifUnread, setNotifUnread] = useState(0)
   useEffect(() => {
     if (!isModOrAbove) return
     const fetchInbox = () => fetch('/api/inbox?count=true').then(r => r.json()).then(j => setInboxUnread(j.totalUnread || 0))
@@ -137,6 +138,12 @@ export function SidebarClient() {
     const interval = setInterval(fetchInbox, 30000)
     return () => clearInterval(interval)
   }, [isModOrAbove])
+  useEffect(() => {
+    const fetchNotif = () => fetch('/api/notifications?unread=true').then(r => r.json()).then(j => setNotifUnread((j.data || []).length))
+    fetchNotif()
+    const interval = setInterval(fetchNotif, 30000)
+    return () => clearInterval(interval)
+  }, [])
 
   const isActive = (href: string) => {
     if (href === '/dashboard') return pathname === '/dashboard'
@@ -146,11 +153,11 @@ export function SidebarClient() {
   const navItemClass = (active: boolean) =>
     cn(
       'flex items-center gap-2.5 h-[34px] px-3 rounded-lg text-[13px]',
-      'transition-all transition-duration-[200ms] transition-timing-function-[cubic-bezier(0.2,0,0,1)]',
+      'transition-all duration-200 ease-emphasized',
       'relative select-none',
       collapsed && 'justify-center px-2',
       active
-        ? 'text-[var(--accent)] bg-[var(--accent-subtle)]'
+        ? 'glass text-[var(--text)] font-medium'
         : 'text-[var(--text-2)] hover:text-[var(--text)] hover:bg-[var(--surface-hover)]'
     )
 
@@ -178,7 +185,7 @@ export function SidebarClient() {
               <path d="M7 22l6-15h4l4 10h-4l-3-5-4 10H7z" fill="#fff" opacity="0.9"/>
               <path d="M13 19c2-2 3-3 5-3h3c-1 2-2 3-4 3h-4z" fill="#fff" opacity="0.5"/>
             </svg>
-            {!collapsed && <span className="text-[14px] font-[500] text-[var(--text)] tracking-[-0.01em]">ANDERFLOW</span>}
+            {!collapsed && <span className="text-[14px] font-display font-semibold text-gradient tracking-tight">ANDERFLOW</span>}
           </Link>
           <button
             onClick={() => setCollapsed(!collapsed)}
@@ -215,7 +222,7 @@ export function SidebarClient() {
                     <item.icon className="w-[16px] h-[16px] shrink-0" />
                     {!collapsed && <span className="truncate">{item.name}</span>}
                     {!collapsed && item.name === 'Inbox' && inboxUnread > 0 && (
-                      <span className="ml-auto text-[10px] font-[500] text-white bg-[var(--accent)] rounded-full px-1.5 py-0.5">{inboxUnread}</span>
+                      <span className="badge-pulse ml-auto text-[10px] font-bold text-white bg-red-500 rounded-full px-1.5 py-0.5 font-numeric">{inboxUnread}</span>
                     )}
                   </Link>
                 )
@@ -265,7 +272,12 @@ export function SidebarClient() {
                 {active && (
                   <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 rounded-r bg-[var(--accent)] animate-scale-in origin-center" style={{ height: '16px' }} />
                 )}
-                <item.icon className="w-[16px] h-[16px] shrink-0" />
+                <span className="relative">
+                  <item.icon className="w-[16px] h-[16px] shrink-0" />
+                  {item.name === 'Notificações' && notifUnread > 0 && (
+                    <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-red-500 badge-pulse" />
+                  )}
+                </span>
                 {!collapsed && <span className="truncate">{item.name}</span>}
               </Link>
             )

@@ -65,8 +65,10 @@ const config: Config = {
         xl: ['17px', { lineHeight: '1.3' }],
       },
       fontFamily: {
-        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+        sans: ['var(--font-jakarta)', 'Inter', 'system-ui', 'sans-serif'],
+        display: ['var(--font-cal)', 'system-ui', 'sans-serif'],
         mono: ['JetBrains Mono', 'Fira Code', 'monospace'],
+        numeric: ['var(--font-space)', 'system-ui', 'sans-serif'],
       },
       spacing: {
         0.5: '2px',

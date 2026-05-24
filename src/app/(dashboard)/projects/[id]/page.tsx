@@ -725,7 +725,7 @@ export default function ProjectDetailPage() {
                   <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" className="text-[var(--accent)]"><rect x="2" y="2" width="12" height="12" rx="1.5"/><path d="M6 8l2 2 4-4"/></svg>
                 )}
                 <span className={`text-[11px] font-[600] ${isReview ? 'text-[var(--warning)]' : 'text-[var(--accent)]'}`}>
-                  {isReview ? 'Aguardando resposta do cliente' : project.proposalMessage ? 'Proposta enviada — aguardando cliente' : 'Em análise pelo desenvolvedor'}
+                  {isReview ? 'Aguardando resposta do cliente' : project.proposalMessage ? 'Proposta enviada — aguardando cliente' : (isAdmin ? 'Você precisa enviar a proposta' : 'Em análise pelo desenvolvedor')}
                 </span>
               </div>
               {project.proposalMessage ? (
@@ -745,7 +745,7 @@ export default function ProjectDetailPage() {
                     )
                   })()}
                   {isReview && isAdmin && (
-                    <div className="flex items-center gap-2 mt-2 pt-2 border-t border-[var(--border)]">
+                    <div className="flex items-center gap-2 mt-2.5 pt-2">
                       <Button size="sm" variant="outline" onClick={() => setProposalViewOpen(true)} className="h-7 text-[11px]">Ver proposta</Button>
                       <Button size="sm" variant="outline" onClick={() => setApproveOpen(true)} className="h-7 text-[11px] text-[var(--warning)]">Alterar</Button>
                     </div>
@@ -753,13 +753,13 @@ export default function ProjectDetailPage() {
                 </div>
               ) : (
                 <p className="text-[12px] text-[var(--text)]">
-                  {isClient ? 'Sua solicitacao esta em analise. Aguarde o retorno em ate 24h.' : 'Envie a proposta para o cliente revisar e aceitar.'}
+                  {isAdmin ? 'Clique em \"Enviar proposta\" abaixo e defina valor, prazo e escopo para o cliente revisar.' : 'Sua solicitacao esta em analise. Aguarde o retorno em ate 24h.'}
                 </p>
               )}
             </div>
           )}
 
-          <div className="flex items-stretch justify-between gap-6 pt-2 border-t border-[var(--border)]">
+          <div className="flex items-stretch justify-between gap-6 pt-4">
             <div className="flex-1 min-w-0">
               {isClient && project.contractSignedAt && (
                 <div className="flex items-center gap-2 text-[11px] text-[var(--success)] mb-2">
@@ -808,7 +808,7 @@ export default function ProjectDetailPage() {
                 <p className="text-[11px] text-[var(--text-3)]">{completedCount}/{totalSteps} etapas</p>
                 <Progress value={progress} className="h-[2px] w-28 mt-1.5" />
               </div>
-              <div className="flex items-center gap-1 justify-end pt-1.5 mt-2 border-t border-[var(--border)]">
+              <div className="flex items-center gap-1.5 justify-end pt-2">
                 {project.briefing && (() => { try { JSON.parse(project.briefing); return (
                   <Button variant="ghost" size="sm" onClick={() => setBriefingOpen(true)} className="h-6 text-[10px] gap-1 px-1.5" title="Briefing">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>

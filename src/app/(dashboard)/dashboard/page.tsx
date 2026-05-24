@@ -1,7 +1,8 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useSession } from 'next-auth/react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
@@ -10,6 +11,9 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { PageHeader } from '@/components/ui/page-header'
 import { StatCard } from '@/components/ui/stat-card'
 import { OnboardingTip } from '@/components/ui/onboarding-tip'
+import { GlassCard } from '@/components/ui/glass-card'
+import { GradientText } from '@/components/ui/gradient-text'
+import { PageWrapper } from '@/components/layout/PageWrapper'
 import { IconProject, IconFinancial, IconClient, IconAnalytics, IconPlus, IconChat, IconFile, IconCheck, IconArrowRight, IconKnowledge } from '@/components/icons'
 import { cn } from '@/lib/utils'
 import { AnimatedCounter } from '@/components/ui/animated-counter'
@@ -68,8 +72,39 @@ export default function DashboardPage() {
   const completed = recentProjects.filter((p: any) => p.status === 'COMPLETED').length
   const inProgress = recentProjects.filter((p: any) => p.status === 'IN_PROGRESS').length
 
+  const revenueMetric = useRef([
+    { label: 'Hoje', value: data?.stats?.revenueToday || 0 },
+    { label: 'Esta semana', value: data?.stats?.revenueWeek || 0 },
+    { label: 'Este mês', value: data?.stats?.totalRevenue || 0 },
+  ])
+  const [revenueIdx, setRevenueIdx] = useState(0)
+
+  useEffect(() => {
+    revenueMetric.current = [
+      { label: 'Hoje', value: data?.stats?.revenueToday || 0 },
+      { label: 'Esta semana', value: data?.stats?.revenueWeek || 0 },
+      { label: 'Este mês', value: data?.stats?.totalRevenue || 0 },
+    ]
+  }, [data])
+
+  useEffect(() => {
+    if (!isAdmin) return
+    const timer = setInterval(() => {
+      setRevenueIdx(prev => (prev + 1) % 3)
+    }, 4000)
+    return () => clearInterval(timer)
+  }, [isAdmin])
+
+  const formatRevenue = (v: number) => {
+    if (v >= 1000) return `R$ ${(v / 1000).toFixed(0)}k`
+    return `R$ ${v.toFixed(0)}`
+  }
+
+  const currentRevenue = revenueMetric.current[revenueIdx]
+
   return (
-    <div className="p-4 space-y-5 animate-page-enter">
+    <PageWrapper>
+      <div className="p-4 space-y-4">
       <OnboardingTip
         id="dashboard_welcome"
         title={isAdmin ? "Bem-vindo ao seu painel de controle" : "Bem-vindo ao ANDERFLOW"}
@@ -78,6 +113,7 @@ export default function DashboardPage() {
       <PageHeader
         title={isAdmin ? "Painel de Controle" : `Ola, ${session?.user?.name?.split(' ')[0] || 'Cliente'}`}
         description={isAdmin ? "Visao geral da sua plataforma" : "Acompanhe seus projetos"}
+        className="font-display"
       >
         <Button size="sm" asChild>
           <a href="/portal/briefing"><IconPlus className="w-[14px] h-[14px]" /> Novo Projeto</a>
@@ -86,8 +122,57 @@ export default function DashboardPage() {
 
       {isAdmin && (
         <div className="grid gap-3 grid-cols-2 md:grid-cols-4">
-          {stats.map((stat) => (
-            <StatCard key={stat.label} {...stat} />
+          {stats.slice(0, 1).map((stat, i) => (
+            <GlassCard key={stat.label} className="p-0">
+              <motion.div
+                whileHover={{ y: -2 }}
+                transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+                className="flex items-center gap-3 px-3 py-2.5"
+              >
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--accent-subtle)]">
+                  <span className="w-4 h-4 text-[var(--accent)]">{stat.icon}</span>
+                </div>
+                <div className="min-w-0">
+                  <AnimatePresence mode="wait">
+                    <motion.span
+                      key={revenueIdx}
+                      initial={{ opacity: 0, y: 6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -6 }}
+                      transition={{ duration: 0.25 }}
+                      className="font-numeric font-bold text-[15px] text-[var(--text)] tabular-nums block"
+                    >
+                      {formatRevenue(currentRevenue.value)}
+                    </motion.span>
+                  </AnimatePresence>
+                  <AnimatePresence mode="wait">
+                    <motion.span
+                      key={`label-${revenueIdx}`}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.2 }}
+                      className="text-[10px] text-[var(--text-3)] uppercase tracking-wide font-sans"
+                    >
+                      {currentRevenue.label}
+                    </motion.span>
+                  </AnimatePresence>
+                </div>
+              </motion.div>
+            </GlassCard>
+          ))}
+          {stats.slice(1).map((stat, i) => (
+            <motion.div
+              key={stat.label}
+              whileHover={{ y: -2 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+            >
+              <StatCard
+                {...stat}
+                index={i + 1}
+                className="h-[56px]"
+              />
+            </motion.div>
           ))}
         </div>
       )}
@@ -101,7 +186,7 @@ export default function DashboardPage() {
                   <IconProject className="w-[18px] h-[18px] text-[var(--accent)]" />
                 </div>
                 <div>
-<p className="text-xl font-[500] text-[var(--text)]"><AnimatedCounter value={recentProjects.length} /></p>
+<p className="font-numeric text-xl font-bold text-[var(--text)]"><AnimatedCounter value={recentProjects.length} /></p>
                    <p className="text-[11px] text-[var(--text-3)]">Projetos</p>
                 </div>
               </CardContent>
@@ -112,7 +197,7 @@ export default function DashboardPage() {
                   <IconCheck className="w-[18px] h-[18px] text-[var(--success)]" />
                 </div>
                 <div>
-<p className="text-xl font-[500] text-[var(--text)]"><AnimatedCounter value={completed} /></p>
+<p className="font-numeric text-xl font-bold text-[var(--text)]"><AnimatedCounter value={completed} /></p>
                    <p className="text-[11px] text-[var(--text-3)]">Concluidos</p>
                 </div>
               </CardContent>
@@ -123,7 +208,7 @@ export default function DashboardPage() {
                   <IconKnowledge className="w-[18px] h-[18px] text-[var(--info)]" />
                 </div>
                 <div>
-<p className="text-xl font-[500] text-[var(--text)]"><AnimatedCounter value={inProgress} /></p>
+<p className="font-numeric text-xl font-bold text-[var(--text)]"><AnimatedCounter value={inProgress} /></p>
                    <p className="text-[11px] text-[var(--text-3)]">Em andamento</p>
                 </div>
               </CardContent>
@@ -245,9 +330,9 @@ export default function DashboardPage() {
                   'flex items-center justify-between p-2 -mx-2 rounded-lg',
                   (data?.stats?.pendingRevenue || 0) > 0 && 'animate-balance-negative'
                 )}>
-                  <span className="text-[13px] text-[var(--text-2)]">Saldo pendente</span>
+                  <span className="font-numeric text-[13px] font-bold text-[var(--text-2)] tabular-nums">Saldo pendente</span>
                   <span className={cn(
-                    'text-[13px] font-[500]',
+                    'font-numeric text-[13px] font-bold',
                     (data?.stats?.pendingRevenue || 0) > 0 ? 'text-[var(--destructive)]' : 'text-[var(--warning)]'
                   )}>
                     R$ {((data?.stats?.pendingRevenue || 0) / 1000).toFixed(1)}k
@@ -258,13 +343,13 @@ export default function DashboardPage() {
                   (data?.stats?.paidThisMonth || 0) > 0 && 'animate-balance-positive'
                 )}>
                   <span className="text-[13px] text-[var(--text-2)]">Recebido este mes</span>
-                  <span className="text-[13px] font-[500] text-[var(--success)]">
+                  <span className="font-numeric text-[13px] font-bold text-[var(--success)]">
                     R$ {((data?.stats?.paidThisMonth || 0) / 1000).toFixed(1)}k
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-[13px] text-[var(--text-2)]">Notificacoes</span>
-                  <span className="text-[13px] font-[500]">{data?.stats?.unreadNotifications || 0} nao lidas</span>
+                  <span className="font-numeric text-[13px] font-bold">{data?.stats?.unreadNotifications || 0} nao lidas</span>
                 </div>
               </div>
             </CardContent>
@@ -272,6 +357,7 @@ export default function DashboardPage() {
         </div>
         )}
       </div>
-    </div>
+      </div>
+    </PageWrapper>
   )
 }

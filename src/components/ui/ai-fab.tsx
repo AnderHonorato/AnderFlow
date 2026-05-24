@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect, useCallback, useMemo, useId } from 'react'
+import { motion, AnimatePresence as FMAnimatePresence } from 'framer-motion'
 import { useSession } from 'next-auth/react'
 import { usePathname } from 'next/navigation'
 import { Button } from '@/components/ui/button'
@@ -80,21 +81,28 @@ function ReasoningStream({lines,active}:{lines:string[];active:boolean}){
   while(vis.length<3)vis.unshift('')
   const[rIdx,setRIdx]=useState(0)
   const[charIdx,setCharIdx]=useState(0)
+  const rIdxRef=useRef(0)
+  const charIdxRef=useRef(0)
   const animRef=useRef<ReturnType<typeof setInterval>|null>(null)
   useEffect(()=>{
-    if(!active||vis.every(l=>!l)){setRIdx(0);setCharIdx(0);if(animRef.current)clearInterval(animRef.current);return}
-    setRIdx(0);setCharIdx(0)
+    if(!active||vis.every(l=>!l)){rIdxRef.current=0;charIdxRef.current=0;setRIdx(0);setCharIdx(0);if(animRef.current)clearInterval(animRef.current);return}
+    rIdxRef.current=0;charIdxRef.current=0;setRIdx(0);setCharIdx(0)
     const pump=()=>{
-      setCharIdx(c=>{
-        const line=vis[Math.min(rIdx,vis.length-1)]||''
-        if(c>=line.length){setRIdx(r=>{const nr=r+1;if(nr>=vis.length)return 0;return nr});return 0}
-        return c+1
-      })
+      const line=vis[Math.min(rIdxRef.current,vis.length-1)]||''
+      if(charIdxRef.current>=line.length){
+        rIdxRef.current=rIdxRef.current+1
+        if(rIdxRef.current>=vis.length)rIdxRef.current=0
+        charIdxRef.current=0
+        setRIdx(rIdxRef.current)
+      }else{
+        charIdxRef.current++
+      }
+      setCharIdx(charIdxRef.current)
     }
     animRef.current=setInterval(pump,40+Math.random()*30)
     return()=>{if(animRef.current)clearInterval(animRef.current)}
   },[lines,active])
-  useEffect(()=>{if(!active){if(animRef.current)clearInterval(animRef.current);setRIdx(0);setCharIdx(0)}},[active])
+  useEffect(()=>{if(!active){if(animRef.current)clearInterval(animRef.current);rIdxRef.current=0;charIdxRef.current=0;setRIdx(0);setCharIdx(0)}},[active])
   const currLine=vis[Math.min(rIdx,vis.length-1)]||''
   return(<div className={`mb-2 rounded-xl overflow-hidden relative transition-all duration-300 ${active?'opacity-100 scale-100':'opacity-0 scale-95 pointer-events-none'}`} style={{background:'rgba(58,122,196,0.06)'}}>
     {BUBBLES.map((b,i)=>(<div key={i} className="absolute rounded-full pointer-events-none" style={{width:b.w,height:b.h,top:b.top,left:b.left,right:b.right,bottom:b.bottom,background:'radial-gradient(circle,rgba(58,122,196,0.45) 0%,transparent 70%)',animation:`${b.a} ${b.d} ease-in-out infinite`}}/>))}
@@ -511,9 +519,43 @@ useEffect(()=>{setWelcomeIdx(0);setWelcomeStarKey(p=>p+1)},[cn])
   return(<>
     {wv&&!op&&(<div className="fixed bottom-20 right-6 z-[60] max-w-[260px] rounded-2xl font-sans-dm p-3.5 shadow-xl backdrop-blur-sm" style={{background:'var(--surface)',border:'1.5px solid rgba(232,98,42,0.18)',animation:'autoMsgGlow 2.6s ease-in-out infinite, md-card-pop 0.4s var(--ease-spring) both'}}><button title="Fechar" onClick={dw} className="absolute top-1.5 right-1.5 h-5 w-5 flex items-center justify-center rounded-full hover:bg-[var(--surface-hover)] text-[var(--text-3)] transition-colors"><X className="h-3 w-3"/></button><div className="flex items-start gap-2.5"><div style={{animation:'autoMsgBgPulse 2.6s ease-in-out infinite'}} className="shrink-0 rounded-full p-1"><AIs s={28}/></div><p className="text-[12px] leading-relaxed text-[var(--text)] pr-4"><span>{autoMsgDisp||wm}</span>{autoMsgDisp&&autoMsgDisp.length<autoMsgFull.length&&<span className="typewriter-cursor"/>}</p></div></div>)}
 
-    <div style={{position:'fixed',zIndex:50,bottom:'1.5rem',right:'1.5rem',transform:op?'scale(0.5) translateY(12px)':'scale(1) translateY(0)',opacity:op?0:1,transition:'all 0.35s cubic-bezier(0.34,1.2,0.64,1)',pointerEvents:op?'none':'auto'}}><button onClick={()=>{setOp(true);dw()}} className={`group flex items-center h-12 rounded-full bg-[var(--surface)] border border-[var(--border)] shadow-lg hover:shadow-xl transition-all transition-duration-[300ms] transition-timing-function-[cubic-bezier(0.2,0,0,1)] w-12 hover:w-[172px] justify-center hover:justify-start hover:pl-2.5 hover:pr-4 overflow-hidden font-sans-dm ${wv?'pulse-fab':''}`} title="Assistente IA"><span className="shrink-0 w-10 h-10 flex items-center justify-center"><AIs s={40}/></span><span className="text-[12px] font-[500] text-[var(--text)] whitespace-nowrap truncate w-0 opacity-0 group-hover:w-auto group-hover:opacity-100 group-hover:ml-1.5 transition-all transition-duration-[300ms] overflow-hidden select-none">Metrys Assistente</span></button></div>
+    <FMAnimatePresence>
+      {!op && (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.8, y: 16 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.8, y: 16 }}
+          transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+          style={{ position: 'fixed', zIndex: 50, bottom: '1.5rem', right: '1.5rem' }}
+        >
+          <motion.button
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => { setOp(true); dw() }}
+            className={`group relative flex items-center justify-center h-14 w-14 rounded-full shadow-xl shadow-[var(--accent)]/10 overflow-hidden font-sans-dm ${wv ? 'pulse-fab' : ''}`}
+            title="Assistente IA"
+          >
+            <span className="absolute inset-0 rounded-full bg-gradient-to-br from-[var(--accent)] via-violet-500 to-blue-500 opacity-90" />
+            <span className="absolute inset-[-3px] rounded-full opacity-40" style={{background:'conic-gradient(from 0deg, var(--accent), #8b5cf6, #3b82f6, var(--accent))',animation:'fab-glow-spin 6s linear infinite'}} />
+            <span className="absolute inset-0 rounded-full ring-pulse" />
+            <span className="relative z-10 flex items-center justify-center drop-shadow-[0_0_8px_rgba(0,0,0,0.3)]">
+              <AIs s={36} />
+            </span>
+          </motion.button>
+        </motion.div>
+      )}
+    </FMAnimatePresence>
 
-    <div className="fixed bottom-6 right-6 z-[55] bg-[var(--surface)] border border-[var(--border)] shadow-2xl flex overflow-hidden font-sans-dm" style={{width:pw,height:ph,maxHeight:'calc(100vh - 40px)',borderRadius:'16px',transform:op?'scale(1) translateY(0)':'scale(0.96) translateY(8px)',transformOrigin:'bottom right',opacity:op?1:0,pointerEvents:op?'auto':'none',transition:'width 0.3s ease, height 0.3s ease, opacity 0.35s cubic-bezier(0.34,1.2,0.64,1), transform 0.35s cubic-bezier(0.34,1.2,0.64,1)'}}>
+    <FMAnimatePresence>
+      {op && (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95, y: 20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.95, y: 20 }}
+          transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+          className="fixed bottom-6 right-6 z-[55] glass-strong rounded-2xl shadow-2xl flex overflow-hidden font-sans-dm"
+          style={{ width: pw, height: ph, maxHeight: 'calc(100vh - 40px)', transformOrigin: 'bottom right' }}
+        >
       <div className={`flex flex-col overflow-hidden transition-all transition-duration-[300ms] transition-timing-function-[cubic-bezier(0.34,1.2,0.64,1)] ${sb?'w-[140px] opacity-100':'w-0 opacity-0'}`}>
         <div className="w-[140px] flex flex-col h-full bg-[var(--surface)]">
         <div className="px-3 py-2.5 flex items-center justify-between"><span className="text-[10px] font-[500] text-[var(--text-3)] uppercase tracking-wider">Chats</span><button onClick={nc} className="h-5 w-5 flex items-center justify-center rounded hover:bg-[var(--surface-hover)] text-[var(--text-3)]" title="Novo chat"><Plus className="h-3 w-3"/></button></div>
@@ -542,18 +584,6 @@ useEffect(()=>{setWelcomeIdx(0);setWelcomeStarKey(p=>p+1)},[cn])
             <button onClick={()=>setOp(false)} className="h-6 w-6 flex items-center justify-center rounded-lg text-[var(--text-3)] hover:bg-[var(--accent-subtle)] hover:text-[var(--accent)]" title="Minimizar"><ChevronDown className="h-4 w-4"/></button>
           </div>
         </div>
-        {ms.length>0&&(<div className="group/tok relative mx-3 mb-0.5" style={{height:'3px'}}>
-          <div className="absolute right-0 top-0 h-full rounded-full transition-all duration-500 overflow-hidden" style={{width:ms.length>0?`${Math.max(3,Math.min(100,tokenStats.pct))}%`:'0%',minWidth:ms.length>0?'16px':'0px',background:`linear-gradient(90deg,var(--success),var(--accent),var(--destructive))`,backgroundSize:`${100/(tokenStats.pct/100||0.01)}% 100%`,animation:'tokenBarFlow 2s ease-in-out infinite'}}/>
-          <div className="absolute right-0 -top-1 opacity-0 group-hover/tok:opacity-100 transition-opacity duration-200 pointer-events-none" style={{transform:'translateY(-100%)'}}>
-            <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl shadow-xl px-3 py-2.5 text-left whitespace-nowrap" style={{minWidth:'200px'}}>
-              <div className="flex items-center justify-between gap-3 mb-1.5"><span className="text-[10px] text-[var(--text-3)]">Tokens usados</span><span className="text-[11px] font-[600] text-[var(--text)]">{tokenStats.used.toLocaleString()} / {tokenStats.limit.toLocaleString()}</span></div>
-              <div className="w-full h-1.5 rounded-full bg-[var(--surface-2)] mb-2 overflow-hidden"><div className="h-full rounded-full transition-all duration-500" style={{width:`${tokenStats.pct}%`,background:tokenStats.pct>80?'var(--destructive)':tokenStats.pct>50?'var(--accent)':'var(--success)'}}/></div>
-              <div className="flex items-center justify-between gap-3 mb-1"><span className="text-[9px] text-[var(--text-3)]">Input / Output</span><span className="text-[10px] text-[var(--text-2)]">{tokenStats.inputTk.toLocaleString()} / {tokenStats.outputTk.toLocaleString()}</span></div>
-              <div className="flex items-center justify-between gap-3"><span className="text-[9px] text-[var(--text-3)]">Custo estimado</span><span className="text-[10px] font-[500] text-[var(--warning)]">${tokenStats.cost<0.01?'<0.01':tokenStats.cost.toFixed(tokenStats.cost<0.1?3:2)}</span></div>
-              <div className="mt-1.5 pt-1.5 border-t border-[var(--border)]"><p className="text-[8px] text-[var(--text-3)]">DeepSeek V3 · 64K contexto · $0.27/$1.10 por 1M tokens</p></div>
-            </div>
-          </div>
-        </div>)}
         <div className="flex-1 overflow-y-auto px-3 scrollbar-thin" ref={sc}><div className="py-3">
         {ms.length===0&&!streamActive&&streamPhase!=='typing'&&!rp?(<div className="flex flex-col h-full px-2">
           <div className="flex items-start gap-3 mb-4 mt-4">
@@ -588,22 +618,24 @@ useEffect(()=>{setWelcomeIdx(0);setWelcomeStarKey(p=>p+1)},[cn])
                   animation:`${blobKey} ${4.5+i*1.2}s ease-in-out infinite`,
                 }}/>
                 {/* card button */}
-                <button onClick={()=>send(c.text)} className="relative w-full text-left px-3 py-3 border transition-all duration-500"
+                <button onClick={()=>send(c.text)} className="relative w-full text-left px-3 py-3 transition-all duration-500"
                   style={{
                     background:'var(--surface)',
-                    borderColor:'var(--border)',
+                    borderLeft:c.score>=4?'2px solid var(--accent)':c.score>=2?'2px solid transparent':'2px solid transparent',
                     borderRadius:CARD_SHAPES[i%CARD_SHAPES.length],
                     opacity:c.visible?1:0.3,
-                    transition:'opacity 0.5s ease',
+                    transition:'opacity 0.5s ease, border-color 0.3s ease, box-shadow 0.3s ease',
                     zIndex:1,
+                    boxShadow:c.score>=2?'inset 0 0 0 1px var(--border)':'none',
                   }}
-                  onMouseEnter={e=>{e.currentTarget.style.borderColor='var(--accent)';e.currentTarget.style.boxShadow='0 0 16px rgba(232,98,42,0.1)'}}
-                  onMouseLeave={e=>{e.currentTarget.style.borderColor='var(--border)';e.currentTarget.style.boxShadow=''}}>
+                  onMouseEnter={e=>{e.currentTarget.style.borderLeftColor='var(--accent)';e.currentTarget.style.boxShadow='inset 0 0 0 1px rgba(232,98,42,0.2), 0 4px 16px rgba(232,98,42,0.08)'}}
+                  onMouseLeave={e=>{e.currentTarget.style.borderLeftColor=c.score>=4?'var(--accent)':c.score>=2?'transparent':'transparent';e.currentTarget.style.boxShadow=c.score>=2?'inset 0 0 0 1px var(--border)':'none'}}>
                   <p className={`text-[11px] leading-relaxed ${c.score>=4?'text-[var(--text)] font-[500]':c.score>=2?'text-[var(--text-2)]':'text-[var(--text-3)]'}`}>{c.text}</p>
                 </button>
               </div>)
             })}
           </div>
+          <p className="text-[10px] text-[var(--text-3)] text-center mt-3 opacity-60 hover:opacity-100 transition-opacity cursor-pointer select-none" onClick={()=>setCardSlots(buildCardSlots())}>Ver mais sugestões</p>
           </div>
         ):(<div className="space-y-3">
           {ms.map((msg,i)=>{const ia=msg.role==='assistant';const sd=i===0||(msg.createdAt&&ms[i-1]?.createdAt&&new Date(msg.createdAt).toDateString()!==new Date(ms[i-1].createdAt!).toDateString());const imgs=(msg.attachments||[]).filter(a=>a.type.startsWith('image/'));const docs=(msg.attachments||[]).filter(a=>!a.type.startsWith('image/'));const rpMsg=msg.replyTo?ms.find(m=>m.id===msg.replyTo):null
@@ -623,11 +655,10 @@ useEffect(()=>{setWelcomeIdx(0);setWelcomeStarKey(p=>p+1)},[cn])
                     <button title="Gostei" onClick={()=>{if(msg.liked===undefined){sfb(i,true);setFbk('')}}} className={`h-4 w-4 flex items-center justify-center rounded ${msg.liked===true?'text-[var(--success)]':'text-[var(--text-3)] hover:text-[var(--success)]'}`}><ThumbsUp className="h-3 w-3"/></button>
                     <button title="Nao gostei" onClick={()=>{if(msg.liked===undefined)sfb(i,false)}} className={`h-4 w-4 flex items-center justify-center rounded ${msg.liked===false?'text-[var(--destructive)]':'text-[var(--text-3)] hover:text-[var(--destructive)]'}`}><ThumbsDown className="h-3 w-3"/></button>
                     <button title="Responder" onClick={()=>setRp(msg)} className="h-4 w-4 flex items-center justify-center rounded text-[var(--text-3)] hover:text-[var(--accent)]"><Reply className="h-3 w-3"/></button>
-                    <button title="Copiar" onClick={()=>{navigator.clipboard.writeText(msg.content||'');toast.success('Copiado!')}} className="h-4 w-4 flex items-center justify-center rounded text-[var(--text-3)] hover:text-[var(--info)]"><Copy className="h-3 w-3"/></button>
+                    <button title="Copiar" onClick={()=>{const t=msg.content||'';try{if(navigator.clipboard&&window.isSecureContext){navigator.clipboard.writeText(t).then(()=>toast.success('Copiado!'))}else{const el=document.createElement('textarea');el.value=t;el.style.position='fixed';el.style.opacity='0';document.body.appendChild(el);el.select();document.execCommand('copy');document.body.removeChild(el);toast.success('Copiado!')}}catch{toast.error('Falha ao copiar')}}} className="h-4 w-4 flex items-center justify-center rounded text-[var(--text-3)] hover:text-[var(--info)]"><Copy className="h-3 w-3"/></button>
     </div>)}
 
           </div>
-          <p className="text-[10px] text-[var(--text-3)] text-center mt-3 opacity-60 hover:opacity-100 transition-opacity cursor-pointer select-none" onClick={()=>setCardSlots(buildCardSlots())}>Ver mais sugestões</p>
           </div>
             </div></div></div>)})}
           {/* Streaming reasoning display - 3 linhas rotativas com card arredondado visivel durante geracao */}
@@ -670,13 +701,32 @@ useEffect(()=>{setWelcomeIdx(0);setWelcomeStarKey(p=>p+1)},[cn])
             </div>
             <button onClick={()=>ii.current?.click()} className="h-7 w-7 flex items-center justify-center rounded-lg text-[var(--text-3)] hover:text-[var(--accent)] hover:bg-[var(--accent-subtle)] transition-all shrink-0" title="Imagem"><Image className="h-3.5 w-3.5"/></button>
             <button onClick={()=>fi.current?.click()} className="h-7 w-7 flex items-center justify-center rounded-lg text-[var(--text-3)] hover:text-[var(--accent)] hover:bg-[var(--accent-subtle)] transition-all shrink-0" title="Arquivo"><Paperclip className="h-3.5 w-3.5"/></button>
+            {ms.length>0&&(<div className="group/tok relative shrink-0 flex items-center">
+              <button title="Tokens" className="h-7 px-1.5 flex items-center gap-1 rounded-lg text-[var(--text-3)] hover:bg-[var(--surface-hover)] transition-all shrink-0">
+                <div className="w-10 h-1.5 rounded-full bg-[var(--surface-2)] overflow-hidden">
+                  <div className="h-full rounded-full transition-all duration-500" style={{width:`${tokenStats.pct}%`,background:tokenStats.pct>80?'var(--destructive)':tokenStats.pct>50?'var(--accent)':'var(--success)'}}/>
+                </div>
+                <span className="text-[9px] tabular-nums font-[500]" style={{color:tokenStats.pct>80?'var(--destructive)':tokenStats.pct>50?'var(--accent)':'var(--success)'}}>{tokenStats.pct}%</span>
+              </button>
+              <div className="absolute bottom-full right-0 mb-1.5 opacity-0 group-hover/tok:opacity-100 transition-opacity duration-200 pointer-events-none">
+                <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl shadow-xl px-3 py-2.5 text-left whitespace-nowrap" style={{minWidth:'220px'}}>
+                  <div className="flex items-center justify-between gap-3 mb-1.5"><span className="text-[10px] text-[var(--text-3)]">Tokens usados</span><span className="text-[11px] font-[600] text-[var(--text)]">{tokenStats.used.toLocaleString()} / {tokenStats.limit.toLocaleString()}</span></div>
+                  <div className="w-full h-1.5 rounded-full bg-[var(--surface-2)] mb-2 overflow-hidden"><div className="h-full rounded-full transition-all duration-500" style={{width:`${tokenStats.pct}%`,background:tokenStats.pct>80?'var(--destructive)':tokenStats.pct>50?'var(--accent)':'var(--success)'}}/></div>
+                  <div className="flex items-center justify-between gap-3 mb-1"><span className="text-[9px] text-[var(--text-3)]">Input / Output</span><span className="text-[10px] text-[var(--text-2)]">{tokenStats.inputTk.toLocaleString()} / {tokenStats.outputTk.toLocaleString()}</span></div>
+                  <div className="flex items-center justify-between gap-3"><span className="text-[9px] text-[var(--text-3)]">Custo estimado</span><span className="text-[10px] font-[500] text-[var(--warning)]">${tokenStats.cost<0.01?'<0.01':tokenStats.cost.toFixed(tokenStats.cost<0.1?3:2)}</span></div>
+                  <div className="mt-1.5 pt-1.5 border-t border-[var(--border)]"><p className="text-[8px] text-[var(--text-3)]">DeepSeek V3 · 64K contexto · $0.27/$1.10 por 1M tokens</p></div>
+                </div>
+              </div>
+            </div>)}
             <div className="flex-1"/>
             <Button size="icon" className="h-8 w-8 shrink-0 rounded-xl" disabled={(!inp.trim()&&pf.length===0)||(streamPhase==='typing'||streamPhase==='think')} onClick={()=>send()}><Send className="h-3.5 w-3.5"/></Button>
           </div>
         </div></div>
         <div className="pb-1.5 text-center"><p className="text-[9px] text-[var(--text-3)]">Metrys e uma IA e pode cometer erros.</p></div>
       </div>
-    </div>
+        </motion.div>
+      )}
+    </FMAnimatePresence>
 
     <Dialog open={vi!==null} onOpenChange={()=>setVi(null)}><DialogContent className="max-w-3xl max-h-[90vh] p-0 overflow-hidden bg-[var(--bg)] border-[var(--border)]">{vi!==null&&vim[vi]&&(<div className="flex flex-col h-full max-h-[85vh]"><div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border)] shrink-0"><span className="text-[12px] font-[500] text-[var(--text)] truncate">{vim[vi].name}</span><div className="flex items-center gap-1">{vim.length>1&&(<div className="flex items-center gap-0.5 mr-2"><button title="Anterior" onClick={()=>setVi(Math.max(0,vi-1))} disabled={vi===0} className="h-7 w-7 flex items-center justify-center rounded-lg hover:bg-[var(--surface-hover)] text-[var(--text-3)] disabled:opacity-30"><ChevronLeft className="h-4 w-4"/></button><span className="text-[11px] text-[var(--text-3)]">{vi+1}/{vim.length}</span><button title="Proxima" onClick={()=>setVi(Math.min(vim.length-1,vi+1))} disabled={vi===vim.length-1} className="h-7 w-7 flex items-center justify-center rounded-lg hover:bg-[var(--surface-hover)] text-[var(--text-3)] disabled:opacity-30"><ChevronRight className="h-4 w-4"/></button></div>)}<a title="Baixar imagem" href={vim[vi].url} download={vim[vi].name} className="h-7 w-7 flex items-center justify-center rounded-lg hover:bg-[var(--surface-hover)] text-[var(--text-3)]"><Download className="h-4 w-4"/></a><button title="Fechar visualizador" onClick={()=>setVi(null)} className="h-7 w-7 flex items-center justify-center rounded-lg hover:bg-[var(--surface-hover)] text-[var(--text-3)]"><X className="h-4 w-4"/></button></div></div><div className="flex-1 flex items-center justify-center p-4 overflow-auto"><img src={vim[vi].url} alt={vim[vi].name} className="max-w-full max-h-[70vh] object-contain rounded-lg"/></div></div>)}</DialogContent></Dialog>
   </>)

@@ -1,11 +1,13 @@
 import type { Metadata, Viewport } from 'next'
-import { Inter, DM_Sans } from 'next/font/google'
+import { Inter, DM_Sans, Plus_Jakarta_Sans, Space_Grotesk } from 'next/font/google'
 import './globals.css'
 import { ThemeProvider } from '@/providers/theme-provider'
 import { Toaster } from '@/components/ui/toaster'
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
 const dmSans = DM_Sans({ subsets: ['latin'], weight: ['400','500','600','700'], variable: '--font-dm-sans' })
+const jakarta = Plus_Jakarta_Sans({ subsets: ['latin'], variable: '--font-jakarta', weight: ['300','400','500','600','700'] })
+const spaceGrotesk = Space_Grotesk({ subsets: ['latin'], variable: '--font-space', weight: ['300','400','500','700'] })
 
 export const metadata: Metadata = {
   title: 'ANDERFLOW Sistemas | Fluxo inteligente para empresas modernas',
@@ -38,7 +40,7 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="pt-BR" suppressHydrationWarning>
-      <body className={`${inter.variable} ${dmSans.variable} font-sans antialiased bg-[var(--bg)] text-[var(--text)]`}>
+      <body className={`${inter.variable} ${dmSans.variable} ${jakarta.variable} ${spaceGrotesk.variable} font-sans antialiased bg-[var(--bg)] text-[var(--text)]`}>
         <ThemeProvider defaultTheme="dark">
           {children}
           <Toaster />
