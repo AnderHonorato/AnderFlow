@@ -1,0 +1,5 @@
+export { PATHS } from './paths'
+export { CATEGORIES, type IconCategory } from './categories'
+export { getStyle, renderSvg, renderPath, type IconVariant } from './variants'
+export { buildIconMap, getIconCount } from './registry'
+export { ICON_SYSTEM_PROMPT } from './system-prompt'
