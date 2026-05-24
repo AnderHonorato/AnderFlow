@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getSessionUser } from '@/lib/auth-utils'
+import { checkAndGrantAchievements } from '@/lib/achievements'
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -45,6 +46,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         })
       }
     }
+
+    checkAndGrantAchievements(user.id, 'contract_signed', contract.projectId || undefined).catch(() => {})
 
     return NextResponse.json({ message: 'Contrato assinado com sucesso!' })
   } catch (error: any) {

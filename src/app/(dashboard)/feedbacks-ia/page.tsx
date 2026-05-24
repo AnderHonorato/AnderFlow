@@ -5,20 +5,26 @@ import { useSession } from 'next-auth/react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
-import { ThumbsUp, ThumbsDown, AlertTriangle, ChevronDown, MessageSquare, Eye } from 'lucide-react'
+import { ThumbsUp, ThumbsDown, AlertTriangle, ChevronDown, MessageSquare, Eye, Bot, Activity, ChevronRight } from 'lucide-react'
 
 export default function FeedbacksIAPage() {
   const { data: session } = useSession()
   const [feedbacks, setFeedbacks] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
-  const [filter, setFilter] = useState<'all'|'ai_feedback'|'ai_error'>('all')
+  const [filter, setFilter] = useState<'all'|'ai_feedback'|'ai_error'|'bot'>('all')
   const [expanded, setExpanded] = useState<string|null>(null)
+  const [botReports, setBotReports] = useState<any[]>([])
 
   useEffect(() => {
     fetch('/api/ai/feedback').then(r=>r.json()).then(j=>{setFeedbacks(j.data||[]);setLoading(false)}).catch(()=>setLoading(false))
+    fetch('/api/bots/activity').then(r=>r.json()).then(j=>setBotReports(j.data||[])).catch(()=>{})
+    const iv = setInterval(() => {
+      fetch('/api/bots/activity').then(r=>r.json()).then(j=>setBotReports(j.data||[])).catch(()=>{})
+    }, 15000)
+    return () => clearInterval(iv)
   }, [])
 
-  const filtered = filter==='all'?feedbacks:feedbacks.filter(f=>f.type===filter)
+  const filtered = filter==='all'?feedbacks:filter==='bot'?[]:feedbacks.filter(f=>f.type===filter)
 
   const parseContent = (content:string) => {
     const lines = content.split('\n')
@@ -40,13 +46,47 @@ export default function FeedbacksIAPage() {
       <div className="flex items-center justify-between">
         <div><h2 className="text-[17px] font-[500] tracking-[-0.015em]">Feedbacks IA</h2><p className="text-[12px] text-[var(--text-3)] mt-1">{feedbacks.length} registros</p></div>
         <div className="flex items-center gap-2">
-          {(['all','ai_feedback','ai_error'] as const).map(f=>(
+          {(['all','ai_feedback','ai_error','bot'] as const).map(f=>(
             <button key={f} onClick={()=>setFilter(f)} className={`px-3 py-1 rounded-lg text-[11px] font-[500] transition-colors ${filter===f?'bg-[var(--accent)] text-white':'bg-[var(--surface-2)] text-[var(--text-3)] hover:bg-[var(--surface)]'}`}>
-              {f==='all'?'Todos':f==='ai_feedback'?'Feedbacks':'Erros'}
+              {f==='all'?'Todos':f==='ai_feedback'?'Feedbacks':f==='ai_error'?'Erros':'Bots'}
             </button>
           ))}
         </div>
       </div>
+
+      {(filter==='all'||filter==='bot')&&botReports.length>0&&(
+        <Card className="border-[var(--accent)]/20">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <Activity className="h-4 w-4 text-[var(--accent)]"/>
+              <h3 className="text-[13px] font-[500] text-[var(--text)]">Atividade dos Bots ({botReports.length})</h3>
+            </div>
+            <div className="space-y-2">
+              {botReports.filter(b=>b.recentActions?.length>0).map(b=>(
+                <div key={b.botId} className="p-3 rounded-lg bg-[var(--surface-2)] border border-[var(--border)]">
+                  <div className="flex items-center gap-2">
+                    <span className={`h-2 w-2 rounded-full shrink-0 ${b.status==='ACTIVE'?'bg-[var(--success)] animate-pulse':'bg-[var(--text-3)]'}`}/>
+                    <span className="text-[12px] font-[500] text-[var(--text)]">{b.botName}</span>
+                    <Badge variant="outline" className="text-[9px]">{b.role}</Badge>
+                    {b.lastActionAt&&<span className="text-[10px] text-[var(--text-3)] ml-auto">{new Date(b.lastActionAt).toLocaleTimeString('pt-BR')}</span>}
+                  </div>
+                  <div className="mt-2 space-y-1">
+                    {b.recentActions?.slice(0,5).map((a:any,i:number)=>(
+                      <div key={i} className="flex items-start gap-2 text-[11px]">
+                        <ChevronRight className="h-3 w-3 text-[var(--text-3)] mt-0.5 shrink-0"/>
+                        <div className="min-w-0">
+                          <span className="text-[var(--text-2)]">{a.action}</span>
+                          {a.result&&<span className="text-[var(--text-3)] ml-1.5">→ {a.result}</span>}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="space-y-3">
         {filtered.length===0&&<p className="text-[13px] text-[var(--text-3)] text-center py-12">Nenhum registro</p>}

@@ -20,6 +20,40 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ data: contracts })
   } catch (error) {
-    return NextResponse.json({ data: [], error: 'Erro ao buscar contratos' }, { status: 200 })
+    return NextResponse.json({ data: [], error: 'Erro ao buscar contratos' }, { status: 500 })
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const user = await getSessionUser(request)
+    if (!user) return NextResponse.json({ error: 'Nao autenticado' }, { status: 401 })
+
+    const body = await request.json().catch(() => ({}))
+    const { title, content, clientId, projectId, value, startDate, endDate, status, autoRenew } = body
+
+    if (!title?.trim()) return NextResponse.json({ error: 'Titulo obrigatorio' }, { status: 400 })
+
+    const contractClientId = isAdmin(user) ? (clientId || user.id) : user.id
+
+    const contract = await prisma.contract.create({
+      data: {
+        title: title.trim(),
+        content: content || '',
+        clientId: contractClientId,
+        projectId: projectId || null,
+        value: value || null,
+        startDate: startDate ? new Date(startDate) : null,
+        endDate: endDate ? new Date(endDate) : null,
+        status: status || 'DRAFT',
+        autoRenew: autoRenew || false,
+      },
+      include: { client: { select: { id: true, name: true } }, project: { select: { id: true, name: true } } },
+    })
+
+    return NextResponse.json({ data: contract }, { status: 201 })
+  } catch (error: any) {
+    console.error('[contracts:POST]', error)
+    return NextResponse.json({ error: error?.message || 'Erro ao criar contrato' }, { status: 500 })
   }
 }

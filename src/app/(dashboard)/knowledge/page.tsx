@@ -3,13 +3,14 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { KnowledgeClient } from './knowledge-client'
 import { redirect } from 'next/navigation'
+import { cargoEhDeveloperOuSuperior } from '@/lib/hierarquia'
 
 export default async function KnowledgePage() {
   const session = await getServerSession(authOptions)
   if (!session?.user) redirect('/login')
 
   const user = session.user as any
-  const isAdminUser = user.role === 'ADMIN' || user.role === 'DEVELOPER'
+  const isAdminUser = cargoEhDeveloperOuSuperior(user.role)
 
   const projects = await prisma.project.findMany({
     where: {

@@ -51,3 +51,17 @@ model TeamMember {
 
   @@unique([teamId, userId])
 }
+
+model Achievement {
+  id         String   @id @default(cuid())
+  userId     String
+  type       String
+  projectId  String?
+  unlockedAt DateTime @default(now())
+
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project Project? @relation(fields: [projectId], references: [id])
+
+  @@unique([userId, type])
+  @@unique([userId, type, projectId])
+}

@@ -5,6 +5,7 @@
 // ============================================
 
 import { prisma } from '@/lib/prisma'
+import { cargoParaNivel } from '@/lib/hierarquia'
 
 let engineInterval: ReturnType<typeof setInterval> | null = null
 const PROCESSING = new Set<string>() // evita processar o mesmo bot simultaneamente
@@ -131,14 +132,15 @@ async function checkDependency(dep: { type: string; description: string; since: 
 }
 
 async function collectBotState(botId: string, role: string): Promise<Record<string, any>> {
+  const isClient = cargoParaNivel(role) < 40
   const [projects, tasks, invoices, contracts, tickets, leads, messages] = await Promise.all([
-    prisma.project.count({ where: role === 'CLIENT' ? { clientId: botId } : {} }),
-    prisma.task.count({ where: role === 'CLIENT' ? { project: { clientId: botId } } : {} }),
-    prisma.invoice.count({ where: role === 'CLIENT' ? { clientId: botId } : {} }),
-    prisma.contract.count({ where: role === 'CLIENT' ? { clientId: botId } : {} }),
-    prisma.ticket.count({ where: role === 'CLIENT' ? { creatorId: botId } : {} }),
+    prisma.project.count({ where: isClient ? { clientId: botId } : {} }),
+    prisma.task.count({ where: isClient ? { project: { clientId: botId } } : {} }),
+    prisma.invoice.count({ where: isClient ? { clientId: botId } : {} }),
+    prisma.contract.count({ where: isClient ? { clientId: botId } : {} }),
+    prisma.ticket.count({ where: isClient ? { creatorId: botId } : {} }),
     prisma.lead.count(),
-    prisma.message.count({ where: role === 'CLIENT' ? { senderId: botId } : {} }),
+    prisma.message.count({ where: isClient ? { senderId: botId } : {} }),
   ])
   return { projects, tasks, invoices, contracts, tickets, leads, messages, botId }
 }
@@ -229,28 +231,35 @@ function getFeaturesForRole(role: string): string {
   return all[role] || all.USER
 }
 
+let warnedMissingKey = false
+
 async function callBotAI(prompt: string): Promise<{
   action: string; endpoint: string; method: string; body: any; needsApproval: string | null
 } | null> {
-  const apiKey = process.env.ANTHROPIC_API_KEY
+  const apiKey = process.env.DEEPSEEK_API_KEY
   if (!apiKey) {
-    console.log('[BOTS] Sem ANTHROPIC_API_KEY — usando fallback deterministico')
+    if (!warnedMissingKey) {
+      console.log('[BOTS] Sem DEEPSEEK_API_KEY — bots operando sem IA')
+      warnedMissingKey = true
+    }
     return null
   }
 
   try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
+    const res = await fetch('https://api.deepseek.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
+        'Authorization': `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: 'deepseek-chat',
         max_tokens: 400,
-        system: 'Você é um orquestrador de bots de teste. Responda sempre em JSON válido, sem markdown, sem explicações adicionais.',
-        messages: [{ role: 'user', content: prompt }],
+        temperature: 0.3,
+        messages: [
+          { role: 'system', content: 'Voce e um orquestrador de bots de teste. Responda sempre em JSON valido, sem markdown, sem explicacoes adicionais.' },
+          { role: 'user', content: prompt },
+        ],
       }),
       signal: AbortSignal.timeout(15000),
     })
@@ -258,7 +267,7 @@ async function callBotAI(prompt: string): Promise<{
     if (!res.ok) return null
 
     const json = await res.json()
-    const text = json.content?.[0]?.text || ''
+    const text = json.choices?.[0]?.message?.content || ''
     const match = text.match(/\{[\s\S]*\}/)
     if (!match) return null
 
@@ -279,7 +288,7 @@ async function executeAction(
 
   // Injeta o clientId/botId em ações que precisam
   const body = { ...aiResponse.body }
-  if (aiResponse.endpoint.includes('/projects') && aiResponse.method === 'POST' && !body.clientId && role === 'CLIENT') {
+  if (aiResponse.endpoint.includes('/projects') && aiResponse.method === 'POST' && !body.clientId && cargoParaNivel(role) < 40) {
     body.clientId = botId
   }
 

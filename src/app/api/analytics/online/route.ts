@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getToken } from 'next-auth/jwt'
+import { cargoParaNivel } from '@/lib/hierarquia'
 
 // Em produção usar Redis, por enquanto em memória
 const onlineUsers = new Map<string, number>()
@@ -15,7 +16,7 @@ setInterval(() => {
 
 export async function GET(request: NextRequest) {
   const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET })
-  if (!token || (token.role !== 'ADMIN' && token.role !== 'DEVELOPER')) {
+  if (!token || cargoParaNivel(token.role as string) < 40) {
     return NextResponse.json({ error: 'Nao autorizado' }, { status: 403 })
   }
   const now = Date.now()
@@ -55,7 +56,7 @@ export async function POST(req: NextRequest) {
   // Verify the requesting user matches or is admin
   const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET })
   if (userId && token?.id !== userId) {
-    const isAdminUser = token?.role === 'ADMIN' || token?.role === 'DEVELOPER'
+    const isAdminUser = cargoParaNivel(token?.role as string) >= 40
     if (!isAdminUser) return NextResponse.json({ error: 'Nao autorizado' }, { status: 403 })
   }
   const now = Date.now()

@@ -26,6 +26,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'projectId nao encontrado' }, { status: 400 })
     }
 
+    const task = await prisma.task.findUnique({ where: { id: taskId }, select: { id: true } })
+    if (!task) return NextResponse.json({ error: 'Task nao encontrada' }, { status: 404 })
+
+    const project = await prisma.project.findUnique({ where: { id: resolvedProjectId }, select: { id: true } })
+    if (!project) return NextResponse.json({ error: 'Projeto nao encontrado' }, { status: 404 })
+
     if (action === 'start') {
       const existing = await prisma.timeEntry.findFirst({
         where: { taskId, userId: user.id, endAt: null },

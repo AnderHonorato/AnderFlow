@@ -1,28 +1,44 @@
-self.addEventListener('push', (e: any) => {
-  const data = e.data?.json()
-  if (!data) return
+const CACHE_NAME = 'anderflow-v2'
 
-  const options: NotificationOptions = {
-    body: data.body || '',
-    icon: '/icon-192.png',
-    badge: '/icon-192.png',
-    data: { url: data.url || '/' },
-    vibrate: [200, 100, 200],
-    requireInteraction: data.requireInteraction || false,
-  }
+const STATIC_ASSETS = [
+  '/',
+  '/portal',
+  '/login',
+  '/manifest.json',
+]
 
-  e.waitUntil(self.registration.showNotification(data.title || 'Andero', options))
+self.addEventListener('install', (event) => {
+  event.waitUntil(
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(STATIC_ASSETS))
+  )
+  self.skipWaiting()
 })
 
-self.addEventListener('notificationclick', (e: any) => {
-  e.notification.close()
-  const url = e.notification.data?.url || '/'
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    caches.keys().then((keys) =>
+      Promise.all(keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k)))
+    )
+  )
+  self.clients.claim()
+})
 
-  e.waitUntil(
-    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientsArr: any[]) => {
-      const existing = clientsArr.find((c: any) => c.url.includes(url) && 'focus' in c)
-      if (existing) return existing.focus()
-      return self.clients.openWindow(url)
+self.addEventListener('fetch', (event) => {
+  if (event.request.method !== 'GET') return
+  if (event.request.url.includes('/api/')) return
+
+  event.respondWith(
+    caches.match(event.request).then((cached) => {
+      const fetchPromise = fetch(event.request)
+        .then((response) => {
+          if (response.ok) {
+            const clone = response.clone()
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone))
+          }
+          return response
+        })
+        .catch(() => cached)
+      return cached || fetchPromise
     })
   )
 })

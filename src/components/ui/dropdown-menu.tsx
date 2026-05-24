@@ -24,7 +24,7 @@ const DropdownMenuContent = React.forwardRef<
         'data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95',
         'data-[side=bottom]:slide-in-from-top-1 data-[side=top]:slide-in-from-bottom-1',
         'origin-[var(--radix-dropdown-menu-content-transform-origin)]',
-        'transition-[transform,opacity] duration-[200ms] ease-[cubic-bezier(0.2,0,0,1)]',
+        'transition-[transform,opacity] transition-duration-[200ms] transition-timing-function-[cubic-bezier(0.2,0,0,1)]',
         className
       )}
       {...props}
@@ -43,7 +43,7 @@ const DropdownMenuItem = React.forwardRef<
     ref={ref}
     className={cn(
       'relative flex cursor-default select-none items-center rounded-lg px-2.5 py-1.5 text-[13px] outline-none',
-      'transition-colors duration-[100ms] ease-[cubic-bezier(0.2,0,0,1)]',
+      'transition-colors transition-duration-[100ms] transition-timing-function-[cubic-bezier(0.2,0,0,1)]',
       'focus:bg-[var(--surface-hover)] focus:text-[var(--text)]',
       'data-[disabled]:pointer-events-none data-[disabled]:opacity-40',
       inset && 'pl-8',

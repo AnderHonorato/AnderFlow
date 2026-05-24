@@ -30,6 +30,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ data: notifications, unreadCount })
   } catch (error) {
+    console.error('[notifications:GET]', error)
     return NextResponse.json({ error: 'Erro ao buscar notificações' }, { status: 500 })
   }
 }
@@ -58,6 +59,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ data: notification }, { status: 201 })
   } catch (error) {
+    console.error('[notifications:POST]', error)
     return NextResponse.json({ error: 'Erro ao criar notificação' }, { status: 500 })
   }
 }
@@ -81,6 +83,7 @@ export async function PATCH(request: NextRequest) {
 
     return NextResponse.json({ message: 'Notificações atualizadas' })
   } catch (error) {
+    console.error('[notifications:PATCH]', error)
     return NextResponse.json({ error: 'Erro ao atualizar notificações' }, { status: 500 })
   }
 }

@@ -17,7 +17,8 @@ export default function DashboardPage() {
   const { data: session } = useSession()
   const [data, setData] = useState<any>(null)
   const [loading, setLoading] = useState(true)
-  const isAdmin = session?.user?.role === 'ADMIN'
+  const roleLevel = (session?.user as any)?.roleLevel || 0
+  const isAdmin = roleLevel >= 80
 
   useEffect(() => {
     fetch('/api/dashboard')

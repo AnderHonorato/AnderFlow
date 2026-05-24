@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
 
   try {
     const activeProjects = await prisma.project.count({
-      where: { isArchived: false, status: { not: 'COMPLETED' }, ...clientFilter },
+      where: { isArchived: false, status: { notIn: ['COMPLETED', 'CANCELLED'] }, ...clientFilter },
     })
     const completedProjects = await prisma.project.count({
       where: { status: 'COMPLETED', ...clientFilter },
@@ -77,6 +77,7 @@ export async function GET(request: NextRequest) {
       })),
     })
   } catch (error) {
+    console.error('[dashboard:GET]', error)
     return NextResponse.json({ error: 'Erro ao buscar dashboard' }, { status: 500 })
   }
 }

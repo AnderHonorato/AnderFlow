@@ -65,6 +65,8 @@ model User {
   pushSubscriptions  PushSubscription[]
   permissionRequests PermissionRequest[]
   bans               UserBan[]
+  briefingDrafts     BriefingDraft[]
+  achievements       Achievement[]
 }
 
 model Account {

@@ -1,4 +1,8 @@
 import { prisma } from '@/lib/prisma'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
+import { redirect } from 'next/navigation'
+import { cargoEhAdmin } from '@/lib/hierarquia'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
@@ -12,6 +16,11 @@ function getMonthLabel(date: Date): string {
 }
 
 export default async function AnalyticsPage() {
+  const session = await getServerSession(authOptions)
+  if (!session?.user) redirect('/login')
+
+  const user = session.user as any
+  if (!cargoEhAdmin(user.role)) redirect('/dashboard')
   const [
     projectCount,
     activeProjects,
@@ -29,7 +38,7 @@ export default async function AnalyticsPage() {
     prisma.invoice.aggregate({ _sum: { total: true }, _count: true }),
     prisma.invoice.aggregate({ _sum: { total: true }, where: { status: 'PAID' } }),
     prisma.task.count(),
-    prisma.task.count({ where: { status: 'DONE' } }),
+    prisma.task.count({ where: { completedAt: { not: null } } }),
   ])
 
   const totalInvoices = invoiceResult._sum.total ?? 0

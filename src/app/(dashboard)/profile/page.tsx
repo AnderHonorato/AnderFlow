@@ -96,9 +96,9 @@ export default function ProfilePage() {
           <div className="flex items-center justify-between py-2">
             <div>
               <p className="text-[13px] font-[500]">Função</p>
-              <p className="text-[12px] text-[var(--text-3)] mt-0.5">{session?.user?.role === 'ADMIN' ? 'Administrador' : 'Cliente'}</p>
+              <p className="text-[12px] text-[var(--text-3)] mt-0.5">{(session?.user as any)?.roleLevel >= 100 ? 'Owner / Criador' : (session?.user as any)?.roleLevel >= 80 ? 'Administrador' : (session?.user as any)?.roleLevel >= 60 ? 'Moderador' : (session?.user as any)?.roleLevel >= 40 ? 'Desenvolvedor' : 'Cliente'}</p>
             </div>
-            <Badge variant={session?.user?.role === 'ADMIN' ? 'warning' : 'info'}>{session?.user?.role}</Badge>
+            <Badge variant={(session?.user as any)?.roleLevel >= 80 ? 'warning' : 'info'}>{(session?.user as any)?.role || 'CLIENT'}</Badge>
           </div>
         </CardContent>
       </Card>

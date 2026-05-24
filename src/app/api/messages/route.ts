@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getToken } from 'next-auth/jwt'
+import { cargoEhDeveloperOuSuperior } from '@/lib/hierarquia'
 
 async function getUserId(request: NextRequest): Promise<string | null> {
   const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET })
@@ -12,7 +13,7 @@ async function canAccessChannel(channelId: string, userId: string): Promise<bool
   if (!channel) return false
   if (!channel.clientId) return true
   const user = await prisma.user.findUnique({ where: { id: userId }, select: { role: true } })
-  const isAdminUser = user?.role === 'ADMIN' || user?.role === 'DEVELOPER'
+  const isAdminUser = cargoEhDeveloperOuSuperior(user?.role)
   return isAdminUser || channel.clientId === userId
 }
 

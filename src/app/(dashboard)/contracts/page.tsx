@@ -1,4 +1,8 @@
 import { prisma } from '@/lib/prisma'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
+import { redirect } from 'next/navigation'
+import { cargoEhAdmin } from '@/lib/hierarquia'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -28,7 +32,16 @@ function getStatusBadge(status: string) {
 }
 
 export default async function ContractsPage() {
+  const session = await getServerSession(authOptions)
+  if (!session?.user) redirect('/login')
+
+  const user = session.user as any
+  const isAdminUser = cargoEhAdmin(user.role)
+
+  if (!isAdminUser) redirect('/dashboard')
+
   const contracts = await prisma.contract.findMany({
+    where: { ...(isAdminUser ? {} : { clientId: user.id }) },
     include: {
       client: { select: { name: true } },
     },

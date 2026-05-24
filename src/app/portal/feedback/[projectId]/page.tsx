@@ -71,7 +71,7 @@ export default function FeedbackPage() {
             <button
               key={i}
               onClick={() => setScore(i)}
-              className={`h-10 rounded-lg text-[13px] font-[500] transition-all duration-[200ms] ease-[cubic-bezier(0.2,0,0,1)] border
+              className={`h-10 rounded-lg text-[13px] font-[500] transition-all transition-duration-[200ms] transition-timing-function-[cubic-bezier(0.2,0,0,1)] border
                 ${score === i
                   ? 'bg-[var(--accent)] text-white border-[var(--accent)] scale-105 shadow-lg'
                   : 'bg-[var(--surface-2)] text-[var(--text-2)] border-[var(--border)] hover:border-[var(--accent)] hover:text-[var(--text)]'

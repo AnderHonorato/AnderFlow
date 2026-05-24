@@ -64,12 +64,39 @@ export function SidebarClient() {
   const { onlineNow, setStats } = useOnlineStore()
   const [collapsed, setCollapsed] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => { setMounted(true) }, [])
 
   const role = (session?.user as any)?.role || 'USER'
   const roleLevel = (session?.user as any)?.roleLevel || 0
-  const isAdminOrAbove = roleLevel >= 80
-  const isModOrAbove = roleLevel >= 60
-  const isOwner = roleLevel >= 100
+  const [hierarquiaVerificada, setHierarquiaVerificada] = useState(false)
+  const [permissaoNivel, setPermissaoNivel] = useState(roleLevel)
+  const [permissaoErro, setPermissaoErro] = useState(false)
+
+  // Verifica hierarquia real no backend ao montar
+  useEffect(() => {
+    const controller = new AbortController()
+    const { signal } = controller
+    fetch('/api/auth/permissao', { signal })
+      .then(r => r.json())
+      .then(data => {
+        if (data.autorizado) {
+          setPermissaoNivel(data.nivel)
+          setHierarquiaVerificada(true)
+        } else {
+          setPermissaoErro(true)
+        }
+      })
+      .catch(() => {
+        if (!signal.aborted) setPermissaoErro(true)
+      })
+    return () => controller.abort()
+  }, [])
+
+  const nivelEfetivo = hierarquiaVerificada ? permissaoNivel : roleLevel
+  const isAdminOrAbove = nivelEfetivo >= 80
+  const isModOrAbove = nivelEfetivo >= 60
+  const isOwner = nivelEfetivo >= 100
   const topNav = isModOrAbove ? adminNavItems : clientNavItems
 
   const bottomNav = useMemo(() => {
@@ -102,7 +129,7 @@ export function SidebarClient() {
   const navItemClass = (active: boolean) =>
     cn(
       'flex items-center gap-2.5 h-[34px] px-3 rounded-lg text-[13px]',
-      'transition-all duration-[200ms] cubic-bezier(0.2,0,0,1)',
+      'transition-all transition-duration-[200ms] transition-timing-function-[cubic-bezier(0.2,0,0,1)]',
       'relative select-none',
       collapsed && 'justify-center px-2',
       active
@@ -119,8 +146,8 @@ export function SidebarClient() {
       <aside className={cn(
         'fixed lg:sticky top-0 left-0 z-40 h-screen flex flex-col',
         'bg-[var(--bg-secondary)] border-r border-[var(--border)]',
-        'transform transition-all duration-[300ms] ease-[cubic-bezier(0.2,0,0,1)]',
-        mobileMenuOpen ? 'translate-x-0' : '-translate-x-full',
+        'transform transition-all transition-duration-[300ms] transition-timing-function-[cubic-bezier(0.2,0,0,1)]',
+        mounted && (mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'),
         'lg:translate-x-0 lg:flex',
         collapsed ? 'w-[60px]' : 'w-[220px]'
       )} suppressHydrationWarning>

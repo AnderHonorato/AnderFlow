@@ -15,7 +15,8 @@
     "db:migrate": "prisma migrate dev",
     "db:seed": "tsx prisma/seed.ts",
     "db:studio": "prisma studio",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "cron:monthly": "node -e \"fetch('http://localhost:3000/api/cron/monthly-report', { headers: { Authorization: 'Bearer ' + (process.env.CRON_SECRET || 'dev-secret') } }).then(r => r.json()).then(d => console.log(d))\""
   },
   "dependencies": {
     "@hookform/resolvers": "^3.3.4",

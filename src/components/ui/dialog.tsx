@@ -42,8 +42,8 @@ const DialogContent = React.forwardRef<
         'data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[52%]',
         'data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[52%]',
         'translate-x-[-50%] translate-y-[-50%]',
-        '[&[data-state=open]]:duration-[300ms] [&[data-state=open]]:[animation-timing-function:cubic-bezier(0.34,1.56,0.64,1)]',
-        '[&[data-state=closed]]:duration-[200ms] [&[data-state=closed]]:[animation-timing-function:cubic-bezier(0.3,0,1,1)]',
+        '[&[data-state=open]]:animation-duration-[300ms] [&[data-state=open]]:[animation-timing-function:cubic-bezier(0.34,1.56,0.64,1)]',
+        '[&[data-state=closed]]:animation-duration-[200ms] [&[data-state=closed]]:[animation-timing-function:cubic-bezier(0.3,0,1,1)]',
         className
       )}
       aria-describedby={props['aria-describedby'] ?? undefined}
@@ -52,7 +52,7 @@ const DialogContent = React.forwardRef<
       {children}
       <DialogPrimitive.Close className="absolute right-4 top-4 rounded-lg h-7 w-7 flex items-center justify-center
         opacity-60 hover:opacity-100 hover:bg-[var(--surface-hover)]
-        transition-all duration-[150ms] ease-[cubic-bezier(0.2,0,0,1)]
+        transition-all transition-duration-[150ms] transition-timing-function-[cubic-bezier(0.2,0,0,1)]
         focus:outline-none focus:ring-2 focus:ring-[var(--accent)]">
         <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
           <path d="M3 3l10 10M13 3L3 13"/>

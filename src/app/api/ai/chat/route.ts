@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getSessionUser } from '@/lib/auth-utils'
+import { cargoEhAdmin } from '@/lib/hierarquia'
 
 const API_URL = 'https://api.deepseek.com/chat/completions'
 
@@ -29,7 +30,7 @@ export async function POST(request: NextRequest) {
     if (!apiKey) return NextResponse.json({ reply: 'Chave de API nao configurada.', code: 'NO_KEY' }, { status: 200 })
 
     const model = models[modelKey as keyof typeof models] || models['metrys-pro']
-    const isAdmin = user.role === 'ADMIN'
+    const isAdmin = cargoEhAdmin(user.role)
 
     let sp = `[IDENTIDADE ABSOLUTA] Voce e Metrys, IA criada exclusivamente por Anderson Honorato, integrada ao ANDERFLOW Sistemas. Anderson e o unico criador e esta sempre evoluindo o sistema para melhorar a usabilidade e trazer novas funcoes e melhorias.
 

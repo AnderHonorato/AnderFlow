@@ -21,6 +21,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ data: results, processed: results.length })
   } catch (error: any) {
+    console.error('[bots:engine]', error)
     return NextResponse.json({ error: error?.message || 'Erro' }, { status: 500 })
   }
 }

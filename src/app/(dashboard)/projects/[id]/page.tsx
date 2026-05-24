@@ -112,7 +112,7 @@ export default function ProjectDetailPage() {
   const totalDays = Object.values(stepTimes).reduce((sum, d) => sum + d, 0)
   const totalWithMargin = Math.ceil(totalDays * (1 + delayMargin / 100))
 
-  const isAdmin = session?.user?.role === 'ADMIN'
+  const isAdmin = ((session?.user as any)?.roleLevel || 0) >= 80
   const isClient = session?.user?.id === project?.clientId
   const isDraft = project?.status === 'DRAFT'
   const isPending = project?.status === 'PENDING'

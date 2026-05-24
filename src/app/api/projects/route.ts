@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getSessionUser, isAdmin } from '@/lib/auth-utils'
 import { sendWhatsApp } from '@/lib/whatsapp'
+import { checkAndGrantAchievements } from '@/lib/achievements'
 
 export async function GET(request: NextRequest) {
   try {
@@ -102,9 +103,22 @@ export async function POST(request: NextRequest) {
       sendWhatsApp(client.phone, `Novo projeto criado: "${name}". Acompanhe pelo portal.`).catch(() => {})
     }
 
+    checkAndGrantAchievements(clientId, 'first_project', project.id).catch(() => {})
+
     return NextResponse.json({ data: project }, { status: 201 })
   } catch (error: any) {
     console.error('[projects] POST error:', error?.message || error)
     return NextResponse.json({ error: error?.message || 'Erro ao criar projeto' }, { status: 500 })
+  }
+}
+
+// Internal helper called by other routes to award achievements
+export async function grantProjectAchievements(userId: string, projectId: string, status?: string, progress?: number) {
+  await checkAndGrantAchievements(userId, 'first_project', projectId)
+  if (status === 'COMPLETED') {
+    await checkAndGrantAchievements(userId, 'project_complete', projectId)
+  }
+  if (progress && progress >= 50) {
+    await checkAndGrantAchievements(userId, 'project_halfway', projectId)
   }
 }

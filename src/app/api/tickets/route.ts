@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
   if (!user || !isAdmin(user)) return unauthorizedResponse()
   try {
     const body = await request.json()
-    const { title, description, priority, category, creatorId, assigneeId } = body
+    const { title, description, priority, category, assigneeId } = body
 
     const ticket = await prisma.ticket.create({
       data: {
@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
         description,
         priority: priority || 'MEDIUM',
         category,
-        creatorId,
+        creatorId: user.id,
         assigneeId,
       },
       include: {

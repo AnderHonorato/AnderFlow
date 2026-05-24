@@ -37,8 +37,8 @@ export function Header() {
     } catch { return new Set() }
   })
 
-  const role = session?.user?.role as string || 'CLIENT'
-  const isClient = role === 'CLIENT'
+  const roleLevel = (session?.user as any)?.roleLevel || 0
+  const isClient = roleLevel < 40
 
   useEffect(() => {
     if (isClient) {
@@ -50,7 +50,7 @@ export function Header() {
         })
         .catch(() => {})
     }
-  }, [role, isClient])
+  }, [isClient])
 
   useEffect(() => {
     const fetchNotifications = () => {

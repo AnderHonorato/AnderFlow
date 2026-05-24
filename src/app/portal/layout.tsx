@@ -19,6 +19,7 @@ import {
 } from 'lucide-react'
 import { WelcomeOverlay } from '@/components/ui/welcome-overlay'
 import { PushPermission } from '@/components/ui/push-permission'
+import { PwaInstallPrompt } from '@/components/ui/pwa-install-prompt'
 
 const navItems = [
   { name: 'Início', href: '/portal', icon: LayoutDashboard },
@@ -178,6 +179,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
     <SessionProvider>
       <PortalSidebarContent>{children}</PortalSidebarContent>
       <WelcomeOverlay />
+      <PwaInstallPrompt />
     </SessionProvider>
   )
 }

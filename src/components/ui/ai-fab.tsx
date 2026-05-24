@@ -170,20 +170,27 @@ export function AIFab(){
   const abortRef=useRef<AbortController|null>(null)
   const sStreamContent=useRef('')
   const sStreamReasoning=useRef('')
+  const pendingBlocks=useRef<string[]>([])
+  const pendingReasoning=useRef<string>('')
 
   const sc=useRef<HTMLDivElement>(null);const ta=useRef<HTMLTextAreaElement>(null)
   const fi=useRef<HTMLInputElement>(null);const ii=useRef<HTMLInputElement>(null)
   const tt=useRef<ReturnType<typeof setInterval>|null>(null);const st=useRef<ReturnType<typeof setInterval>|null>(null)
   const sl=useRef(false);const spp=useRef(0);const sbb=useRef(0);const spph=useRef<'typing'|'think'|'done'>('typing');const sbl=useRef<string[]>([])
 
-  const pw=ex?'520px':'400px';const ph=ex?'620px':'520px'
+  const pw=sb?`calc(${ex?'520px':'400px'} + 140px)`:(ex?'520px':'400px');const ph=ex?'620px':'520px'
   const vim=useMemo(()=>ms.flatMap(m=>(m.attachments||[]).filter(a=>a.type.startsWith('image/'))),[ms])
   const pinCnv=useMemo(()=>cn.filter(c=>c.pinned),[cn])
   const unpinCnv=useMemo(()=>cn.filter(c=>!c.pinned),[cn])
-const[cardSlots,setCardSlots]=useState<{text:string;visible:boolean;key:number;score:number;isHigh:boolean}[]>(()=>{
+const buildCardSlots = () => {
   const shuffled=[...SUGS].sort(()=>Math.random()-.5)
   return Array.from({length:5},(_,i)=>({text:shuffled[i]||SUGS[i],visible:true,key:Math.random(),score:0,isHigh:false}))
-})
+}
+const[cardSlots,setCardSlots]=useState<{text:string;visible:boolean;key:number;score:number;isHigh:boolean}[]>(()=>
+  Array.from({length:5},(_,i)=>({text:SUGS[i],visible:true,key:i+1,score:0,isHigh:false}))
+)
+const[cardSlotsInit,setCardSlotsInit]=useState(false)
+useEffect(()=>{if(!cardSlotsInit){setCardSlots(buildCardSlots());setCardSlotsInit(true)}},[cardSlotsInit])
 const cardSlotsRef=useRef(cardSlots)
 useEffect(()=>{cardSlotsRef.current=cardSlots},[cardSlots])
 const[welcomeIdx,setWelcomeIdx]=useState(0)
@@ -320,6 +327,11 @@ useEffect(()=>{setWelcomeIdx(0);setWelcomeStarKey(p=>p+1)},[cn])
   useEffect(()=>{const p=(e:ClipboardEvent)=>{if(!op)return;const it=e.clipboardData?.items;if(!it)return;for(let i=0;i<it.length;i++){if(it[i].type.startsWith('image/')){const b=it[i].getAsFile();if(b)af(b);e.preventDefault();break}}};document.addEventListener('paste',p);return()=>document.removeEventListener('paste',p)})
 
   const stopStream=()=>{
+    if(pendingBlocks.current.length>0){
+      const content=pendingBlocks.current.join('\n\n')
+      setMs(p=>[...p,{role:'assistant',content,createdAt:new Date().toISOString(),reasoning:pendingReasoning.current||undefined}])
+      pendingBlocks.current=[];pendingReasoning.current=''
+    }
     if(abortRef.current){abortRef.current.abort();abortRef.current=null}
     spph.current='done';setSph('done');setLd(false)
     if(st.current)clearInterval(st.current)
@@ -344,6 +356,7 @@ useEffect(()=>{setWelcomeIdx(0);setWelcomeStarKey(p=>p+1)},[cn])
     }
   }
   const startAdaptiveTypewriter=(blocks:string[],reasoning?:string)=>{
+    pendingBlocks.current=blocks;pendingReasoning.current=reasoning||''
     thinkStart.current=Date.now();setThinkSec(0);setThinkExpanded(false)
     let bi=0;let ci=0;let bt=0
     setStreamText('');setStreamPhase('typing')
@@ -352,6 +365,7 @@ useEffect(()=>{setWelcomeIdx(0);setWelcomeStarKey(p=>p+1)},[cn])
         const content=blocks.join('\n\n')
         setThinkSec(Math.round((Date.now()-thinkStart.current)/1000))
         setMs(p=>[...p,{role:'assistant',content,createdAt:new Date().toISOString(),reasoning:reasoning||undefined}])
+        pendingBlocks.current=[];pendingReasoning.current=''
         setStreamPhase('done');setStreamActive(false)
         stopStream()
         lCnv()
@@ -419,27 +433,24 @@ useEffect(()=>{setWelcomeIdx(0);setWelcomeStarKey(p=>p+1)},[cn])
   const send=async(text?:string)=>{
     const txt=text||inp.trim()
     if((!txt&&pf.length===0)||streamPhase==='typing')return
-    // Se estiver em streaming (thinking), aborta e envia nova mensagem com contexto parcial
     if(streamActive){abortRef.current?.abort();abortRef.current=null}
     stopStream();setStreamText('');setReasoningLines([]);setErrIdx(null)
     setStreamPhase('idle');setStreamActive(false)
     sStreamContent.current='';sStreamReasoning.current=''
+    pendingBlocks.current=[];pendingReasoning.current=''
 
     const att=pf.map(f=>({name:f.name,url:f.url,type:f.type,size:f.size}))
     const um:Msg={role:'user',content:txt,createdAt:new Date().toISOString(),attachments:att,replyTo:rp?.id}
     setMs(p=>[...p,um]);setInp('');setPf([]);setRp(null);setLd(true)
-    let cid:string|null=aid
-    if(!cid){try{const r=await fetch('/api/ai/conversations',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title:txt.slice(0,50)||'Nova conversa'})});const j=await r.json();const nid=j.data?.id as string;if(!nid)throw Error();cid=nid;setCn(p=>[{id:nid,title:txt.slice(0,50)||'Nova conversa',preview:txt.slice(0,60),updatedAt:new Date().toISOString(),pinned:false},...p])}catch{toast.error('Erro');setLd(false);return}}
-    const am=[...ms,um];const fcid=cid!
     const ip=att.filter(a=>a.type.startsWith('image/')).map(a=>({type:'image_url' as const,image_url:{url:a.url}}))
     const fp=pf.filter(f=>!f.isImg).map(f=>({name:f.name,type:f.type,content:f.url.split(',')[1]||''}))
-    const mc:any[]=[];if(txt)mc.push({type:'text',text:txt});mc.push(...ip);const lm=mc.length>1?mc:txt||'(imagem)'
+    const payloadMessages=[...ms.map(m=>({role:m.role,content:m.content||'(imagem)',msgId:m.id})),{role:'user',content:txt||'(imagem)'}]
 
     const ac=new AbortController();abortRef.current=ac
     try{
       const r=await fetch('/api/ai/chat/stream',{
         method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({messages:[...am.map(m=>({role:m.role,content:m.content||'(imagem)',msgId:m.id})),{role:'user',content:lm}],conversationId:fcid,projectId:exPid(),files:fp,replyTo:rp?.id,modelKey:model}),
+        body:JSON.stringify({messages:payloadMessages,conversationId:aid||undefined,projectId:exPid(),files:fp,replyTo:rp?.id,modelKey:model}),
         signal:ac.signal,
       })
       if(!r.ok){const ej=await r.json().catch(()=>({reply:'Erro de conexao'}));toast.error(ej.reply||ej.error||'Erro');stopStream();setLd(false);return}
@@ -457,7 +468,8 @@ useEffect(()=>{setWelcomeIdx(0);setWelcomeStarKey(p=>p+1)},[cn])
           const d=t.slice(6);if(!d)continue
           let p:any;try{p=JSON.parse(d)}catch{continue}
           if(p.type==='done'){
-            if(!aid){sl.current=true;setAid(fcid);setTimeout(()=>{sl.current=false},500)}
+            const newCid = p.conversationId
+            if(!aid && newCid){sl.current=true;setAid(newCid);setTimeout(()=>{sl.current=false},500)}
             if(p.code==='OK'){
               const bl=(contentAcc||'').split(/\n?---\n?/).filter((b:string)=>b.trim())
               if(!bl.length)bl.push(contentAcc||'')
@@ -498,11 +510,11 @@ useEffect(()=>{setWelcomeIdx(0);setWelcomeStarKey(p=>p+1)},[cn])
   return(<>
     {wv&&!op&&(<div className="fixed bottom-20 right-6 z-[60] max-w-[260px] rounded-2xl font-sans-dm p-3.5 shadow-xl backdrop-blur-sm" style={{background:'var(--surface)',border:'1.5px solid rgba(232,98,42,0.18)',animation:'autoMsgGlow 2.6s ease-in-out infinite, md-card-pop 0.4s var(--ease-spring) both'}}><button title="Fechar" onClick={dw} className="absolute top-1.5 right-1.5 h-5 w-5 flex items-center justify-center rounded-full hover:bg-[var(--surface-hover)] text-[var(--text-3)] transition-colors"><X className="h-3 w-3"/></button><div className="flex items-start gap-2.5"><div style={{animation:'autoMsgBgPulse 2.6s ease-in-out infinite'}} className="shrink-0 rounded-full p-1"><AIs s={28}/></div><p className="text-[12px] leading-relaxed text-[var(--text)] pr-4"><span>{autoMsgDisp||wm}</span>{autoMsgDisp&&autoMsgDisp.length<autoMsgFull.length&&<span className="typewriter-cursor"/>}</p></div></div>)}
 
-    <div style={{position:'fixed',zIndex:50,bottom:'1.5rem',right:'1.5rem',transform:op?'scale(0.5) translateY(12px)':'scale(1) translateY(0)',opacity:op?0:1,transition:'all 0.35s cubic-bezier(0.34,1.2,0.64,1)',pointerEvents:op?'none':'auto'}}><button onClick={()=>{setOp(true);dw()}} className={`group flex items-center h-12 rounded-full bg-[var(--surface)] border border-[var(--border)] shadow-lg hover:shadow-xl transition-all duration-[300ms] ease-[cubic-bezier(0.2,0,0,1)] w-12 hover:w-[172px] justify-center hover:justify-start hover:pl-2.5 hover:pr-4 overflow-hidden font-sans-dm ${wv?'pulse-fab':''}`} title="Assistente IA"><span className="shrink-0 w-10 h-10 flex items-center justify-center"><AIs s={40}/></span><span className="text-[12px] font-[500] text-[var(--text)] whitespace-nowrap truncate w-0 opacity-0 group-hover:w-auto group-hover:opacity-100 group-hover:ml-1.5 transition-all duration-[300ms] overflow-hidden select-none">Metrys Assistente</span></button></div>
+    <div style={{position:'fixed',zIndex:50,bottom:'1.5rem',right:'1.5rem',transform:op?'scale(0.5) translateY(12px)':'scale(1) translateY(0)',opacity:op?0:1,transition:'all 0.35s cubic-bezier(0.34,1.2,0.64,1)',pointerEvents:op?'none':'auto'}}><button onClick={()=>{setOp(true);dw()}} className={`group flex items-center h-12 rounded-full bg-[var(--surface)] border border-[var(--border)] shadow-lg hover:shadow-xl transition-all transition-duration-[300ms] transition-timing-function-[cubic-bezier(0.2,0,0,1)] w-12 hover:w-[172px] justify-center hover:justify-start hover:pl-2.5 hover:pr-4 overflow-hidden font-sans-dm ${wv?'pulse-fab':''}`} title="Assistente IA"><span className="shrink-0 w-10 h-10 flex items-center justify-center"><AIs s={40}/></span><span className="text-[12px] font-[500] text-[var(--text)] whitespace-nowrap truncate w-0 opacity-0 group-hover:w-auto group-hover:opacity-100 group-hover:ml-1.5 transition-all transition-duration-[300ms] overflow-hidden select-none">Metrys Assistente</span></button></div>
 
-    <div className="fixed bottom-6 right-6 z-[55] bg-[var(--surface)] border border-[var(--border)] shadow-2xl flex overflow-visible font-sans-dm" style={{width:pw,height:ph,maxHeight:'calc(100vh - 40px)',      borderLeft:sb?'none':undefined,borderRadius:sb?'0 16px 16px 16px':'16px',transform:op?'scale(1) translateY(0)':'scale(0.96) translateY(8px)',transformOrigin:'bottom right',opacity:op?1:0,pointerEvents:op?'auto':'none',transition:'width 0.3s ease, height 0.3s ease, border-radius 0.3s ease, opacity 0.35s cubic-bezier(0.34,1.2,0.64,1), transform 0.35s cubic-bezier(0.34,1.2,0.64,1)'}}>
-      <div className={`absolute top-0 bottom-0 right-full flex flex-col overflow-hidden transition-all duration-[300ms] ease-[cubic-bezier(0.34,1.2,0.64,1)] ${sb?'w-[140px] opacity-100 translate-x-0':'w-[140px] opacity-0 translate-x-4 pointer-events-none'}`}>
-        <div className="w-[140px] flex flex-col h-full bg-[var(--surface)]" style={{borderRadius:'16px 0 0 16px'}}>
+    <div className="fixed bottom-6 right-6 z-[55] bg-[var(--surface)] border border-[var(--border)] shadow-2xl flex overflow-hidden font-sans-dm" style={{width:pw,height:ph,maxHeight:'calc(100vh - 40px)',borderRadius:'16px',transform:op?'scale(1) translateY(0)':'scale(0.96) translateY(8px)',transformOrigin:'bottom right',opacity:op?1:0,pointerEvents:op?'auto':'none',transition:'width 0.3s ease, height 0.3s ease, opacity 0.35s cubic-bezier(0.34,1.2,0.64,1), transform 0.35s cubic-bezier(0.34,1.2,0.64,1)'}}>
+      <div className={`flex flex-col overflow-hidden transition-all transition-duration-[300ms] transition-timing-function-[cubic-bezier(0.34,1.2,0.64,1)] ${sb?'w-[140px] opacity-100':'w-0 opacity-0'}`}>
+        <div className="w-[140px] flex flex-col h-full bg-[var(--surface)]">
         <div className="px-3 py-2.5 flex items-center justify-between"><span className="text-[10px] font-[500] text-[var(--text-3)] uppercase tracking-wider">Chats</span><button onClick={nc} className="h-5 w-5 flex items-center justify-center rounded hover:bg-[var(--surface-hover)] text-[var(--text-3)]" title="Novo chat"><Plus className="h-3 w-3"/></button></div>
         <div className="flex-1 overflow-y-auto scrollbar-thin">
           {[...pinCnv,...unpinCnv].filter(Boolean).map(c=>(<div key={c.id} onClick={()=>{stp();setAid(c.id);setLd(false);setRp(null);setErrIdx(null)}} className={`group px-3 py-2 cursor-pointer transition-colors border-l-2 ${aid===c.id?'border-l-[var(--accent)] bg-[var(--accent-subtle)]/30':c.pinned?'border-l-[var(--warning)]':'border-l-transparent hover:bg-[var(--surface-hover)]'}`}>
@@ -604,7 +616,7 @@ useEffect(()=>{setWelcomeIdx(0);setWelcomeStarKey(p=>p+1)},[cn])
               <div className="min-w-0">
                 {imgs.length>0&&(<div className={`flex gap-1.5 flex-wrap mb-1.5 ${ia?'':'justify-end'}`}>{imgs.map((img,ii)=>(<button key={ii} title={`Ver ${img.name}`} onClick={()=>setVi(vim.indexOf(img))} className="rounded-xl border border-[var(--border)] overflow-hidden hover:ring-2 ring-[var(--accent)]/40 transition-all"><img src={img.url} alt={img.name} className="h-16 w-16 object-cover"/></button>))}</div>)}
                 {docs.length>0&&(<div className={`flex gap-1.5 flex-wrap mb-1.5 ${ia?'':'justify-end'}`}>{docs.map((doc,di)=>(<div key={di} className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-[var(--surface)] border border-[var(--border)] text-[11px] text-[var(--text-3)]"><Paperclip className="h-3 w-3"/>{doc.name}</div>))}</div>)}
-                {msg.content&&(ia?<div className="text-[12px] leading-relaxed whitespace-pre-wrap break-words"><MD content={msg.content}/></div>:<div className="rounded-2xl px-3 py-2 bg-[var(--accent-subtle)] border border-[var(--accent)]/20 rounded-tr-sm"><p className="text-[12px] leading-relaxed whitespace-pre-wrap break-words text-[var(--text)]">{msg.content}</p></div>)}
+                {msg.content&&(ia?<div className="text-[12px] leading-relaxed whitespace-pre-wrap break-words"><MD content={msg.content}/></div>:<div className="rounded-2xl px-3 py-2 bg-[var(--surface-2)] rounded-tr-sm"><p className="text-[12px] leading-relaxed whitespace-pre-wrap break-words text-[var(--text)]">{msg.content}</p></div>)}
                 {msg.liked!==undefined&&(<p className="text-[9px] text-[var(--success)] mt-0.5 px-1">Agradecemos pelo feedback!</p>)}
                 <div className={`flex items-center gap-1 mt-0.5 px-1 ${ia?'':'justify-end'}`}>
                   <span className="text-[9px] text-[var(--text-3)]">{fmtT(msg.createdAt)}</span>

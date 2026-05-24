@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getSessionUser } from '@/lib/auth-utils'
+import { cargoEhAdmin } from '@/lib/hierarquia'
 import { ICON_SYSTEM_PROMPT } from '@/components/ui/chat-icons'
 
 const API_URL = 'https://api.deepseek.com/chat/completions'
@@ -59,7 +60,13 @@ export async function POST(request: NextRequest) {
     if (!user) return new Response(JSON.stringify({ error: 'Nao autenticado' }), { status: 401, headers: { 'Content-Type': 'application/json' } })
 
     const existing = await prisma.user.findUnique({ where: { id: user.id } })
-    if (!existing) await prisma.user.create({ data: { id: user.id, name: user.name || 'Usuario', email: user.email || `${user.id}@anderflow.local` } })
+    if (!existing) {
+      try {
+        await prisma.user.create({ data: { id: user.id, name: user.name || 'Usuario', email: user.email || `${user.id}@anderflow.local` } })
+      } catch (e: any) {
+        if (e?.code !== 'P2002') console.error('[stream] user create error:', e)
+      }
+    }
 
     const body = await request.json()
     const { messages, projectId, conversationId, files, replyTo, modelKey } = body as {
@@ -69,6 +76,17 @@ export async function POST(request: NextRequest) {
     }
 
     if (!messages?.length) return new Response(JSON.stringify({ error: 'Mensagens obrigatorias' }), { status: 400, headers: { 'Content-Type': 'application/json' } })
+
+    // Auto-cria conversa se nao foi fornecida
+    let convId = conversationId || ''
+    if (!convId) {
+      try {
+        const lastMsgContent = messages[messages.length - 1]?.content
+        const title = typeof lastMsgContent === 'string' ? lastMsgContent.slice(0, 50) : 'Nova conversa'
+        const conv = await prisma.aiConversation.create({ data: { userId: user.id, title: title || 'Nova conversa' } })
+        convId = conv.id
+      } catch (e) { console.error('Auto-create conversation failed:', e) }
+    }
 
     const apiKey = process.env.DEEPSEEK_API_KEY
     if (!apiKey) {
@@ -83,7 +101,7 @@ export async function POST(request: NextRequest) {
     }
 
     const model = models[modelKey as keyof typeof models] || models['metrys-pro']
-    const isAdmin = user.role === 'ADMIN'
+    const isAdmin = cargoEhAdmin(user.role)
 
     let sp = buildSystemPrompt(user, isAdmin, projectId, files, replyTo)
 
@@ -153,7 +171,6 @@ export async function POST(request: NextRequest) {
     const encoder = new TextEncoder()
     const lastMsg = messages[messages.length - 1]
     const lastText = typeof lastMsg?.content === 'string' ? lastMsg.content : '(imagem)'
-    const convId = conversationId || ''
     let fullContent = ''
     let fullReasoning = ''
 
@@ -195,7 +212,7 @@ export async function POST(request: NextRequest) {
         if (convId && (fullContent || fullReasoning)) {
           await saveToDb(convId, lastText, fullContent, fullReasoning)
         }
-        controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'done', code: 'OK', model: model.name })}\n\n`))
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'done', code: 'OK', model: model.name, conversationId: convId })}\n\n`))
         controller.close()
       }
     })

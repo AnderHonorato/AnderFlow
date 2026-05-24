@@ -8,6 +8,7 @@ import {
   parsePermissions,
   ROLE_LEVELS,
 } from '@/lib/auth-utils'
+import { verificarHierarquia, invalidarCache } from '@/lib/hierarquia-server'
 
 export async function GET(request: NextRequest) {
   try {
@@ -89,31 +90,71 @@ export async function PATCH(request: NextRequest) {
   try {
     const user = await getSessionUser(request)
     if (!user?.id || !isOwner(user)) {
-      return NextResponse.json({ error: 'Não autorizado' }, { status: 403 })
+      return NextResponse.json({ error: 'Você não tem permissão para gerenciar usuários.' }, { status: 403 })
+    }
+
+    // Verifica a hierarquia do solicitante no banco antes de qualquer alteração
+    const verificacao = await verificarHierarquia(user.id, true)
+    if (!verificacao.autorizado || verificacao.nivel < 100) {
+      return NextResponse.json({
+        error: 'Não foi possível verificar sua permissão no momento.',
+        detalhe: 'Atualize a página para uma nova consulta ou tente novamente mais tarde.',
+      }, { status: 403 })
     }
 
     const body = await request.json()
     const { ids, permissions, isActive, role } = body
 
     if (!ids || !Array.isArray(ids) || ids.length === 0) {
-      return NextResponse.json({ error: 'ids obrigatório' }, { status: 400 })
+      return NextResponse.json({ error: 'IDs dos usuários são obrigatórios.' }, { status: 400 })
+    }
+
+    // Verifica os usuários alvo no banco antes de alterar
+    const usuariosAlvo = await prisma.user.findMany({
+      where: { id: { in: ids } },
+      select: { id: true, role: true, name: true },
+    })
+
+    if (usuariosAlvo.length === 0) {
+      return NextResponse.json({ error: 'Nenhum usuário encontrado com os IDs fornecidos.' }, { status: 404 })
     }
 
     const data: any = {}
-    if (permissions !== undefined) data.permissions = JSON.stringify(permissions)
+
+    if (permissions !== undefined) {
+      // Verifica permissão para alterar permissões
+      if (verificacao.nivel < 100) {
+        return NextResponse.json({ error: 'Apenas o Owner pode alterar permissões.' }, { status: 403 })
+      }
+      data.permissions = JSON.stringify(permissions)
+    }
+
     if (isActive !== undefined) {
       data.isActive = isActive
       data.deleteRequestedAt = isActive ? null : undefined
       data.deleteScheduledAt = isActive ? null : undefined
     }
+
     if (role !== undefined) {
       const allowedRoles = ['OWNER', 'ADMIN', 'MODERATOR', 'DEVELOPER', 'USER', 'GUEST']
       if (!allowedRoles.includes(role)) {
-        return NextResponse.json({ error: 'Função inválida' }, { status: 400 })
+        return NextResponse.json({ error: 'Cargo inválido. Os cargos permitidos são: Owner, Admin, Moderador, Desenvolvedor, Usuário e Visitante.' }, { status: 400 })
       }
-      if (!canManageRole(user.role, role)) {
-        return NextResponse.json({ error: 'Você não pode atribuir essa função' }, { status: 403 })
+
+      // Verifica se o solicitante pode gerenciar cada cargo alvo
+      for (const alvo of usuariosAlvo) {
+        if (!canManageRole(user.role, alvo.role || 'USER')) {
+          return NextResponse.json({
+            error: `Você não tem permissão para alterar o cargo de "${alvo.name}". O cargo atual é superior ou igual ao seu.`,
+          }, { status: 403 })
+        }
+        if (!canManageRole(user.role, role)) {
+          return NextResponse.json({
+            error: `Você não pode atribuir o cargo "${role}". Seu nível de permissão não permite gerenciar este cargo.`,
+          }, { status: 403 })
+        }
       }
+
       data.role = role
     }
 
@@ -121,6 +162,11 @@ export async function PATCH(request: NextRequest) {
       where: { id: { in: ids } },
       data,
     })
+
+    // Invalida cache de hierarquia para os usuários alterados
+    for (const alvo of usuariosAlvo) {
+      invalidarCache(alvo.id)
+    }
 
     const updatedUsers = await prisma.user.findMany({
       where: { id: { in: ids } },
@@ -131,7 +177,7 @@ export async function PATCH(request: NextRequest) {
       const changes: string[] = []
       if (permissions !== undefined) changes.push('permissões atualizadas')
       if (isActive !== undefined) changes.push(isActive ? 'conta reativada' : 'conta desativada')
-      if (role !== undefined) changes.push(`função alterada para ${role}`)
+      if (role !== undefined) changes.push(`cargo alterado para ${role}`)
 
       if (changes.length > 0) {
         await prisma.notification.create({
@@ -146,9 +192,12 @@ export async function PATCH(request: NextRequest) {
       }
     }
 
-    return NextResponse.json({ message: 'Usuários atualizados', count: updatedUsers.length })
+    return NextResponse.json({ message: 'Usuários atualizados com sucesso.', count: updatedUsers.length })
   } catch (error: any) {
     console.error('[users] PATCH error:', error?.message || error)
-    return NextResponse.json({ error: 'Erro ao atualizar usuários' }, { status: 200 })
+    return NextResponse.json({
+      error: 'Erro ao processar a solicitação.',
+      detalhe: 'Verifique sua conexão e tente novamente.',
+    }, { status: 200 })
   }
 }

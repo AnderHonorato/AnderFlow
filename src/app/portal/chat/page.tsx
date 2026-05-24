@@ -65,7 +65,7 @@ export default function PortalChat() {
 
   if (loading) return <div className="p-6 space-y-4"><Skeleton className="h-8 w-48" /><Skeleton className="h-96" /></div>
 
-  const isMe = (msg: any) => msg.sender?.role === 'CLIENT'
+  const isMe = (msg: any) => msg.sender?.role === 'CLIENT' || msg.sender?.role === 'USER' || msg.sender?.role === 'GUEST' || !msg.sender?.role
 
   return (
     <div className="flex flex-col h-[calc(100vh-4rem)]">

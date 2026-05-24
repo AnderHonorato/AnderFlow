@@ -11,7 +11,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     const ticket = await prisma.ticket.findUnique({ where: { id } })
     if (!ticket) return NextResponse.json({ error: 'Nao encontrado' }, { status: 404 })
     return NextResponse.json({ data: ticket })
-  } catch { return NextResponse.json({ error: 'Erro' }, { status: 200 }) }
+  } catch { return NextResponse.json({ error: 'Erro' }, { status: 500 }) }
 }
 
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -20,7 +20,11 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     if (!user || !isAdmin(user)) return NextResponse.json({ error: 'Nao autorizado' }, { status: 403 })
     const { id } = await params
     const body = await request.json()
-    const ticket = await prisma.ticket.update({ where: { id }, data: body })
+    const updateData: any = { ...body }
+    if (body.status === 'RESOLVED') {
+      updateData.resolvedAt = new Date()
+    }
+    const ticket = await prisma.ticket.update({ where: { id }, data: updateData })
 
     if (body.status === 'RESOLVED' && ticket.creatorId) {
       const creator = await prisma.user.findUnique({ where: { id: ticket.creatorId }, select: { phone: true } })
@@ -30,5 +34,5 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     }
 
     return NextResponse.json({ data: ticket })
-  } catch { return NextResponse.json({ error: 'Erro' }, { status: 200 }) }
+  } catch { return NextResponse.json({ error: 'Erro' }, { status: 500 }) }
 }

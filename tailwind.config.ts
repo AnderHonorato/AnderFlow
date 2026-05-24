@@ -3,6 +3,20 @@ import type { Config } from 'tailwindcss'
 const config: Config = {
   darkMode: 'class',
   content: ['./src/**/*.{js,ts,jsx,tsx,mdx}'],
+  blocklist: [
+    'duration',
+    'ease',
+    'delay',
+    '[&[data-state=closed]]:duration-[200ms]',
+    '[&[data-state=open]]:duration-[300ms]',
+    'duration-[100ms]',
+    'duration-[150ms]',
+    'duration-[200ms]',
+    'duration-[300ms]',
+    'duration-[400ms]',
+    'ease-[cubic-bezier(0.2,0,0,1)]',
+    'ease-[cubic-bezier(0.34,1.2,0.64,1)]',
+  ],
   theme: {
     extend: {
       colors: {

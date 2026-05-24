@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getTemplateForCategory, generateSummary } from '@/lib/briefing-engine'
+import { checkAndGrantAchievements } from '@/lib/achievements'
 
 export async function GET(request: NextRequest) {
   try {
@@ -122,21 +123,12 @@ export async function POST(request: NextRequest) {
             type: 'PROJECT_UPDATE',
             title: `Novo projeto: ${projectNumber}`,
             message: `${answers?.project_name || 'Novo projeto'} — ${summary.slice(0, 100)}`,
-            isRead: false,
+        isRead: false,
           },
         })
       }
 
-      // Notify client
-      await prisma.notification.create({
-        data: {
-          userId,
-          type: 'PROJECT_UPDATE',
-          title: `Projeto ${projectNumber} enviado!`,
-          message: `Seu projeto "${answers?.project_name || 'Novo Projeto'}" foi recebido. A equipe irá analisar e entrar em contato em breve.`,
-          isRead: false,
-        },
-      })
+      checkAndGrantAchievements(userId, 'briefing_sent', project.id).catch(() => {})
 
       return NextResponse.json({
         data: { project, summary },

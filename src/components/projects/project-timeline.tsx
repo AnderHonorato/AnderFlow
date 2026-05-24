@@ -244,7 +244,7 @@ export function ProjectTimeline({
             </div>
           </div>
 
-          <div className="rounded-lg bg-[var(--surface)] border border-[var(--border)] p-4 transition-all duration-[400ms] ease-[cubic-bezier(0.2,0,0,1)] animate-fade-up">
+          <div className="rounded-lg bg-[var(--surface)] border border-[var(--border)] p-4 transition-all transition-duration-[400ms] transition-timing-function-[cubic-bezier(0.2,0,0,1)] animate-fade-up">
             <div className="flex items-start gap-3">
               <NodeIcon status={active.status} nodeId={active.id} />
               <div className="flex-1 min-w-0">

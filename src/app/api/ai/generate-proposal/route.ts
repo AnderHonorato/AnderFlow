@@ -72,38 +72,40 @@ A proposta deve incluir:
 Use linguagem profissional mas acessivel. Destaque pontos do briefing se disponiveis.
 No final, inclua uma linha separada EXATAMENTE no formato: VALOR_SUGERIDO: XXXX (onde XXXX e o valor numerico em reais, ex: 5000)`
 
-    const apiKey = process.env.ANTHROPIC_API_KEY
+    const apiKey = process.env.DEEPSEEK_API_KEY
     if (!apiKey) {
-      return NextResponse.json({ error: 'ANTHROPIC_API_KEY nao configurada' }, { status: 500 })
+      return NextResponse.json({ error: 'DEEPSEEK_API_KEY nao configurada' }, { status: 500 })
     }
 
     let aiProposal = ''
     let suggestedValue = ''
 
     try {
-      const res = await fetch('https://api.anthropic.com/v1/messages', {
+      const res = await fetch('https://api.deepseek.com/v1/chat/completions', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-api-key': apiKey,
-          'anthropic-version': '2023-06-01',
+          'Authorization': `Bearer ${apiKey}`,
         },
         body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
+          model: 'deepseek-chat',
           max_tokens: 800,
-          system: 'Voce e um assistente para um desenvolvedor freelancer. Gere uma proposta comercial profissional em portugues brasileiro. Use markdown para formatacao.',
-          messages: [{ role: 'user', content: userPrompt }],
+          temperature: 0.4,
+          messages: [
+            { role: 'system', content: 'Voce e um assistente para um desenvolvedor freelancer. Gere uma proposta comercial profissional em portugues brasileiro. Use markdown para formatacao.' },
+            { role: 'user', content: userPrompt },
+          ],
         }),
       })
 
       if (!res.ok) {
         const errText = await res.text()
-        console.error('Anthropic API error:', errText)
+        console.error('DeepSeek API error:', errText)
         return NextResponse.json({ error: 'Erro na API de IA' }, { status: 500 })
       }
 
       const json = await res.json()
-      aiProposal = json.content?.[0]?.text || ''
+      aiProposal = json.choices?.[0]?.message?.content || ''
 
       const valorMatch = aiProposal.match(/VALOR_SUGERIDO:\s*(\d+)/i)
       if (valorMatch) {

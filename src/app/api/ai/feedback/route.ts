@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { getSessionUser } from '@/lib/auth-utils'
+import { getSessionUser, isAdmin } from '@/lib/auth-utils'
 
 export async function POST(request: NextRequest) {
   try {
@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
   try {
     const user = await getSessionUser(request)
-    if (!user || user.role !== 'ADMIN') return NextResponse.json({ error: 'Acesso restrito' }, { status: 403 })
+    if (!user || !isAdmin(user)) return NextResponse.json({ error: 'Acesso restrito' }, { status: 403 })
 
     const feedbacks = await prisma.feedback.findMany({
       orderBy: { createdAt: 'desc' },

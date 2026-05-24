@@ -9,6 +9,8 @@ import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
+import { AchievementBadge, achievementConfig } from '@/components/ui/achievement-badge'
 import { IconProject, IconCheck, IconAnalytics, IconPlus, IconFinancial, IconNotification, IconArrowRight, IconArrowUpRight } from '@/components/icons'
 
 function getGreeting() {
@@ -50,6 +52,8 @@ export default function PortalDashboard() {
   const [projects, setProjects] = useState<any[]>([])
   const [invoices, setInvoices] = useState<any[]>([])
   const [notifications, setNotifications] = useState<any[]>([])
+  const [achievements, setAchievements] = useState<any[]>([])
+  const [newAchievement, setNewAchievement] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [greeting, setGreeting] = useState('Ola')
 
@@ -60,17 +64,33 @@ export default function PortalDashboard() {
   useEffect(() => {
     const loadAll = async () => {
       try {
-        const [projRes, invRes, notifRes] = await Promise.all([
+        const [projRes, invRes, notifRes, achRes] = await Promise.all([
           fetch('/api/projects', { credentials: 'include' }),
           fetch('/api/invoices', { credentials: 'include' }),
           fetch('/api/notifications', { credentials: 'include' }),
+          fetch('/api/achievements', { credentials: 'include' }),
         ])
         const projJson = await projRes.json()
         const invJson = await invRes.json()
         const notifJson = await notifRes.json()
+        const achJson = await achRes.json()
         setProjects(projJson.data || [])
         setInvoices(invJson.data || [])
         setNotifications((notifJson.data || []).slice(0, 5))
+        const achData = achJson.data || []
+        setAchievements(achData)
+
+        const stored = localStorage.getItem('anderflow_achievements')
+        const prevIds = stored ? JSON.parse(stored) : []
+        const newOnes = achData.filter((a: any) => !prevIds.includes(a.id))
+        if (newOnes.length > 0) {
+          setNewAchievement(newOnes[0])
+          try {
+            const confetti = (await import('canvas-confetti')).default
+            confetti({ particleCount: 80, spread: 70, origin: { y: 0.6 } })
+          } catch {}
+        }
+        localStorage.setItem('anderflow_achievements', JSON.stringify(achData.map((a: any) => a.id)))
       } catch {}
       setLoading(false)
     }
@@ -139,6 +159,22 @@ export default function PortalDashboard() {
           <div><p className="text-[17px] font-[500]">{projects.length ? <><AnimatedCounter value={avgProgress} />%</> : '-'}</p><p className="text-[11px] text-[var(--text-3)]">Media progresso</p></div>
         </CardContent></Card>
       </div>
+
+      {achievements.length > 0 && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-[12px] font-[500] text-[var(--text-3)] uppercase tracking-wider">Suas conquistas</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-wrap gap-2">
+            {achievements.map((a: any) => (
+              <AchievementBadge key={a.id} type={a.type} unlockedAt={a.unlockedAt} />
+            ))}
+            {Object.keys(achievementConfig).filter(t => !achievements.some((a: any) => a.type === t)).map(t => (
+              <AchievementBadge key={t} type={t} locked />
+            ))}
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid gap-5 lg:grid-cols-3 items-start">
         <div className="lg:col-span-2 space-y-5">
@@ -322,6 +358,34 @@ export default function PortalDashboard() {
           </Card>
         </div>
       </div>
+
+      <Dialog open={!!newAchievement} onOpenChange={() => setNewAchievement(null)}>
+        <DialogContent className="sm:max-w-[380px]">
+          <DialogHeader>
+            <DialogTitle className="text-center">Nova Conquista!</DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col items-center gap-4 py-4">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[var(--accent-subtle)] border-2 border-[var(--accent)]/30">
+              <span className="text-2xl">
+                {newAchievement?.type === 'first_project' && '🚀'}
+                {newAchievement?.type === 'briefing_sent' && '📋'}
+                {newAchievement?.type === 'contract_signed' && '✍️'}
+                {newAchievement?.type === 'project_halfway' && '⚡'}
+                {newAchievement?.type === 'project_complete' && '🏆'}
+              </span>
+            </div>
+            <p className="text-[14px] font-[500] text-[var(--text)] text-center">
+              {newAchievement && achievementConfig[newAchievement.type]?.label}
+            </p>
+            <p className="text-[11px] text-[var(--text-3)] text-center">
+              Continue evoluindo! Mais conquistas te aguardam.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button onClick={() => setNewAchievement(null)} className="w-full">Incrivel!</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

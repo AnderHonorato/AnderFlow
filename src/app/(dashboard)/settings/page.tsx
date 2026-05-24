@@ -15,9 +15,10 @@ import {
   IconSettings, IconProfile, IconNotification, IconLogout, IconCheck,
   IconFinancial, IconProject, IconClient, IconChat, IconCRM,
   IconAnalytics, IconKnowledge, IconAutomation, IconTicket, IconFile,
-  IconArrowRight,
+  IconArrowRight, IconCheck as IconCheck2,
 } from '@/components/icons'
 import { cn } from '@/lib/utils'
+import { Send } from 'lucide-react'
 
 const categories = [
   { id: 'general', label: 'Geral', icon: IconSettings },
@@ -262,11 +263,45 @@ export default function SettingsPage() {
                     />
                   </div>
                 ))}
-              </CardContent>
-            </Card>
-          )}
+                  </CardContent>
+                </Card>
+              )}
+
+              {process.env.NODE_ENV === 'development' && (
+                <Card className="border-[var(--warning)]/30">
+                  <CardHeader>
+                    <CardTitle>Dev Tools</CardTitle>
+                    <CardDescription>Ferramentas de desenvolvimento e teste</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-[13px] font-[500]">Relatorio Mensal</p>
+                        <p className="text-[11px] text-[var(--text-3)]">Simula o envio do relatorio mensal do cron</p>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={async () => {
+                          const res = await fetch('/api/cron/monthly-report', {
+                            headers: { Authorization: 'Bearer dev-secret' },
+                          })
+                          const json = await res.json()
+                          if (json.sent !== undefined) {
+                            toast.success(`Relatorio enviado para ${json.sent} clientes`)
+                          } else {
+                            toast.error(json.error || 'Erro ao enviar')
+                          }
+                        }}
+                      >
+                        <Send className="h-3.5 w-3.5" /> Simular envio
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+          </div>
         </div>
-      </div>
     </div>
   )
 }

@@ -19,9 +19,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Ticket nao encontrado' }, { status: 404 })
     }
 
-    const apiKey = process.env.ANTHROPIC_API_KEY
+    const apiKey = process.env.DEEPSEEK_API_KEY
     if (!apiKey) {
-      return NextResponse.json({ error: 'ANTHROPIC_API_KEY nao configurada' }, { status: 500 })
+      return NextResponse.json({ error: 'DEEPSEEK_API_KEY nao configurada' }, { status: 500 })
     }
 
     const systemPrompt = `Voce e um assistente de suporte para uma empresa de desenvolvimento de software chamada ANDERFLOW Sistemas.
@@ -41,28 +41,30 @@ Descricao: ${ticket.description}`
     let aiSuggestedReply: string | null = null
 
     try {
-      const res = await fetch('https://api.anthropic.com/v1/messages', {
+      const res = await fetch('https://api.deepseek.com/v1/chat/completions', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-api-key': apiKey,
-          'anthropic-version': '2023-06-01',
+          'Authorization': `Bearer ${apiKey}`,
         },
         body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
+          model: 'deepseek-chat',
           max_tokens: 500,
-          system: systemPrompt,
-          messages: [{ role: 'user', content: userPrompt }],
+          temperature: 0.3,
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userPrompt },
+          ],
         }),
       })
 
       if (!res.ok) {
-        console.error('[analyze-ticket] Anthropic API error:', await res.text())
+        console.error('[analyze-ticket] DeepSeek API error:', await res.text())
         return NextResponse.json({ ok: false, error: 'Erro na API de IA' }, { status: 500 })
       }
 
       const json = await res.json()
-      const rawText = json.content?.[0]?.text || ''
+      const rawText = json.choices?.[0]?.message?.content || ''
 
       const jsonMatch = rawText.match(/\{[\s\S]*\}/)
       if (jsonMatch) {

@@ -12,7 +12,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
         className={cn(
           'flex h-9 w-full rounded-lg bg-[var(--surface-2)] border border-[var(--border)] px-3 py-1 text-[13px]',
           'placeholder:text-[var(--text-3)]',
-          'transition-[border-color,box-shadow,background-color] duration-[150ms] ease-[cubic-bezier(0.2,0,0,1)]',
+          'transition-[border-color,box-shadow,background-color] transition-duration-[150ms] transition-timing-function-[cubic-bezier(0.2,0,0,1)]',
           'hover:border-[var(--border-2)] hover:bg-[var(--surface-hover)]',
           'focus-visible:outline-none focus-visible:border-[var(--accent)]',
           'focus-visible:ring-[3px] focus-visible:ring-[var(--accent)]/15',
