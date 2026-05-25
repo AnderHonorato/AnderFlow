@@ -6,19 +6,18 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
-import { Progress } from '@/components/ui/progress'
 import { Skeleton } from '@/components/ui/skeleton'
 import { OnboardingTip } from '@/components/ui/onboarding-tip'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { DndContext, DragEndEvent, PointerSensor, useSensor, useSensors, closestCorners } from '@dnd-kit/core'
-import { SortableContext, useSortable, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable'
+import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { GripVertical } from 'lucide-react'
 import { Plus, Search, DollarSign, TrendingUp, Users, Target,
-  MoreHorizontal, Building2, Loader2, LayoutGrid, List, Brain,
+  MoreHorizontal, Building2, Loader2, LayoutGrid, List,
 } from 'lucide-react'
 
 type ViewMode = 'funnel' | 'list'
@@ -128,7 +127,7 @@ export default function CRMPage() {
   const [saving, setSaving] = useState(false)
   const [form, setForm] = useState({ name: '', email: '', phone: '', company: '', source: '', value: '' })
   const [selectedLead, setSelectedLead] = useState<any>(null)
-  const [scoring, setScoring] = useState<string | null>(null)
+  const [, setScoring] = useState<string | null>(null)
   const [sortByScore, setSortByScore] = useState(false)
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))

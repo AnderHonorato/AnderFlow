@@ -1,19 +1,16 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { useSession } from 'next-auth/react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Skeleton } from '@/components/ui/skeleton'
 import { toast } from 'sonner'
-import { IconCheck, IconClose, IconLoader } from '@/components/icons'
+import { IconLoader } from '@/components/icons'
 import { ClipboardList, Check, X, Filter } from 'lucide-react'
 
 export default function ApprovalsPage() {
-  const { data: session } = useSession()
   const [approvals, setApprovals] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('pending')

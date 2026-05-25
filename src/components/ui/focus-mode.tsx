@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
+
 import { toast } from 'sonner'
 import { Moon, BellOff } from 'lucide-react'
 
@@ -53,6 +53,34 @@ export function FocusModeButton() {
       setRemaining(hours > 0 ? `${hours}h ${mins}min` : `${mins}min`)
     }
   }, [endFocus])
+
+  const startFocus = useCallback((duration: number | string) => {
+    let until: number
+    if (duration === 'tomorrow') {
+      const tomorrow = new Date()
+      tomorrow.setDate(tomorrow.getDate() + 1)
+      tomorrow.setHours(9, 0, 0, 0)
+      until = tomorrow.getTime()
+    } else {
+      until = Date.now() + (duration as number) * 60000
+    }
+    try { localStorage.setItem(FOCUS_KEY, String(until)) } catch {}
+    setActive(true)
+    const diff = until - Date.now()
+    const hours = Math.floor(diff / 3600000)
+    const mins = Math.floor((diff % 3600000) / 60000)
+    setRemaining(hours > 0 ? `${hours}h ${mins}min` : `${mins}min`)
+    setOpen(false)
+    toast.success('Modo foco ativado')
+  }, [])
+
+  useEffect(() => { update() }, [update])
+
+  useEffect(() => {
+    if (!active) return
+    const interval = setInterval(update, 60000)
+    return () => clearInterval(interval)
+  }, [active, update])
 
   return (
     <div ref={ref} className="relative">

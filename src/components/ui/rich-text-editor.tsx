@@ -15,7 +15,7 @@ interface RichTextEditorProps {
   onSubmit?: () => void
 }
 
-export function RichTextEditor({ value, onChange, placeholder, className, onSubmit }: RichTextEditorProps) {
+export function RichTextEditor({ value: _value, onChange, placeholder, className, onSubmit }: RichTextEditorProps) {
   const editorRef = useRef<HTMLDivElement>(null)
   const [linkUrl, setLinkUrl] = useState('')
   const [showLinkInput, setShowLinkInput] = useState(false)

@@ -3,16 +3,16 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { toast } from 'sonner'
-import { IconSearch, IconCheck, IconClose, IconSettings, IconFilter, IconChevronDown, IconBot, IconPlay, IconPause } from '@/components/icons'
+import { IconSearch, IconClose, IconSettings, IconFilter, IconBot, IconPlay, IconPause } from '@/components/icons'
 import { cn } from '@/lib/utils'
-import { isOwner, canManageRole, getRoleLabel, ROLE_LABELS, ALL_PERMISSIONS, ROLES, parsePermissions, getEffectivePermissions } from '@/lib/auth-utils'
+import { isOwner, canManageRole, getRoleLabel, ALL_PERMISSIONS, ROLES, parsePermissions, getEffectivePermissions } from '@/lib/auth-utils'
 import type { Role } from '@/lib/auth-utils'
 
 function getRoleBadgeVariant(role: string) {
@@ -79,24 +79,6 @@ export default function UsersPage() {
   const [singleUserRole, setSingleUserRole] = useState('')
   const [singleUserExtraPerms, setSingleUserExtraPerms] = useState<Set<string>>(new Set())
 
-  useEffect(() => {
-    if (session === undefined) return
-    if (!actorIsOwner) {
-      router.push('/dashboard')
-      return
-    }
-    if (activeTab === 'users') loadUsers()
-    if (activeTab === 'requests') loadRequests()
-  }, [actorIsOwner, loadRequests, loadUsers, router, session, activeTab])
-
-  useEffect(() => {
-    if (activeTab === 'users') loadUsers()
-  }, [activeTab, loadUsers, search, roleFilter, statusFilter])
-
-  useEffect(() => {
-    if (activeTab === 'requests') loadRequests()
-  }, [activeTab, loadRequests, requestStatusFilter])
-
   const loadUsers = useCallback(() => {
     setLoading(true)
     const params = new URLSearchParams()
@@ -119,6 +101,24 @@ export default function UsersPage() {
       .catch(() => { setRequests([]); setRequestsLoading(false) })
   }, [requestStatusFilter])
 
+  useEffect(() => {
+    if (session === undefined) return
+    if (!actorIsOwner) {
+      router.push('/dashboard')
+      return
+    }
+    if (activeTab === 'users') loadUsers()
+    if (activeTab === 'requests') loadRequests()
+  }, [actorIsOwner, loadRequests, loadUsers, router, session, activeTab])
+
+  useEffect(() => {
+    if (activeTab === 'users') loadUsers()
+  }, [activeTab, loadUsers, search, roleFilter, statusFilter])
+
+  useEffect(() => {
+    if (activeTab === 'requests') loadRequests()
+  }, [activeTab, loadRequests, requestStatusFilter])
+
   const handleRequestAction = async (id: string, status: string, isDefinitive = false) => {
     const res = await fetch('/api/permission-requests', {
       method: 'PATCH',
@@ -140,14 +140,6 @@ export default function UsersPage() {
       next.has(id) ? next.delete(id) : next.add(id)
       return next
     })
-  }
-
-  const toggleSelectAll = () => {
-    if (selectedIds.size === users.length) {
-      setSelectedIds(new Set())
-    } else {
-      setSelectedIds(new Set(users.map(u => u.id)))
-    }
   }
 
   const openPermissions = () => {

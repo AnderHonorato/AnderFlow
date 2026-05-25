@@ -2,8 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import Image from 'next/image'
-import { useSession } from 'next-auth/react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
@@ -20,7 +19,6 @@ import {
 } from 'lucide-react'
 
 export default function FinancialPage() {
-  const { data: session } = useSession()
   const router = useRouter()
   const [invoices, setInvoices] = useState<any[]>([])
   const [clients, setClients] = useState<any[]>([])

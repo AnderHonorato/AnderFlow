@@ -2,14 +2,12 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { ArrowLeft, Loader2, CheckCircle2, AlertCircle, Mail } from 'lucide-react'
+import { ArrowLeft, Loader2, CheckCircle2, AlertCircle } from 'lucide-react'
 import { toast } from 'sonner'
 
 export default function ForgotPasswordPage() {
-  const router = useRouter()
   const [step, setStep] = useState<'email' | 'code' | 'done'>('email')
   const [isLoading, setIsLoading] = useState(false)
   const [email, setEmail] = useState('')
@@ -19,7 +17,7 @@ export default function ForgotPasswordPage() {
   const [error, setError] = useState('')
   const [countdown, setCountdown] = useState(1800)
   const [resendCooldown, setResendCooldown] = useState(0)
-  const [codeSent, setCodeSent] = useState(false)
+  const [, setCodeSent] = useState(false)
 
   useEffect(() => {
     if (step === 'code' && countdown > 0) {

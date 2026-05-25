@@ -3,7 +3,7 @@ import { getSessionUser, unauthorizedResponse } from '@/lib/auth-utils'
 import { prisma } from '@/lib/prisma'
 
 export async function GET(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const user = await getSessionUser()

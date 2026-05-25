@@ -1,6 +1,6 @@
 # ANDERFLOW Sistemas
 
-**Plataforma SaaS Premium de Gestão de Projetos e Relacionamento com Clientes**
+## Plataforma SaaS Premium de Gestão de Projetos e Relacionamento com Clientes
 
 Desenvolvido por Anderson — sistema completo para centralizar atendimento, projetos, pagamentos, contratos, arquivos, suporte e comunicação com clientes.
 
@@ -9,7 +9,7 @@ Desenvolvido por Anderson — sistema completo para centralizar atendimento, pro
 ## 🚀 Stack
 
 | Camada | Tecnologia |
-|--------|-----------|
+| ------ | ---------- |
 | **Frontend** | Next.js 14 (App Router) + React 18 + TypeScript |
 | **Estilo** | Tailwind CSS + Radix UI + Framer Motion |
 | **Backend** | Next.js API Routes + Prisma ORM |
@@ -24,7 +24,7 @@ Desenvolvido por Anderson — sistema completo para centralizar atendimento, pro
 
 ## 📂 Estrutura
 
-```
+```text
 src/
 ├── app/
 │   ├── (auth)/          # Login, registro, recuperação de senha
@@ -64,22 +64,25 @@ npx tsx prisma/seed.ts
 
 # Rodar servidor de desenvolvimento
 npm run dev
-#roda com edição em tempo real
+
+# Roda com edição em tempo real
 npm run watch
 # → http://localhost:3000
 ```
-Ver arvore de arquivos:
 
- npx tree-node-cli -L 8 -I "node_modules|dist|build|.next|coverage|.git"
+Ver árvore de arquivos:
 
- 
+```bash
+npx tree-node-cli -L 8 -I "node_modules|dist|build|.next|coverage|.git"
+```
+
 ### 🔐 Logins Demo
 
 | Perfil | Email | Senha |
-|--------|-------|-------|
-| **Desenvolvedor** | admin@andero.com.br | admin123 |
-| Cliente 1 | carlos@techstore.com | client123 |
-| Cliente 2 | ana@fastfood.com | client123 |
+| ------ | ----- | ----- |
+| **Desenvolvedor** | <admin@andero.com.br> | admin123 |
+| Cliente 1 | <carlos@techstore.com> | client123 |
+| Cliente 2 | <ana@fastfood.com> | client123 |
 
 ---
 
@@ -88,7 +91,7 @@ Ver arvore de arquivos:
 ### Painel Admin (23 páginas)
 
 | Página | Funcionalidade |
-|--------|---------------|
+| ------ | -------------- |
 | **Dashboard** | KPIs em tempo real, projetos recentes, saldo financeiro |
 | **Projetos** | Kanban + Lista, busca, criação com briefing |
 | **Clientes** | CRUD completo, health score, busca |
@@ -113,9 +116,11 @@ Ver arvore de arquivos:
 | **Configurações** | Módulos, aparência, tema |
 
 ### Portal do Cliente (8 páginas)
+
 Dashboard, Projetos, Mensagens, Financeiro, Contratos, Tickets, Arquivos, Calendário
 
 ### APIs (14 rotas)
+
 `/api/dashboard`, `projects`, `tasks`, `clients`, `leads`, `invoices`, `tickets`, `notifications`, `messages`, `channels`, `payments`, `auth/register`, `auth/forgot-password`, `webhooks/stripe`
 
 ---
@@ -135,25 +140,30 @@ npx prisma studio    # Interface visual do banco (porta 5555)
 ## 📝 Notas do Desenvolvedor
 
 ### Banco de Dados
+
 - **Desenvolvimento**: SQLite (`prisma/dev.db`) — zero configuração
 - **Produção**: Alterar `datasource db` em `prisma/schema.prisma` para PostgreSQL
 
 ### Autenticação
+
 - NextAuth com JWT + credenciais + Google OAuth
 - Middleware protege todas as rotas privadas
 - 2FA modelado (implementação requer Google Authenticator)
 
 ### Socket.IO
+
 - Servidor em `server/socket.ts` (porta 3001)
 - Cliente em `src/lib/socket.ts`
 - Chat usa API REST com fallback para Socket.IO
 
 ### Performance
+
 - React Query com cache de 60s
 - Componentes lazy-loading via Next.js App Router
 - Skeleton loading em todas as páginas com dados assíncronos
 
 ### Design System
+
 - Inspirado em Stripe, Linear, Notion, Vercel
 - Dark/Light mode com transição suave
 - Cores HSL via CSS custom properties

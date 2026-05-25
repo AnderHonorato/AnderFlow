@@ -3,13 +3,8 @@
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
-import { toast } from 'sonner'
-import {
-  Brain, ThumbsUp, ThumbsDown, MessageSquare, TrendingUp, DollarSign,
-  BarChart3, Clock, Zap,
-} from 'lucide-react'
+import { MessageSquare, ThumbsUp, Clock, DollarSign } from 'lucide-react'
 
 export default function AiPerformancePage() {
   const [data, setData] = useState<any>(null)

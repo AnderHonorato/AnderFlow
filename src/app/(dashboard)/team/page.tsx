@@ -7,12 +7,9 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
-import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
-import { Users, Clock, AlertTriangle, CheckCircle2, Ticket, FolderKanban, ArrowUpDown, RefreshCcw } from 'lucide-react'
+import { Users, FolderKanban, ArrowUpDown, RefreshCcw } from 'lucide-react'
 
 interface TeamMember {
   id: string
@@ -39,10 +36,6 @@ export default function TeamPage() {
   const roleLevel = (session?.user as any)?.roleLevel || 0
   const [members, setMembers] = useState<TeamMember[]>([])
   const [loading, setLoading] = useState(true)
-  const [redistributing, setRedistributing] = useState(false)
-  const [selectedFrom, setSelectedFrom] = useState<string | null>(null)
-  const [redistributeTaskId, setRedistributeTaskId] = useState<string | null>(null)
-  const [tasksList, setTasksList] = useState<any[]>([])
 
   useEffect(() => {
     if (roleLevel < 80) {
@@ -54,12 +47,6 @@ export default function TeamPage() {
       .then(json => { setMembers(json.data || []); setLoading(false) })
       .catch(() => setLoading(false))
   }, [roleLevel, router])
-
-  const loadTasks = async (userId: string) => {
-    const res = await fetch(`/api/tasks?assigneeId=${userId}&status=TODO,IN_PROGRESS`)
-    const json = await res.json()
-    setTasksList(json.data || [])
-  }
 
   const getRoleLabel = (role: string) => {
     const labels: Record<string, string> = {

@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -21,7 +20,6 @@ interface SessionItem {
 }
 
 export default function SessionsPage() {
-  const { data: session } = useSession()
   const [sessions, setSessions] = useState<SessionItem[]>([])
   const [loading, setLoading] = useState(true)
   const [revoking, setRevoking] = useState<string | null>(null)

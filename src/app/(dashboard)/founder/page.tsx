@@ -2,18 +2,13 @@
 
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { Progress } from '@/components/ui/progress'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
-import { toast } from 'sonner'
 import {
-  Crown, DollarSign, TrendingUp, Users, Activity,
-  Star, AlertTriangle, Download, Target,
+  Crown, DollarSign, TrendingUp, Users,
+  Star, AlertTriangle, Target,
 } from 'lucide-react'
-import { motion } from 'framer-motion'
 
 export default function FounderPage() {
   const { data: session } = useSession()

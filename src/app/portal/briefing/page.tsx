@@ -11,7 +11,7 @@ import { Progress } from '@/components/ui/progress'
 import { toast } from 'sonner'
 import {
   ArrowLeft, ArrowRight, Check, Loader2,
-  Paperclip, X, Image as IconeImagem, File, Save, Upload,
+  X, Image as IconeImagem, File, Save, Upload,
 } from 'lucide-react'
 import { SERVICE_CATEGORIES, getTemplateForCategory, generateSummary } from '@/lib/briefing-engine'
 import type { BriefingTemplate, BriefingStage, ServiceCategory } from '@/lib/briefing-engine'

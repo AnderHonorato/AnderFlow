@@ -6,13 +6,12 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Badge } from '@/components/ui/badge'
 import { toast } from 'sonner'
 import {
   BarChart, Bar, LineChart, Line, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts'
-import { BarChart3, PieChartIcon, LineChartIcon, Table, Save, Trash2 } from 'lucide-react'
+import { BarChart3, PieChartIcon, LineChartIcon, Table, Save } from 'lucide-react'
 
 const METRICS = [
   { key: 'revenue', label: 'Receita', icon: '💰' },
@@ -49,10 +48,6 @@ export default function CustomReportsPage() {
     }).catch(() => {})
   }, [])
 
-  useEffect(() => {
-    loadData()
-  }, [metric, groupBy, dateRange, loadData])
-
   const loadData = useCallback(async () => {
     setLoading(true)
     const params = new URLSearchParams({ metric, groupBy, dateRange })
@@ -61,6 +56,10 @@ export default function CustomReportsPage() {
     setData(json.data || [])
     setLoading(false)
   }, [metric, groupBy, dateRange])
+
+  useEffect(() => {
+    loadData()
+  }, [metric, groupBy, dateRange, loadData])
 
   const loadSavedReport = (report: any) => {
     const cfg = report.config

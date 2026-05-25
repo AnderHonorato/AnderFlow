@@ -10,7 +10,6 @@ export async function GET(request: NextRequest) {
 
   const now = new Date()
   const fourteenDaysAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000)
-  const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
 
   const activeClients = await prisma.user.findMany({
     where: {

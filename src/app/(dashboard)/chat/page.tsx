@@ -34,7 +34,6 @@ export default function ChatPage() {
   const [templateOpen, setTemplateOpen] = useState(false)
   const [templateFilter, setTemplateFilter] = useState('')
   const [templateIndex, setTemplateIndex] = useState(0)
-  const filterTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const handleSearch = useCallback((q: string) => {
     if (!q.trim() || !selectedChannel) { setSearchResults([]); return }

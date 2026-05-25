@@ -1,13 +1,13 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { toast } from 'sonner'
-import { Plus, Trash2, Activity, AlertTriangle } from 'lucide-react'
+import { Plus, Activity, AlertTriangle } from 'lucide-react'
 
 const STATUS_OPTIONS = [
   { value: 'operational', label: 'Operacional', color: 'var(--success)' },
@@ -18,7 +18,7 @@ const STATUS_OPTIONS = [
 export default function StatusPageSettings() {
   const [components, setComponents] = useState<any[]>([])
   const [incidents, setIncidents] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
+  const [, setLoading] = useState(true)
   const [incidentOpen, setIncidentOpen] = useState(false)
   const [incidentTitle, setIncidentTitle] = useState('')
   const [incidentMsg, setIncidentMsg] = useState('')
@@ -26,7 +26,7 @@ export default function StatusPageSettings() {
 
   const load = async () => {
     try {
-      const [compRes, incRes] = await Promise.all([
+      const [compRes, _incRes] = await Promise.all([
         fetch('/api/status').then(r => r.json()),
         fetch('/api/status').then(r => r.json()),
       ])
@@ -99,7 +99,6 @@ export default function StatusPageSettings() {
         </CardHeader>
         <CardContent>
           {components.map(c => {
-            const st = STATUS_OPTIONS.find(s => s.value === c.status) || STATUS_OPTIONS[0]
             return (
               <div key={c.id} className="flex items-center justify-between py-2.5 border-b border-[var(--border)] last:border-b-0">
                 <span className="text-[13px] text-[var(--text)]">{c.name}</span>

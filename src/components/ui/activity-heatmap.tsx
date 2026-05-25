@@ -41,7 +41,6 @@ export function ActivityHeatmap({ data, max }: HeatmapProps) {
     setCells(result)
   }, [data])
 
-  const weekLabels = cells.filter((_, i) => i % 7 === 0)
 
   return (
     <div className="overflow-x-auto">

@@ -5,10 +5,9 @@ import { useRouter } from 'next/navigation'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Skeleton } from '@/components/ui/skeleton'
 import { toast } from 'sonner'
-import { IconLoader, IconCheck, IconSparkles } from '@/components/icons'
-import { Sparkles, ArrowRight, Check, Edit3 } from 'lucide-react'
+import { IconLoader, IconCheck } from '@/components/icons'
+import { Sparkles, Check, Edit3 } from 'lucide-react'
 
 export default function NewTicketPage() {
   const router = useRouter()

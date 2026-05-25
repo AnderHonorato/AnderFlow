@@ -3,12 +3,11 @@
 import { useState, useEffect } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Skeleton } from '@/components/ui/skeleton'
 import { toast } from 'sonner'
-import { CheckCircle, XCircle, Eye, Users } from 'lucide-react'
+import { CheckCircle, XCircle, Eye } from 'lucide-react'
 
 export default function PendingUsersPage() {
   const [users, setUsers] = useState<any[]>([])

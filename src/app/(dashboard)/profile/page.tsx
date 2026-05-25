@@ -11,10 +11,9 @@ import { Separator } from '@/components/ui/separator'
 import { Badge } from '@/components/ui/badge'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { toast } from 'sonner'
-import { IconTrash, IconLoader, IconLogout, IconCheck } from '@/components/icons'
+import { IconTrash, IconLoader, IconCheck } from '@/components/icons'
 import { Camera } from 'lucide-react'
 import { ADMIN_BADGES } from '@/lib/admin-badges'
-import type { AdminBadgeType } from '@/lib/admin-badges'
 import { usePerfilStore } from '@/stores/app-store'
 
 export default function ProfilePage() {

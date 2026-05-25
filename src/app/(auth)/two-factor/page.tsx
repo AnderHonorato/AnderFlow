@@ -4,7 +4,6 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { signIn } from 'next-auth/react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { toast } from 'sonner'
 import { Shield, Loader2, AlertCircle } from 'lucide-react'
 
 function TwoFactorForm() {

@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Skeleton } from '@/components/ui/skeleton'
 import { toast } from 'sonner'
-import { ArrowLeft, Plus, Target, TrendingUp, Trash2 } from 'lucide-react'
+import { ArrowLeft, Plus, Target, Trash2 } from 'lucide-react'
 
 export default function ProjectOKRsPage() {
   const { id } = useParams<{ id: string }>()

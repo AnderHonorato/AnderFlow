@@ -178,7 +178,7 @@ export function AIFab(){
   const[thinkSec,setThinkSec]=useState(0)
   const[thinkExpanded,setThinkExpanded]=useState(false)
   const autoTimer=useRef<ReturnType<typeof setTimeout>|null>(null)
-  const autoShowRef=useRef(autoShow)
+  const autoShowRef = useRef<() => void>(null!)
   const thinkStart=useRef(0)
   const abortRef=useRef<AbortController|null>(null)
   const sStreamContent=useRef('')

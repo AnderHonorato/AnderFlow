@@ -10,8 +10,8 @@ import { Progress } from '@/components/ui/progress'
 import { Input } from '@/components/ui/input'
 import { toast } from 'sonner'
 import {
-  Rocket, CheckCircle2, ArrowRight, Settings, Users, FolderKanban, CreditCard,
-  MessageSquare, Zap, SkipForward, Sparkles, Loader2,
+  Rocket, CheckCircle2, Settings, Users, FolderKanban, CreditCard,
+  MessageSquare, SkipForward, Sparkles, Loader2,
 } from 'lucide-react'
 
 const TOTAL_STEPS = 6
@@ -85,14 +85,6 @@ export default function OnboardingPage() {
       else toast.error('Erro ao criar projeto')
     } catch { toast.error('Erro') }
     setSaving(false)
-  }
-
-  const handleFinish = async () => {
-    saveProgress(TOTAL_STEPS - 1, [0, 1, 2, 3, 4, 5])
-    try {
-      const confetti = (await import('canvas-confetti')).default
-      confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } })
-    } catch {}
   }
 
   const progress = ((completed.length + (step > 0 ? 1 : 0)) / TOTAL_STEPS) * 100

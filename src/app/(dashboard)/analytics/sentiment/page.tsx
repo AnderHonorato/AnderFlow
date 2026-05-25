@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Smile, Meh, Frown, AlertTriangle } from 'lucide-react'
 
@@ -13,7 +12,6 @@ export default function SentimentAnalyticsPage() {
   const positiveWords = useMemo(() => ['bom', 'otimo', 'excelente', 'obrigado', 'gostei', 'perfeito', 'rapido', 'feliz', 'satisfeito', 'incrivel'], [])
   const negativeWords = useMemo(() => ['ruim', 'pessimo', 'erro', 'atraso', 'problema', 'insatisfeito', 'lento', 'falha', 'bug', 'demora'], [])
   const stopWords = useMemo(() => ['que', 'com', 'para', 'nao', 'uma', 'dos', 'das', 'mais', 'como', 'por'], [])
-
   useEffect(() => {
     const fetchData = async () => {
       const [commentsRes, updatesRes] = await Promise.all([
@@ -29,6 +27,7 @@ export default function SentimentAnalyticsPage() {
         ...updates.map((u: any) => ({ text: u.description, date: u.createdAt, projectId: u.projectId })),
       ]
 
+
       const sentiments: Record<string, number> = { positive: 0, neutral: 0, negative: 0 }
       const monthly: Record<string, Record<string, number>> = {}
 
@@ -37,6 +36,7 @@ export default function SentimentAnalyticsPage() {
         if (!monthly[month]) monthly[month] = { positive: 0, neutral: 0, negative: 0 }
 
         const text = item.text.toLowerCase()
+
         const posCount = positiveWords.filter(w => text.includes(w)).length
         const negCount = negativeWords.filter(w => text.includes(w)).length
 
@@ -72,7 +72,6 @@ export default function SentimentAnalyticsPage() {
   }, [positiveWords, negativeWords, stopWords])
 
   if (loading) return <div className="p-6 space-y-4"><Skeleton className="h-8 w-48" /><Skeleton className="h-64" /></div>
-
   const { sentiments, topNegativeKeywords, total } = data || { sentiments: { positive: 0, neutral: 0, negative: 0 }, topNegativeKeywords: [], total: 1 }
 
   const pieData = [

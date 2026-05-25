@@ -3,12 +3,9 @@
 import { useEffect, useState } from 'react'
 import { useSession } from 'next-auth/react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
-import { toast } from 'sonner'
-import { TrendingUp, TrendingDown, DollarSign, Users, RefreshCcw, AlertTriangle, ArrowUpRight } from 'lucide-react'
+import { TrendingUp, TrendingDown, AlertTriangle } from 'lucide-react'
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
-import Link from 'next/link'
 
 interface MRRData {
   mrr: number

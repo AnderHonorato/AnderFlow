@@ -94,7 +94,6 @@ export async function GET(request: NextRequest) {
     const teamUtilization = totalUsers > 0 ? Math.min(100, Math.round(((totalTimeEntries._sum?.hours ?? 0) / (totalUsers * 160)) * 100)) : 0
 
     // CAC and LTV estimates
-    const cac = revenueYTD > 0 ? Math.round((1000 * newClientsThisMonth) / Math.max(1, newClientsThisMonth)) : 0
     const ltv = activeClients > 0 ? Math.round(revenueYTD / activeClients) : 0
 
     const alertsList: string[] = []

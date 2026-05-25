@@ -9,7 +9,6 @@ import {
   cargoEhDeveloperOuSuperior,
   podeGerenciarCargo,
   type Cargo,
-  type Permissao,
 } from '@/lib/hierarquia'
 
 // Re-export do tipo Role com alias para compatibilidade

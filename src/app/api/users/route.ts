@@ -4,7 +4,6 @@ import {
   getSessionUser,
   isOwner,
   canManageRole,
-  getRoleLevel,
   parsePermissions,
   ROLE_LEVELS,
 } from '@/lib/auth-utils'

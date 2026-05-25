@@ -1,15 +1,15 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { toast } from 'sonner'
 import {
-  Plus, Search, Zap, Play, Pause, MoreHorizontal, ArrowRight,
-  Mail, MessageSquare, Bell, CreditCard, FileText, Users, Clock, CheckCircle2,
+  Plus, Search, Zap, Play, Pause, ArrowRight,
+  Mail, MessageSquare, CreditCard, Users, Clock, CheckCircle2,
   Trash2,
 } from 'lucide-react'
 
@@ -25,10 +25,6 @@ const actionOptions = [
   { value: 'create_task', label: 'Criar tarefa' },
   { value: 'send_chat_message', label: 'Enviar mensagem no chat' },
 ]
-
-const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
-  Users, CreditCard, Mail, Clock, CheckCircle2, MessageSquare,
-}
 
 function getActionIcon(trigger: string): React.ComponentType<{ className?: string }> {
   if (trigger.includes('cliente')) return Users

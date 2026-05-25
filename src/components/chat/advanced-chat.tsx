@@ -4,13 +4,10 @@ import { useEffect, useState, useRef } from 'react'
 import Image from 'next/image'
 import { useSession } from 'next-auth/react'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
-import { ScrollArea } from '@/components/ui/scroll-area'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { toast } from 'sonner'
 import {
-  IconSend, IconPaperclip, IconImage, IconTrash, IconClose,
+  IconSend, IconPaperclip, IconImage, IconTrash,
 } from '@/components/icons'
 
 interface Message {
@@ -222,7 +219,7 @@ export function AdvancedChat({ channelId, compact = false }: AdvancedChatProps) 
                             <p className="text-[12px] truncate font-[500]">{meta.name}</p>
                             <p className="text-[10px] opacity-70">{formatBytes(meta.size)}</p>
                           </div>
-                          <a href={meta.url} download className="ml-1 shrink-0 opacity-70 hover:opacity-100">
+                          <a href={meta.url} download className="ml-1 shrink-0 opacity-70 hover:opacity-100" aria-label={`Baixar ${meta.name}`}>
                             <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M8 2v10M4 8l4 4 4-4M2 14h12"/></svg>
                           </a>
                         </div>
@@ -234,6 +231,7 @@ export function AdvancedChat({ channelId, compact = false }: AdvancedChatProps) 
                       <button
                         onClick={() => handleDelete(msg.id)}
                         className="absolute -left-7 top-1/2 -translate-y-1/2 flex items-center justify-center h-5 w-5 rounded text-[var(--text-3)] hover:text-[var(--destructive)] opacity-0 group-hover:opacity-100 transition-all"
+                        aria-label="Excluir mensagem"
                       >
                         <IconTrash className="w-3 h-3" />
                       </button>
@@ -286,6 +284,7 @@ export function AdvancedChat({ channelId, compact = false }: AdvancedChatProps) 
               ref={fileInputRef}
               className="hidden"
               onChange={(e) => handleFileSelect(e, false)}
+              aria-label="Selecionar arquivo"
             />
             <input
               type="file"
@@ -293,6 +292,7 @@ export function AdvancedChat({ channelId, compact = false }: AdvancedChatProps) 
               accept="image/*"
               className="hidden"
               onChange={(e) => handleFileSelect(e, true)}
+              aria-label="Selecionar imagem"
             />
             <Button variant="ghost" size="icon-sm" className="shrink-0 h-8 w-8" onClick={() => fileInputRef.current?.click()}>
               <IconPaperclip className="w-[14px] h-[14px]" />

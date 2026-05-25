@@ -1,21 +1,20 @@
 'use client'
 
-import { useEffect, useState, useMemo, Fragment } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { usePathname, useRouter } from 'next/navigation'
+import { usePathname } from 'next/navigation'
 import { useSession, signOut } from 'next-auth/react'
 import { useUIStore, useOnlineStore, usePerfilStore } from '@/stores/app-store'
 import { cn } from '@/lib/utils'
 import {
   IconDashboard, IconProject, IconClient, IconCRM, IconChat,
   IconFinancial, IconAnalytics, IconKnowledge, IconNotification,
-  IconSettings, IconChevronLeft, IconChevronRight, IconMenu,
+  IconSettings, IconChevronLeft, IconChevronRight,
   IconLogout, IconProfile, IconTicket, IconFile,
   IconAutomation,
 } from '@/components/icons'
 import { Star, Clock } from 'lucide-react'
-import { motion } from 'framer-motion'
 
 const adminNavSections = [
   {
@@ -79,10 +78,9 @@ const iconMap: Record<string, any> = {
 
 export function SidebarClient() {
   const pathname = usePathname()
-  const router = useRouter()
   const { data: session } = useSession()
   const { mobileMenuOpen, setMobileMenuOpen } = useUIStore()
-  const { onlineNow, setStats } = useOnlineStore()
+  const { setStats } = useOnlineStore()
   const { fotoPerfil } = usePerfilStore()
   const [collapsed, setCollapsed] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
@@ -127,14 +125,13 @@ export function SidebarClient() {
     })
   }
 
-  const [openTicketsCount, setOpenTicketsCount] = useState(0)
-  const [chatUnread, setChatUnread] = useState(0)
+  const [openTicketsCount] = useState(0)
+  const [chatUnread] = useState(0)
 
-  const role = (session?.user as any)?.role || 'USER'
   const roleLevel = (session?.user as any)?.roleLevel || 0
   const [hierarquiaVerificada, setHierarquiaVerificada] = useState(false)
   const [permissaoNivel, setPermissaoNivel] = useState(roleLevel)
-  const [permissaoErro, setPermissaoErro] = useState(false)
+  const [_, setPermissaoErro] = useState(false)
 
   useEffect(() => {
     const controller = new AbortController()
@@ -168,57 +165,12 @@ export function SidebarClient() {
   const isOwner = nivelEfetivo >= 100
   const topNav = isModOrAbove ? adminNavItems : clientNavItems
 
-  useEffect(() => {
-    if (!mounted || !pathname) return
-    const allItems = [...topNav, ...bottomNav]
-    const match = allItems.find(i => {
-      if (i.href === '/dashboard') return pathname === '/dashboard'
-      return pathname === i.href || pathname.startsWith(i.href + '/')
-    })
-    if (!match) return
-    setRecents(prev => {
-      const next = [match.href, ...prev.filter(u => u !== match.href)].slice(0, 10)
-      localStorage.setItem('anderflow-recents', JSON.stringify(next))
-      return next
-    })
-  }, [pathname, mounted, topNav, bottomNav])
-
-  useEffect(() => {
-    if (!isModOrAbove) return
-    const fetchTickets = async () => {
-      try {
-        const [openRes, progRes] = await Promise.all([
-          fetch('/api/tickets?status=OPEN&limit=1'),
-          fetch('/api/tickets?status=IN_PROGRESS&limit=1'),
-        ])
-        const openData = await openRes.json()
-        const progData = await progRes.json()
-        setOpenTicketsCount((openData.pagination?.total || 0) + (progData.pagination?.total || 0))
-      } catch { /* noop */ }
-    }
-    fetchTickets()
-    const interval = setInterval(fetchTickets, 60000)
-    return () => clearInterval(interval)
-  }, [isModOrAbove])
-
-  useEffect(() => {
-    const fetchChat = async () => {
-      try {
-        const res = await fetch('/api/chat/unread-count')
-        const data = await res.json()
-        setChatUnread(data.count || 0)
-      } catch { /* noop */ }
-    }
-    fetchChat()
-    const interval = setInterval(fetchChat, 30000)
-    return () => clearInterval(interval)
-  }, [])
-
   const bottomNav = useMemo(() => {
     if (!isModOrAbove) return clientBottomNav
     return [
-      ...(isOwner ? [{ name: 'Usuarios', href: '/users', icon: IconClient }] : []),
-      ...(isOwner ? [{ name: 'Founder', href: '/founder', icon: IconDashboard }] : []),
+      ...(isOwner ? [{ name: 'Chaves API', href: '/settings/api-keys', icon: IconSettings }] : []),
+      ...(isAdminOrAbove ? [{ name: 'Integrações', href: '/settings/integrations', icon: IconAutomation }] : []),
+      ...(isOwner ? [{ name: 'Usuários', href: '/users', icon: IconClient }] : []),
       { name: 'Notificações', href: '/notifications', icon: IconNotification },
       {
         name: 'Configurações',
@@ -275,28 +227,13 @@ export function SidebarClient() {
         : 'text-[var(--text-2)] hover:text-[var(--text)] hover:bg-[var(--surface-hover)]'
     )
 
-  const subNavItemClass = (active: boolean) =>
-    cn(
-      'flex items-center gap-2.5 h-[30px] px-3 rounded-lg text-[12px]',
-      'transition-all duration-200 ease-emphasized',
-      'relative select-none ml-3',
-      collapsed && 'justify-center px-2 ml-0',
-      active
-        ? 'text-[var(--accent)] bg-[var(--accent-subtle)] font-medium'
-        : 'text-[var(--text-3)] hover:text-[var(--text-2)] hover:bg-[var(--surface-hover)]'
-    )
-
   return (
     <>
       {mobileMenuOpen && (
         <div className="fixed inset-0 z-40 bg-black/40 lg:hidden" onClick={() => setMobileMenuOpen(false)} />
       )}
 
-      <motion.aside
-        initial={false}
-        animate={{ width: collapsed ? 60 : 220 }}
-        transition={{ duration: 0.3, ease: [0.2, 0, 0, 1] }}
-        className={cn(
+      <aside className={cn(
         'fixed lg:sticky top-0 left-0 z-40 h-screen flex flex-col',
         'bg-[var(--bg-secondary)] border-r border-[var(--border)]',
         'transform transition-all transition-duration-[300ms] transition-timing-function-[cubic-bezier(0.2,0,0,1)]',
@@ -457,52 +394,26 @@ export function SidebarClient() {
         <div className="border-t border-[var(--border)] py-2 px-2 space-y-0.5">
           {bottomNav.map(item => {
             const active = isActive(item.href)
-            const temSubItens = 'subItems' in item && Array.isArray(item.subItems) && item.subItems.length > 0
-            const mostrarSubItens = temSubItens && !collapsed && pathname.startsWith('/settings')
 
             return (
-              <Fragment key={item.name}>
-                <Link
-                  href={item.href}
-                  onClick={() => setMobileMenuOpen(false)}
-                  title={collapsed ? item.name : undefined}
-                  className={cn(navItemClass(active), 'group')}
-                >
-                  {active && (
-                    <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 rounded-r bg-[var(--accent)] animate-scale-in origin-center" style={{ height: '16px' }} />
+              <Link
+                key={item.name}
+                href={item.href}
+                onClick={() => setMobileMenuOpen(false)}
+                title={collapsed ? item.name : undefined}
+                className={navItemClass(active)}
+              >
+                {active && (
+                  <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 rounded-r bg-[var(--accent)] animate-scale-in origin-center" style={{ height: '16px' }} />
+                )}
+                <span className="relative">
+                  <item.icon className="w-[16px] h-[16px] shrink-0" />
+                  {item.name === 'Notificações' && notifUnread > 0 && (
+                    <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-red-500 badge-pulse" />
                   )}
-                  <span className="relative">
-                    <item.icon className="w-[16px] h-[16px] shrink-0" />
-                    {item.name === 'Notificações' && notifUnread > 0 && (
-                      <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-red-500 badge-pulse" />
-                    )}
-                  </span>
-                  {!collapsed && <span className="truncate flex-1 min-w-0">{item.name}</span>}
-                  {!collapsed && (
-                    <button
-                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleFavorite({ name: item.name, href: item.href, iconType: item.icon.name }) }}
-                      className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                    >
-                      <Star className={cn('w-3 h-3', isFav(item.href) ? 'fill-yellow-400 text-yellow-400' : 'text-[var(--text-3)]')} />
-                    </button>
-                  )}
-                </Link>
-                {mostrarSubItens && (item as any).subItems.map((sub: { name: string; href: string; icon: any }) => {
-                  const subAtivo = isActive(sub.href)
-                  const SubIcon = sub.icon
-                  return (
-                    <Link
-                      key={sub.name}
-                      href={sub.href}
-                      onClick={() => setMobileMenuOpen(false)}
-                      className={subNavItemClass(subAtivo)}
-                    >
-                      <SubIcon className="w-[14px] h-[14px] shrink-0" />
-                      <span className="truncate">{sub.name}</span>
-                    </Link>
-                  )
-                })}
-              </Fragment>
+                </span>
+                {!collapsed && <span className="truncate">{item.name}</span>}
+              </Link>
             )
           })}
 
@@ -536,7 +447,7 @@ export function SidebarClient() {
             )}
           </div>
         </div>
-      </motion.aside>
+      </aside>
     </>
   )
 }

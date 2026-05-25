@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react'
 import { useSession } from 'next-auth/react'
 import { Button } from '@/components/ui/button'
 import { Bell, X } from 'lucide-react'
-import { isFocusActive } from '@/components/ui/focus-mode'
 
 function urlBase64ToUint8Array(base64String: string) {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4)
@@ -114,6 +113,7 @@ export function PushPermission() {
           <button
             onClick={() => { setShow(false); setDismissed(true) }}
             className="shrink-0 text-[var(--text-3)] hover:text-[var(--text)] transition-colors"
+            aria-label="Fechar"
           >
             <X className="h-4 w-4" />
           </button>

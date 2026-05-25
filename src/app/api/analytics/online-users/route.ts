@@ -7,8 +7,7 @@ export async function GET(request: NextRequest) {
     const user = await getSessionUser(request)
     const isAdminUser = user && isAdmin(user)
 
-    const { searchParams } = new URL(request.url)
-    const userId = searchParams.get('userId')
+    const { searchParams: _searchParams } = new URL(request.url)
 
     const where: any = { isOnline: true, lastSeen: { gte: new Date(Date.now() - 5 * 60000) } }
     if (!isAdminUser && user) {

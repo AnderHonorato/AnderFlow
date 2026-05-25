@@ -18,7 +18,7 @@ import { TimeTracker } from '@/components/ui/time-tracker'
 import { CsvImportModal } from '@/components/ui/csv-import-modal'
 import { SatisfactionScorecard } from '@/components/projects/satisfaction-scorecard'
 import { IconArrowLeft, IconThumbsUp, IconThumbsDown, IconCheck, IconClose, IconLoader, IconFile, IconClock, IconSparkles, IconPlus } from '@/components/icons'
-import { Target, Link2, Copy, Presentation, GitBranch, AlertTriangle, History, ClipboardCheck } from 'lucide-react'
+import { Target, Link2, Copy, GitBranch, AlertTriangle, History, ClipboardCheck } from 'lucide-react'
 
 const DEFAULT_STEPS = [
   { id: 1, label: 'Briefing', description: 'Coleta de requisitos e entendimento do projeto' },
@@ -68,7 +68,7 @@ export default function ProjectDetailPage() {
   const [clientReplyMsg, setClientReplyMsg] = useState('')
   const [clientReplyLoading, setClientReplyLoading] = useState(false)
   const [proposalViewOpen, setProposalViewOpen] = useState(false)
-  const [proposalHistory, setProposalHistory] = useState<{ value: string; date: string; author: string }[]>([])
+  const [_proposalHistory, setProposalHistory] = useState<{ value: string; date: string; author: string }[]>([])
   const [aiLoading, setAiLoading] = useState(false)
   const [csvImportOpen, setCsvImportOpen] = useState(false)
   const [approvalLinkOpen, setApprovalLinkOpen] = useState(false)
@@ -86,7 +86,7 @@ export default function ProjectDetailPage() {
   const [depDiagramOpen, setDepDiagramOpen] = useState(false)
   const [expandedTaskId, setExpandedTaskId] = useState<string | null>(null)
   const [addDepTaskId, setAddDepTaskId] = useState<string | null>(null)
-  const [depLoading, setDepLoading] = useState(false)
+  const [_depLoading, setDepLoading] = useState(false)
   const [proposalVersions, setProposalVersions] = useState<any[]>([])
   const [versionHistoryOpen, setVersionHistoryOpen] = useState(false)
   const [deliveryChecklistOpen, setDeliveryChecklistOpen] = useState(false)
@@ -117,7 +117,7 @@ export default function ProjectDetailPage() {
   const [riskLoading, setRiskLoading] = useState(false)
   const [mitigatedRisks, setMitigatedRisks] = useState<Set<number>>(new Set())
 
-  const [notionConfigured, setNotionConfigured] = useState(false)
+  const [_notionConfigured, setNotionConfigured] = useState(false)
 
   const handlePrintModal = (modalSelector: string) => {
     const modal = document.querySelector(modalSelector)
@@ -444,10 +444,6 @@ export default function ProjectDetailPage() {
     fetchSprints()
   }
 
-  const sprintProgress = activeSprint?._count?.tasks
-    ? Math.round((activeSprint._count.tasks / Math.max(activeSprint._count.tasks || 1, 10)) * 100)
-    : 0
-
   const persistProject = (newSteps: StepState[], newHistory?: any[]) => {
     setSteps(newSteps)
     const effectiveHistory = newHistory ?? history
@@ -456,8 +452,6 @@ export default function ProjectDetailPage() {
     localStorage.setItem(`anderflow_project_steps_${id}`, payload)
     fetch(`/api/projects/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ stepsData: payload }) }).catch(() => {})
   }
-
-  const saveSteps = (newSteps: StepState[]) => { persistProject(newSteps) }
 
   const formatSmartTime = (dateTimeStr: string) => {
     const parts = dateTimeStr.split(', ')
@@ -892,7 +886,6 @@ export default function ProjectDetailPage() {
       )
     }
     if (nodeId >= 6 && isAdmin) {
-      const stepLabel = DEFAULT_STEPS.find(s => s.id === nodeId)?.label || ''
       return (
         <div className="space-y-2">
           <Button variant="outline" size="sm" onClick={() => handleGenerateApprovalLink(nodeId)} disabled={approvalLoading} className="h-7 text-[11px] gap-1">

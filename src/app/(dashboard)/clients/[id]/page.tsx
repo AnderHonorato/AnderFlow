@@ -10,10 +10,9 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Progress } from '@/components/ui/progress'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Separator } from '@/components/ui/separator'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { toast } from 'sonner'
-import { ArrowLeft, Mail, Phone, Building2, Calendar, Clock, FolderKanban, DollarSign, MessageSquare, TicketIcon, Link2, Copy, Paintbrush, Upload, Users } from 'lucide-react'
+import { ArrowLeft, Mail, Phone, Building2, Calendar, Clock, FolderKanban, DollarSign, MessageSquare, Link2, Copy, Paintbrush, Upload, Users } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 
 export default function ClientDetailPage() {
@@ -22,7 +21,7 @@ export default function ClientDetailPage() {
   const [projects, setProjects] = useState<any[]>([])
   const [invoices, setInvoices] = useState<any[]>([])
   const [messages, setMessages] = useState<any[]>([])
-  const [tickets, setTickets] = useState<any[]>([])
+  const [, setTickets] = useState<any[]>([])
   const [checkins, setCheckins] = useState<any[]>([])
   const [checkinStats, setCheckinStats] = useState<{ total: number; avgMood: number } | null>(null)
   const [loading, setLoading] = useState(true)
@@ -134,7 +133,6 @@ export default function ClientDetailPage() {
 
   const totalRevenue = invoices.filter(i => i.status === 'PAID').reduce((s: number, i: any) => s + i.total, 0)
   const pendingRevenue = invoices.filter(i => i.status !== 'PAID').reduce((s: number, i: any) => s + i.total, 0)
-  const avgProgress = projects.length > 0 ? Math.round(projects.reduce((s: number, p: any) => s + p.progress, 0) / projects.length) : 0
 
   return (
     <div className="p-6 space-y-6 max-w-5xl mx-auto">

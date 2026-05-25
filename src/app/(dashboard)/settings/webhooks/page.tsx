@@ -1,13 +1,13 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { toast } from 'sonner'
-import { Plus, Trash2, Webhook, RefreshCw, ExternalLink, Check, X } from 'lucide-react'
+import { Plus, Trash2, Webhook, RefreshCw, ExternalLink, Check } from 'lucide-react'
 import crypto from 'crypto'
 
 const WEBHOOK_EVENTS = [
@@ -24,7 +24,7 @@ export default function WebhooksSettingsPage() {
   const [endpoints, setEndpoints] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [dialogOpen, setDialogOpen] = useState(false)
-  const [editingId, setEditingId] = useState<string | null>(null)
+  const [, setEditingId] = useState<string | null>(null)
   const [url, setUrl] = useState('')
   const [secret, setSecret] = useState('')
   const [selectedEvents, setSelectedEvents] = useState<string[]>([])
@@ -112,12 +112,6 @@ export default function WebhooksSettingsPage() {
     setUrl('')
     setSecret('')
     setSelectedEvents([])
-  }
-
-  const toggleEvent = (eventId: string) => {
-    setSelectedEvents(prev =>
-      prev.includes(eventId) ? prev.filter(e => e !== eventId) : [...prev, eventId]
-    )
   }
 
   const generateSecret = () => {

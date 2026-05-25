@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
 import { Card, CardContent } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 import { Check } from 'lucide-react'
 

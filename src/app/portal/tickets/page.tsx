@@ -2,21 +2,18 @@
 
 import { useEffect, useState } from 'react'
 import { useSession } from 'next-auth/react'
-import { useRouter } from 'next/navigation'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Skeleton } from '@/components/ui/skeleton'
 import { toast } from 'sonner'
-import { IconCheck, IconClose, IconLoader, IconPlus } from '@/components/icons'
-import { MessageSquare, CheckCircle2, Clock } from 'lucide-react'
+import { IconLoader, IconPlus } from '@/components/icons'
+import { MessageSquare, CheckCircle2 } from 'lucide-react'
 
 export default function PortalTicketsPage() {
   const { data: session } = useSession()
-  const router = useRouter()
   const [tickets, setTickets] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [tab, setTab] = useState<'open' | 'resolved'>('open')

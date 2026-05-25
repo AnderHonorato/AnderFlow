@@ -1,14 +1,14 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
-  Search, Filter, User, FolderKanban, CreditCard,
-  Shield, Key, Settings, Clock,
+  Search, User, FolderKanban, CreditCard,
+  Shield, Settings, Clock,
 } from 'lucide-react'
 
 function getTypeIcon(entity: string) {

@@ -21,7 +21,7 @@ export function TimeTracker({ taskId, projectId }: TimeTrackerProps) {
   const [isRunning, setIsRunning] = useState(false)
   const [elapsed, setElapsed] = useState(0)
   const [loading, setLoading] = useState(false)
-  const [entryId, setEntryId] = useState<string | null>(null)
+  const [_entryId, setEntryId] = useState<string | null>(null)
   const startTimeRef = useRef<number | null>(null)
 
   useEffect(() => {

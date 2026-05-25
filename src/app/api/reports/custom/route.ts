@@ -99,7 +99,7 @@ export async function GET(req: NextRequest) {
         else key = d.toISOString().slice(0, 10)
         grouped[key] = (grouped[key] || 0) + (e.hours || 0)
       }
-      data = Object.entries(grouped).map(([label, value]) => ({ label: Number(value.toFixed(1)), value: Number(value.toFixed(1)) }))
+      data = Object.entries(grouped).map(([_label, value]) => ({ label: Number(value.toFixed(1)), value: Number(value.toFixed(1)) }))
       break
     }
     case 'clients': {

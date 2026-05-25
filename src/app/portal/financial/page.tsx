@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react'
 import Image from 'next/image'
-import { useSession } from 'next-auth/react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -12,7 +11,6 @@ import { toast } from 'sonner'
 import { DollarSign, Clock, TrendingUp, CreditCard, AlertCircle, ReceiptText as ReceiptIcon, Copy, QrCode } from 'lucide-react'
 
 export default function PortalFinancial() {
-  const { data: session } = useSession()
   const [invoices, setInvoices] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [payOpen, setPayOpen] = useState(false)

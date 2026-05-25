@@ -78,7 +78,7 @@ export function ContextualAlert() {
                     <a href={tip.link} className="ml-1 underline font-medium">Ver</a>
                   )}
                 </span>
-                <button onClick={() => dismiss(tip)} className="text-[var(--text-3)] hover:text-[var(--text)]">
+                <button onClick={() => dismiss(tip)} className="text-[var(--text-3)] hover:text-[var(--text)]" aria-label="Fechar alerta">
                   <X className="h-3 w-3" />
                 </button>
               </div>

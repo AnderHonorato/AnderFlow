@@ -35,7 +35,7 @@ export async function GET(
     assigneeMap[key].tasks.push(t)
   })
 
-  Object.entries(assigneeMap).forEach(([id, data]) => {
+  Object.entries(assigneeMap).forEach(([_id, data]) => {
     const withDates = data.tasks.filter(t => t.dueDate)
     for (let i = 0; i < withDates.length; i++) {
       for (let j = i + 1; j < withDates.length; j++) {

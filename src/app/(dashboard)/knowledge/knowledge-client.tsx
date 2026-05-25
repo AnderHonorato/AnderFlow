@@ -135,7 +135,7 @@ export function KnowledgeClient({ projects: initialProjects }: { projects: any[]
       )}
 
       <div>
-        {completedYears.map((year, yi) => (
+        {completedYears.map((year) => (
           <div key={year} className="relative pl-10">
             <div className="flex items-center gap-3 mb-4 sticky top-[48px] bg-[var(--bg)] py-2 z-10">
               <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--accent)] text-white text-[13px] font-[500] shrink-0">{year}</div>

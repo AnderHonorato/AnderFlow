@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
-import { useSession } from 'next-auth/react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -27,7 +26,6 @@ interface Section {
 export default function BriefingFillPage() {
   const router = useRouter()
   const params = useParams()
-  const { data: session } = useSession()
   const [project, setProject] = useState<any>(null)
   const [sections, setSections] = useState<Section[]>([])
   const [answers, setAnswers] = useState<Record<string, any>>({})

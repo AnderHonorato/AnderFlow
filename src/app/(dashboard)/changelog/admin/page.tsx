@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
 import { toast } from 'sonner'
 import {
-  Plus, Sparkles, Bug, Zap, Eye,
+  Plus, Sparkles, Bug, Zap,
 } from 'lucide-react'
 
 const TYPE_ICONS: Record<string, any> = { feature: Sparkles, fix: Bug, improvement: Zap }
@@ -25,7 +25,6 @@ export default function ChangelogAdminPage() {
   const [entries, setEntries] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [showNew, setShowNew] = useState(false)
-  const [previewOpen, setPreviewOpen] = useState(false)
   const [form, setForm] = useState({ version: '', title: '', description: '', type: 'feature', isPublic: false })
 
   const loadEntries = () => {

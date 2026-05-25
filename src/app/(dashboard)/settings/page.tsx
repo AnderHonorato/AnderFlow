@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTheme } from 'next-themes'
-import { useSession } from 'next-auth/react'
+
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -12,13 +12,11 @@ import { Separator } from '@/components/ui/separator'
 import { Switch } from '@/components/ui/switch'
 import { toast } from 'sonner'
 import {
-  IconSettings, IconProfile, IconNotification, IconLogout, IconCheck,
-  IconFinancial, IconProject, IconClient, IconChat, IconCRM,
-  IconAnalytics, IconKnowledge, IconAutomation, IconTicket, IconFile,
-  IconArrowRight, IconCheck as IconCheck2,
+  IconSettings, IconNotification, IconLogout, IconCheck,
+  IconProject, IconAnalytics, IconAutomation, IconFile,
 } from '@/components/icons'
 import { cn } from '@/lib/utils'
-import { Send, Download, Layers, MessageSquare, Upload, FileJson } from 'lucide-react'
+import { Send, Download, MessageSquare, Upload, FileJson } from 'lucide-react'
 import { TwoFactorSetup } from '@/components/ui/two-factor-setup'
 
 const categories = [
@@ -75,7 +73,6 @@ const notifPrefsDefault = {
 export default function SettingsPage() {
   const router = useRouter()
   const { theme, setTheme, resolvedTheme } = useTheme()
-  const { data: session } = useSession()
   const [activeCategory, setActiveCategory] = useState('appearance')
   const [mounted, setMounted] = useState(false)
   const [moduleToggles, setModuleToggles] = useState<Record<string, boolean>>(
@@ -85,7 +82,7 @@ export default function SettingsPage() {
   const [orgName, setOrgName] = useState('ANDERFLOW Sistemas')
   const [chatIaMensagemAutomatica, setChatIaMensagemAutomatica] = useState(true)
   const [modoFoco, setModoFoco] = useState(false)
-  const [configCarregadas, setConfigCarregadas] = useState(false)
+  const [, setConfigCarregadas] = useState(false)
   const [saved, setSaved] = useState(false)
   const [saving, setSaving] = useState(false)
   const [exportEntities, setExportEntities] = useState<string[]>([

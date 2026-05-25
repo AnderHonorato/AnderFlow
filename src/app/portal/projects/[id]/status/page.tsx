@@ -8,12 +8,10 @@ import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
-import { toast } from 'sonner'
+
 import {
   ArrowLeft, MessageSquare, TicketIcon, Clock, CheckCircle,
-  CalendarDays, Users, RefreshCw,
+  CalendarDays,
 } from 'lucide-react'
 import { motion } from 'framer-motion'
 

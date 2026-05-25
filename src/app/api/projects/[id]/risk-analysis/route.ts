@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getSessionUser, isDeveloperOrAbove, unauthorizedResponse } from '@/lib/auth-utils'
 
-export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function POST(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const user = await getSessionUser()
   if (!user || !isDeveloperOrAbove(user)) return unauthorizedResponse()

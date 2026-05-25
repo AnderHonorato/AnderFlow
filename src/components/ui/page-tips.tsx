@@ -192,7 +192,7 @@ export function PageTip() {
             </div>
             <h3 className="text-sm font-semibold text-white">{currentTip.title}</h3>
           </div>
-          <button onClick={dismiss} className="text-[#94A3B8] hover:text-white transition-base">
+          <button onClick={dismiss} className="text-[#94A3B8] hover:text-white transition-base" aria-label="Fechar dica">
             <X className="h-4 w-4" />
           </button>
         </div>

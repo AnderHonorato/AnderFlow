@@ -21,7 +21,6 @@ const GuiaPrimeiroAcesso = dynamic(() => import('@/components/ui/guia-primeiro-a
 const BotEngineInit = dynamic(() => import('@/components/bots/motor-inicializador').then(m => ({ default: m.BotEngineInit })), { ssr: false, loading: () => null })
 const CommandPalette = dynamic(() => import('@/components/ui/command-palette').then(m => ({ default: m.CommandPalette })), { ssr: false, loading: () => null })
 
-
 function BackgroundBlobs() {
   const [mounted, setMounted] = useState(false)
   useEffect(() => { setMounted(true) }, [])
@@ -108,6 +107,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
         <Sidebar />
         <div className="flex flex-1 flex-col min-w-0 overflow-y-auto scroll-area">
           <Header />
+
           <ContextualAlert />
           <PageTip />
           <main className="flex-1">

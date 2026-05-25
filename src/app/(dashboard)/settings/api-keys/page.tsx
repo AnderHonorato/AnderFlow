@@ -11,7 +11,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
 import { toast } from 'sonner'
-import { Eye, EyeOff, Plus, Trash2, Key, Shield, CheckCircle, XCircle, Loader2, Calendar, Wrench, TrendingUp, Clock } from 'lucide-react'
+import { Eye, EyeOff, Plus, Trash2, Key, Shield, CheckCircle, XCircle, Loader2, Wrench, TrendingUp, Clock } from 'lucide-react'
 
 const PROVIDERS = [
   { key: 'deepseek', name: 'DeepSeek', icon: '🧠', color: '#4F46E5' },

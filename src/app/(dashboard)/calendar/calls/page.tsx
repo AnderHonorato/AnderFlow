@@ -1,16 +1,15 @@
 'use client'
 
 import { useCallback, useState, useEffect } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Switch } from '@/components/ui/switch'
 import { Skeleton } from '@/components/ui/skeleton'
 import { toast } from 'sonner'
-import { Plus, CalendarDays, Video, CheckCircle, XCircle, Clock } from 'lucide-react'
+import { Plus, CalendarDays, Video } from 'lucide-react'
 
 export default function CallsPage() {
   const [calls, setCalls] = useState<any[]>([])

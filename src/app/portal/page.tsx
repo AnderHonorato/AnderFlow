@@ -12,7 +12,7 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { AchievementBadge, achievementConfig } from '@/components/ui/achievement-badge'
 import { ProjectCompleteModal } from '@/components/ui/project-complete-modal'
-import { IconProject, IconCheck, IconAnalytics, IconPlus, IconFinancial, IconNotification, IconArrowRight, IconArrowUpRight } from '@/components/icons'
+import { IconProject, IconCheck, IconAnalytics, IconPlus, IconFinancial, IconArrowRight, IconArrowUpRight } from '@/components/icons'
 import { CheckCircle2, Circle, X, Sparkles, TrendingUp, ChevronDown, ChevronUp } from 'lucide-react'
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { getPlan } from '@/lib/plans'
@@ -224,14 +224,6 @@ export default function PortalDashboard() {
         window.location.reload()
       }, 1200)
     }
-  }
-
-  const handleRefresh = async () => {
-    setRefreshing(true)
-    const projRes = await fetch('/api/projects', { credentials: 'include' })
-    const projJson = await projRes.json()
-    setProjects(projJson.data || [])
-    setRefreshing(false)
   }
 
   return (

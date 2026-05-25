@@ -1,20 +1,18 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useSession } from 'next-auth/react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
-import { ThumbsUp, ThumbsDown, AlertTriangle, ChevronDown, MessageSquare, Eye, Bot, Activity, ChevronRight } from 'lucide-react'
+import { ThumbsUp, ThumbsDown, AlertTriangle, ChevronDown, MessageSquare, Eye, Activity, ChevronRight } from 'lucide-react'
 
 export default function FeedbacksIAPage() {
-  const { data: session } = useSession()
   const [feedbacks, setFeedbacks] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<'all'|'ai_feedback'|'ai_error'|'bot'>('all')
   const [expanded, setExpanded] = useState<string|null>(null)
   const [uiFeedbacks, setUiFeedbacks] = useState<any[]>([])
-  const [uiLoading, setUiLoading] = useState(false)
+  const [, setUiLoading] = useState(false)
   const [botReports, setBotReports] = useState<any[]>([])
 
   useEffect(() => {

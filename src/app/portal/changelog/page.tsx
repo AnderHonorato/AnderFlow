@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
@@ -38,7 +38,7 @@ export default function PortalChangelogPage() {
       <div className="relative">
         <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-[var(--border)]" />
         <div className="space-y-6">
-          {entries.map((entry, i) => {
+          {entries.map((entry) => {
             const IconComp = TYPE_ICONS[entry.type] || MessageSquare
             return (
               <div key={entry.id} className="relative pl-10">

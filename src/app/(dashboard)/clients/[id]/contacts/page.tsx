@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Switch } from '@/components/ui/switch'
 import { Skeleton } from '@/components/ui/skeleton'
 import { toast } from 'sonner'
-import { ArrowLeft, Plus, Trash2, User, Mail, Phone, Building2 } from 'lucide-react'
+import { ArrowLeft, Plus, Trash2, User, Mail, Phone } from 'lucide-react'
 
 export default function ClientContactsPage() {
   const { id } = useParams<{ id: string }>()

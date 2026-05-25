@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { toast } from 'sonner'
-import { Upload, FileText, AlertCircle, X } from 'lucide-react'
+import { Upload, FileText, X } from 'lucide-react'
 import Papa from 'papaparse'
 
 interface CsvImportModalProps {

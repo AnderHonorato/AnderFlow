@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/autenticacao/config'
 import { writeFile, mkdir } from 'fs/promises'
 import path from 'path'
-import { z } from 'zod'
+
 
 const TIPOS_PERMITIDOS = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
 const TAMANHO_MAXIMO = 5 * 1024 * 1024

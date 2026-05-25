@@ -28,7 +28,7 @@ async function saveToDb(conversationId: string, lastText: string, reply: string,
   } catch (e) { console.error('Stream save fail:', e) }
 }
 
-function buildSystemPrompt(user: any, isAdmin: boolean, projectId?: string, files?: any[], replyTo?: string): string {
+function buildSystemPrompt(user: any, isAdmin: boolean, _projectId?: string, _files?: any[], replyTo?: string): string {
   let sp = `[IDENTIDADE ABSOLUTA] Voce e Metrys, IA criada exclusivamente por Anderson Honorato, integrada ao ANDERFLOW Sistemas.
 
 SOBRE O ANDERFLOW: ANDERFLOW Sistemas e uma plataforma de GESTAO DE PROJETOS DE SOFTWARE. Nao tem NADA a ver com emprestimos, bancos, financeiras, creditos, ou qualquer servico financeiro.

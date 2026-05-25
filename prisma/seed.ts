@@ -100,7 +100,7 @@ async function main() {
     create: { name: 'Juliana Costa', email: 'juliana@datacorp.com', password: clientPassword, role: 'CLIENT', company: 'DataCorp', phone: '(31) 99999-0004', plan: 'ENTERPRISE', isActive: true, isAccountActive: true, emailVerified: new Date() },
   })
 
-  const c5 = await prisma.user.upsert({
+  await prisma.user.upsert({
     where: { email: 'joao@email.com' },
     update: { role: 'CLIENT', isAccountActive: true, emailVerified: new Date() },
     create: { name: 'João', email: 'joao@email.com', password: clientPassword, role: 'CLIENT', plan: 'BASIC', isActive: true, isAccountActive: true, emailVerified: new Date() },
@@ -154,7 +154,7 @@ async function main() {
     },
   })
 
-  const p4 = await prisma.project.create({
+  await prisma.project.create({
     data: {
       name: 'Landing Page Rebrand',
       slug: 'landing-page-rebrand',
@@ -233,7 +233,7 @@ async function main() {
 
   const ch1 = await prisma.channel.create({ data: { name: 'TechStore', type: 'project' } })
   const ch2 = await prisma.channel.create({ data: { name: 'FastFood Co', type: 'project' } })
-  const ch3 = await prisma.channel.create({ data: { name: 'Vendas Plus', type: 'project' } })
+  await prisma.channel.create({ data: { name: 'Vendas Plus', type: 'project' } })
 
   await prisma.message.create({
     data: { content: 'Bom dia Anderson! Quanto falta pro checkout?', senderId: c1.id, channelId: ch1.id, projectId: p1.id },

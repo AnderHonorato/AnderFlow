@@ -115,7 +115,7 @@ interface BotContext {
   state: Record<string, any>
 }
 
-async function checkDependency(dep: { type: string; description: string; since: string }, botRole: string): Promise<boolean> {
+async function checkDependency(dep: { type: string; description: string; since: string }, _botRole: string): Promise<boolean> {
   // Verifica se o papel requerido já agiu
   if (dep.type === 'OWNER_APPROVAL') {
     const owner = await prisma.user.findFirst({ where: { role: 'OWNER', isBot: false, isActive: true } })
@@ -280,7 +280,7 @@ async function callBotAI(prompt: string): Promise<{
 async function executeAction(
   botId: string,
   aiResponse: { action: string; endpoint: string; method: string; body: any; needsApproval: string | null },
-  ctx: BotContext,
+  _ctx: BotContext,
   role: string
 ): Promise<string> {
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'

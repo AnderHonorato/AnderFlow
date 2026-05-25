@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { Input } from '@/components/ui/input'
+
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Search, FolderKanban, Users, TicketIcon, ArrowRight } from 'lucide-react'
 

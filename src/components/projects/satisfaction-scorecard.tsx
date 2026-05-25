@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
-import { TrendingUp, TrendingDown, Minus, Sparkles, Radar } from 'lucide-react'
+import { TrendingUp, TrendingDown, Minus, Sparkles } from 'lucide-react'
 
 interface SatisfactionData {
   score: number
@@ -33,12 +33,6 @@ export function SatisfactionScorecard({ projectId }: { projectId: string }) {
   if (loading) return <Skeleton className="h-64 w-full" />
   if (!data) return null
 
-  const gradeColor: Record<string, string> = {
-    A: 'var(--success)',
-    B: 'var(--info)',
-    C: 'var(--warning)',
-    D: 'var(--destructive)',
-  }
 
   const scoreColor = data.score >= 85 ? 'var(--success)' : data.score >= 70 ? 'var(--info)' : data.score >= 50 ? 'var(--warning)' : 'var(--destructive)'
 

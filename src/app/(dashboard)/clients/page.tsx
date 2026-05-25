@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
@@ -14,15 +13,14 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { toast } from 'sonner'
 import { AdvancedChat } from '@/components/chat/advanced-chat'
 import {
-  IconPlus, IconSearch, IconClient, IconProject, IconFinancial,
-  IconLoader, IconArrowLeft,
+  IconPlus, IconSearch, IconLoader,
 } from '@/components/icons'
-import { Link2, Copy, Map, Upload, Download, FileText, AlertCircle, Users } from 'lucide-react'
+import { Link2, Copy, Map, Upload, Download, FileText, Users } from 'lucide-react'
 import Papa from 'papaparse'
 
 export default function ClientsPage() {
   const router = useRouter()
-  const { data: session } = useSession()
+  useSession()
   const [clients, setClients] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -43,13 +41,6 @@ export default function ClientsPage() {
   const getDaysInactive = (client: any) => {
     if (!client.lastSeen) return 999
     return Math.floor((Date.now() - new Date(client.lastSeen).getTime()) / (24 * 60 * 60 * 1000))
-  }
-
-  const getActivityColor = (days: number) => {
-    if (days <= 7) return 'bg-[var(--success)] text-[var(--success)]'
-    if (days <= 14) return 'bg-[var(--warning)] text-[var(--warning)]'
-    if (days <= 30) return 'bg-orange-500 text-orange-500'
-    return 'bg-[var(--destructive)] text-[var(--destructive)]'
   }
 
   const getActivityLabel = (days: number) => {

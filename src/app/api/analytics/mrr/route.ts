@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getSessionUser, unauthorizedResponse } from '@/lib/auth-utils'
 import { prisma } from '@/lib/prisma'
 
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   const user = await getSessionUser()
   if (!user || (user.roleLevel || 0) < 80) return unauthorizedResponse()
 

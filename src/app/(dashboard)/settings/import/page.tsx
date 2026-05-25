@@ -1,12 +1,12 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { toast } from 'sonner'
-import { motion } from 'framer-motion'
+
 import { FileJson, FileSpreadsheet, Upload, Check, AlertTriangle } from 'lucide-react'
 import { CsvImportModal } from '@/components/ui/csv-import-modal'
 

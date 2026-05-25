@@ -46,6 +46,34 @@ export function DriveFilePicker({ onSelect, className, projectId }: DriveFilePic
     document.head.appendChild(script)
   }, [pickerReady])
 
+  const createPicker = useCallback((token: string) => {
+    const google = (window as any).google
+    if (!google?.picker) {
+      toast.error('Google Picker API nao carregada')
+      return
+    }
+
+    const picker = new google.picker.PickerBuilder()
+      .addView(google.picker.ViewId.DOCS)
+      .setOAuthToken(token)
+      .setCallback((data: any) => {
+        if (data.action === google.picker.Action.PICKED) {
+          const doc = data.docs?.[0]
+          if (doc) {
+            onSelect({
+              name: doc.name,
+              url: doc.url || `https://drive.google.com/file/d/${doc.id}/view`,
+              mimeType: doc.mimeType || 'application/octet-stream',
+            })
+            toast.success(`Arquivo "${doc.name}" vinculado!`)
+          }
+        }
+      })
+      .build()
+
+    picker.setVisible(true)
+  }, [onSelect])
+
   const openPicker = useCallback(() => {
     const google = (window as any).google
     if (!google?.picker) {
@@ -106,34 +134,6 @@ export function DriveFilePicker({ onSelect, className, projectId }: DriveFilePic
 
     createPicker(oauthToken)
   }, [onSelect, loadGoogleApi, createPicker])
-
-  const createPicker = useCallback((token: string) => {
-    const google = (window as any).google
-    if (!google?.picker) {
-      toast.error('Google Picker API nao carregada')
-      return
-    }
-
-    const picker = new google.picker.PickerBuilder()
-      .addView(google.picker.ViewId.DOCS)
-      .setOAuthToken(token)
-      .setCallback((data: any) => {
-        if (data.action === google.picker.Action.PICKED) {
-          const doc = data.docs?.[0]
-          if (doc) {
-            onSelect({
-              name: doc.name,
-              url: doc.url || `https://drive.google.com/file/d/${doc.id}/view`,
-              mimeType: doc.mimeType || 'application/octet-stream',
-            })
-            toast.success(`Arquivo "${doc.name}" vinculado!`)
-          }
-        }
-      })
-      .build()
-
-    picker.setVisible(true)
-  }, [onSelect])
 
   return (
     <Button

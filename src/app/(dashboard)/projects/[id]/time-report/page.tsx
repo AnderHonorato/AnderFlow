@@ -4,10 +4,10 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
+
 import { Skeleton } from '@/components/ui/skeleton'
 import { IconArrowLeft, IconClock } from '@/components/icons'
-import { format, startOfDay, endOfDay } from 'date-fns'
+import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 
 interface TimeEntry {
@@ -26,14 +26,6 @@ interface DayGroup {
   entries: TimeEntry[]
 }
 
-function formatDuration(seconds: number): string {
-  const h = Math.floor(seconds / 3600)
-  const m = Math.floor((seconds % 3600) / 60)
-  const s = seconds % 60
-  if (h > 0) return `${h}h ${m}m`
-  if (m > 0) return `${m}m ${s}s`
-  return `${s}s`
-}
 
 function formatHours(seconds: number): string {
   const hours = seconds / 3600
@@ -77,7 +69,6 @@ export default function TimeReportPage() {
   groupedByDay.sort((a, b) => b.date.localeCompare(a.date))
 
   const totalSeconds = entries.reduce((sum, e) => sum + (e.duration || 0), 0)
-  const totalHours = totalSeconds / 3600
 
   if (loading) {
     return (

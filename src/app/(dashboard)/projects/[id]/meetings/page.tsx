@@ -1,16 +1,16 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Skeleton } from '@/components/ui/skeleton'
 import { toast } from 'sonner'
-import { ArrowLeft, Plus, Calendar, Mic, Bot, Play, CheckCircle2, Clock, User, Loader2 } from 'lucide-react'
+import { ArrowLeft, Plus, Calendar, Mic, Bot, CheckCircle2, Clock, User, Loader2 } from 'lucide-react'
 import Link from 'next/link'
 
 interface MeetingData {
@@ -27,7 +27,6 @@ interface MeetingData {
 export default function MeetingsPage() {
   const { id } = useParams<{ id: string }>()
   const { data: session } = useSession()
-  const router = useRouter()
   const roleLevel = (session?.user as any)?.roleLevel || 0
   const [meetings, setMeetings] = useState<MeetingData[]>([])
   const [loading, setLoading] = useState(true)

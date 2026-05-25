@@ -13,9 +13,9 @@ import { Separator } from '@/components/ui/separator'
 import { Skeleton } from '@/components/ui/skeleton'
 import { toast } from 'sonner'
 import {
-  ArrowLeft, QrCode, Smartphone, Copy, Check, Loader2,
-  Send, Power, PowerOff, Link2, RefreshCw, Bot, MessageSquare, UserPlus,
-  Mail, CreditCard, Brain, CircuitBoard, ShieldCheck, AlertCircle, TestTube,
+  ArrowLeft, QrCode, Smartphone, Copy, Loader2,
+  Send, Power, PowerOff, Link2, RefreshCw, Bot, MessageSquare,
+  ShieldCheck, AlertCircle, TestTube,
 } from 'lucide-react'
 
 export default function IntegrationsPage() {

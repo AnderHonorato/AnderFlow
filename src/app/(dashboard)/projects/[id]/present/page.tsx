@@ -7,12 +7,12 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Button } from '@/components/ui/button'
+
 import { toast } from 'sonner'
 import { AnimatedCounter } from '@/components/ui/animated-counter'
 import {
-  ChevronLeft, ChevronRight, X, Play, Pause, Timer, StickyNote,
-  Camera, Monitor, Settings,
+  ChevronLeft, ChevronRight, X, Play, Pause, StickyNote,
+  Camera, Monitor,
 } from 'lucide-react'
 
 const slideVariants = {
@@ -36,11 +36,9 @@ export default function ProjectPresentPage() {
   const [timeLeft, setTimeLeft] = useState(10)
   const [isPaused, setIsPaused] = useState(false)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
-  const autoRef = useRef<ReturnType<typeof setInterval> | null>(null)
-
   const [showNotes, setShowNotes] = useState(false)
   const [slideNotes, setSlideNotes] = useState<Record<number, string>>({})
-  const [mirrorOpen, setMirrorOpen] = useState(false)
+  const [_mirrorOpen, setMirrorOpen] = useState(false)
   const [capturing, setCapturing] = useState(false)
 
   useEffect(() => {

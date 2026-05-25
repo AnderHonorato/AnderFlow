@@ -43,7 +43,7 @@ interface StatCardProps {
   index?: number
 }
 
-export function StatCard({ icon, value, label, trend, className, index = 0 }: StatCardProps) {
+export function StatCard({ icon, value, label, trend: _trend, className, index = 0 }: StatCardProps) {
   const isNumeric = typeof value === 'number'
 
   return (

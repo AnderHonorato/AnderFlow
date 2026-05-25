@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -12,7 +11,6 @@ import { IconArrowRight } from '@/components/icons'
 import { AdminPresence } from '@/components/ui/admin-presence'
 
 export default function PortalProjects() {
-  const { data: session } = useSession()
   const [projects, setProjects] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const router = useRouter()

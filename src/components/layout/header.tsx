@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { useUIStore } from '@/stores/app-store'
-import { IconNotification, IconClose, IconMenu, IconArrowRight, IconProject } from '@/components/icons'
+import { IconNotification, IconClose, IconMenu, IconProject } from '@/components/icons'
 import { FocusModeButton, isFocusActive } from '@/components/ui/focus-mode'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { cn } from '@/lib/utils'
@@ -324,6 +324,7 @@ export function Header() {
         <button
           onClick={() => setMobileMenuOpen(true)}
           className="lg:hidden flex items-center justify-center h-7 w-7 rounded-md hover:bg-[var(--surface-hover)] text-[var(--text-2)] hover:text-[var(--text)] transition-colors"
+          aria-label="Abrir menu"
         >
           <IconMenu className="w-[16px] h-[16px]" />
         </button>
@@ -430,6 +431,7 @@ export function Header() {
                   <button
                     onClick={() => setPainelAberto(false)}
                     className="h-6 w-6 flex items-center justify-center rounded-md hover:bg-[var(--surface-hover)] text-[var(--text-3)] hover:text-[var(--text)] transition-colors"
+                    aria-label="Fechar painel"
                   >
                     <IconClose className="h-3.5 w-3.5" />
                   </button>
@@ -590,6 +592,7 @@ export function Header() {
                   <button
                     onClick={(e) => dismissOne(n.id, e)}
                     className="shrink-0 opacity-0 group-hover:opacity-100 flex items-center justify-center h-5 w-5 rounded text-[var(--text-3)] hover:text-[var(--text)] hover:bg-[var(--surface-hover)] transition-all"
+                    aria-label="Dispensar notificacao"
                   >
                     <IconClose className="h-3 w-3" />
                   </button>

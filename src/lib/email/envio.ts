@@ -1,13 +1,22 @@
 import { Resend } from 'resend'
 import { generateEmailHtml } from './templates'
 
-const resend = new Resend(process.env.RESEND_API_KEY || '')
+function getResend(): Resend | null {
+  const key = process.env.RESEND_API_KEY
+  if (!key) return null
+  return new Resend(key)
+}
 
 const SENDER = 'ANDERFLOW <noreply@anderflow.com.br>'
 
 export async function sendVerificationEmail(to: string, code: string) {
+  const resend = getResend()
+  if (!resend) {
+    console.log('[Email] RESEND_API_KEY not configured, skipping verification email')
+    return true
+  }
   try {
-    const { data, error } = await resend.emails.send({
+    const { error } = await resend.emails.send({
       from: SENDER,
       to,
       subject: 'Seu codigo de verificacao - ANDERFLOW',
@@ -28,6 +37,11 @@ export async function sendVerificationEmail(to: string, code: string) {
 }
 
 export async function sendTemplateEmail(to: string, template: string, data: Record<string, any> = {}) {
+  const resend = getResend()
+  if (!resend) {
+    console.log('[Email] RESEND_API_KEY not configured, skipping template email')
+    return true
+  }
   try {
     const subjects: Record<string, string> = {
       welcome: 'Bem-vindo ao ANDERFLOW!',
@@ -38,7 +52,7 @@ export async function sendTemplateEmail(to: string, template: string, data: Reco
       nps_request: 'Avalie sua experiencia com a ANDERFLOW',
     }
 
-    const { data: result, error } = await resend.emails.send({
+    const { error } = await resend.emails.send({
       from: SENDER,
       to,
       subject: subjects[template] || 'ANDERFLOW',
@@ -57,4 +71,4 @@ export async function sendTemplateEmail(to: string, template: string, data: Reco
   }
 }
 
-export { resend }
+export { getResend }

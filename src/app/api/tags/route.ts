@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { getSessionUser, isAdmin } from '@/lib/auth-utils'
+import { getSessionUser } from '@/lib/auth-utils'
 
 export async function GET(request: NextRequest) {
   const user = await getSessionUser(request)

@@ -3,11 +3,10 @@
 import { useState, useRef, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+
 import { useSession } from 'next-auth/react'
 import { MessageCircle, X, Send, Loader2, Sparkles } from 'lucide-react'
 
-const INITIAL_MESSAGE = { role: 'assistant', content: '' }
 
 const SUGGESTIONS = ['Status dos meus projetos', 'Ver faturas pendentes', 'Criar um ticket']
 
@@ -48,7 +47,7 @@ export function BotChat() {
   }
 
   if (!open) return (
-    <button onClick={() => setOpen(true)} className="fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-[var(--accent)] text-white shadow-lg hover:bg-[var(--accent-hover)] transition-all hover:scale-105">
+    <button onClick={() => setOpen(true)} className="fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-[var(--accent)] text-white shadow-lg hover:bg-[var(--accent-hover)] transition-all hover:scale-105" aria-label="Abrir chat">
       <MessageCircle className="h-6 w-6" />
     </button>
   )

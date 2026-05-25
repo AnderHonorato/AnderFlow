@@ -2,10 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { useSession } from 'next-auth/react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { toast } from 'sonner'
@@ -15,7 +13,6 @@ import {
 
 export default function ContractNewPage() {
   const router = useRouter()
-  const { data: session } = useSession()
   const [projects, setProjects] = useState<any[]>([])
   const [selectedProject, setSelectedProject] = useState('')
   const [contractContent, setContractContent] = useState('')

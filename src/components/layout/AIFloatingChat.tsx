@@ -2,7 +2,6 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
-import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
 import { useAIChat } from '@/hooks/useAIChat'

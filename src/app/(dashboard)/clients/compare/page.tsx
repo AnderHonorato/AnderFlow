@@ -6,9 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { toast } from 'sonner'
-import { Search, ArrowUpRight, Star, Download, Users } from 'lucide-react'
+import { Search, Download, Users } from 'lucide-react'
 
 interface ClientMetrics {
   revenue: number

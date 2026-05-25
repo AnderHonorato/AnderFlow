@@ -1,28 +1,24 @@
 import { prisma } from '@/lib/prisma'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import {
-  Plus,
   Search,
   Filter,
   Upload,
   FolderOpen,
   File,
-  Image,
+  Image as ImageIcon,
   FileText,
   Film,
   MoreHorizontal,
   Download,
   Eye,
-  Grid,
-  List,
   HardDrive,
 } from 'lucide-react'
 
 function getFileIcon(mimeType: string) {
-  if (mimeType.startsWith('image/')) return <Image className="h-5 w-5 text-purple-500" alt="" />
+  if (mimeType.startsWith('image/')) return <ImageIcon className="h-5 w-5 text-purple-500" />
   if (mimeType.startsWith('video/')) return <Film className="h-5 w-5 text-info" />
   if (mimeType.includes('pdf') || mimeType.includes('document')) return <FileText className="h-5 w-5 text-warning" />
   if (mimeType.includes('figma') || mimeType.includes('design')) return <File className="h-5 w-5 text-primary" />

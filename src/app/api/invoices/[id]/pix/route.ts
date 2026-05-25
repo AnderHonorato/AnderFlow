@@ -5,7 +5,7 @@ import { generatePixPayload } from '@/lib/pix'
 import QRCode from 'qrcode'
 
 export async function GET(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const user = await getSessionUser()

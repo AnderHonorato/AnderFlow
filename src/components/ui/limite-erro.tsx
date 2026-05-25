@@ -25,7 +25,7 @@ export class LimiteErro extends Component<Props, Estado> {
     return { temErro: true, erro }
   }
 
-  componentDidCatch(erro: Error, info: { componentStack: string }) {
+  componentDidCatch(_erro: Error, info: { componentStack: string }) {
     this.setState({ infoErro: info.componentStack })
   }
 

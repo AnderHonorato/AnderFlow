@@ -13,7 +13,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     if (contract.clientId !== user.id) return NextResponse.json({ error: 'Apenas o cliente pode enviar' }, { status: 403 })
 
     const body = await request.json()
-    const { signedUrl, fileName } = body
+    const { signedUrl } = body
 
     await prisma.contract.update({
       where: { id },

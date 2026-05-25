@@ -5,7 +5,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
-import { CalendarDays, Clock, Video, MapPin } from 'lucide-react'
+import { CalendarDays, Clock, Video } from 'lucide-react'
 
 export default function PortalCallsPage() {
   const [calls, setCalls] = useState<any[]>([])

@@ -9,7 +9,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { toast } from 'sonner'
 import {
   IconNotification, IconCheck, IconProject, IconFinancial, IconChat, IconFile,
-  IconArrowRight, IconChevronDown, IconClose,
+  IconArrowRight, IconChevronDown,
 } from '@/components/icons'
 import { cn } from '@/lib/utils'
 

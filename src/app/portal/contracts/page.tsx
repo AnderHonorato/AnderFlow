@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -23,7 +23,7 @@ export default function PortalContracts() {
   const [uploading, setUploading] = useState(false)
   const [signOpen, setSignOpen] = useState(false)
   const [signContract, setSignContract] = useState<any>(null)
-  const [signing, setSigning] = useState(false)
+  const [, setSigning] = useState(false)
   const [previewOpen, setPreviewOpen] = useState(false)
   const [previewContract, setPreviewContract] = useState<any>(null)
   const [scrolledToEnd, setScrolledToEnd] = useState(false)

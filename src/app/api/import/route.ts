@@ -74,7 +74,6 @@ export async function POST(req: NextRequest) {
 
         const lists = z.array(trelloListSchema).parse(parsed.lists)
         const cards = z.array(trelloCardSchema).parse(parsed.cards)
-        const listMap = new Map(lists.map(l => [l.id, l.name]))
 
         const boardName = parsed.name || 'Board importado'
         const slug = boardName.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 80)

@@ -14,7 +14,6 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Header } from '@/components/layout/header'
-import { IconCheck } from '@/components/icons'
 import {
   LayoutDashboard, FolderKanban, MessageSquare,
   CreditCard, FileText, LogOut, Headphones, Sun, Moon,

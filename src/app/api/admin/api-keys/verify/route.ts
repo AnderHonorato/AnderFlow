@@ -71,7 +71,6 @@ export async function POST(request: NextRequest) {
     }
 
     let url = provider.url
-    let bodyPayload: string | undefined
 
     // Gemini uses query param, not header
     if (keyRow.provider === 'gemini') {

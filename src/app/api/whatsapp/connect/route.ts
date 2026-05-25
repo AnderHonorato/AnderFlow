@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSessionUser, isAdmin, unauthorizedResponse } from '@/lib/auth-utils'
-import { connectWithQR, connectWithCode, getConnectionState } from '@/lib/whatsapp-server'
+import { connectWithQR, connectWithCode } from '@/lib/whatsapp-server'
 
 export async function POST(request: NextRequest) {
   try {
