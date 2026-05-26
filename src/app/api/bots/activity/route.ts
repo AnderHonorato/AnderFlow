@@ -16,22 +16,67 @@ export async function GET(request: NextRequest) {
       orderBy: { botLastActionAt: 'desc' },
     })
 
+    // Busca ações recentes do BotActionLog para cada bot
+    const botIds = bots.map(b => b.id)
+    const recentLogs = await (prisma as any).botActionLog.findMany({
+      where: { botId: { in: botIds } },
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+    }).catch(() => [])
+
+    const logsByBot: Record<string, any[]> = {}
+    for (const log of (recentLogs || [])) {
+      if (!logsByBot[log.botId]) logsByBot[log.botId] = []
+      if (logsByBot[log.botId].length < 10) {
+        logsByBot[log.botId].push(log)
+      }
+    }
+
     const reports: {
       botName: string
       botId: string
       role: string
       status: string | null
       lastActionAt: string | null
-      recentActions: { time: string; action: string; result?: string }[]
+      recentActions: {
+        id?: string
+        time: string
+        action: string
+        result?: string
+        error?: string
+        status?: string
+        tokensUsed?: number
+        costEstimate?: number
+      }[]
     }[] = []
 
     for (const bot of bots) {
-      let actions: any[] = []
-      if (bot.botContext) {
+      // Prioriza ações do BotActionLog (persistente), fallback para botContext
+      const dbLogs = logsByBot[bot.id] || []
+      let actions: any[]
+      let hasDbActions = false
+
+      if (dbLogs.length > 0) {
+        hasDbActions = true
+        actions = dbLogs.map((l: any) => ({
+          id: l.id,
+          time: l.createdAt,
+          action: l.action,
+          result: l.result?.slice(0, 120),
+          error: l.error?.slice(0, 120),
+          status: l.status,
+          tokensUsed: l.tokensUsed,
+          costEstimate: l.costEstimate,
+        }))
+      } else if (bot.botContext) {
         try {
           const ctx = JSON.parse(bot.botContext)
           actions = (ctx.actions || []).slice(-10).reverse()
-        } catch {}
+        } catch {
+          actions = []
+        }
+      } else {
+        actions = []
       }
 
       reports.push({
@@ -39,13 +84,23 @@ export async function GET(request: NextRequest) {
         botId: bot.id,
         role: bot.role,
         status: bot.botStatus,
-        lastActionAt: bot.botLastActionAt?.toISOString() || null,
+        lastActionAt: dbLogs[0]?.createdAt || bot.botLastActionAt?.toISOString() || null,
         recentActions: actions.map((a: any) => ({
+          id: a.id || undefined,
           time: a.time,
           action: a.action,
           result: a.result?.slice(0, 120) || a.error?.slice(0, 120) || undefined,
+          error: a.error?.slice(0, 120) || undefined,
+          status: a.status || undefined,
+          tokensUsed: a.tokensUsed || undefined,
+          costEstimate: a.costEstimate || undefined,
         })),
       })
+
+      // Remove bots que nunca tiveram ações
+      if (!hasDbActions && reports[reports.length - 1].recentActions.length === 0) {
+        reports.pop()
+      }
     }
 
     return NextResponse.json({ data: reports })

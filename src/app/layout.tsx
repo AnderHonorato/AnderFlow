@@ -4,7 +4,6 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import './globals.css'
 import { SessionProvider } from '@/providers/session-provider'
-import { ThemeProvider } from '@/providers/theme-provider'
 import { Toaster } from '@/components/ui/toaster'
 import { BannerCookies } from '@/components/ui/banner-cookies'
 
@@ -45,14 +44,12 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const session = await getServerSession(authOptions)
 
   return (
-    <html lang="pt-BR" suppressHydrationWarning>
+    <html lang="pt-BR" className="dark" suppressHydrationWarning>
       <body className={`${inter.variable} ${dmSans.variable} ${jakarta.variable} ${spaceGrotesk.variable} font-sans antialiased bg-[var(--bg)] text-[var(--text)]`}>
         <SessionProvider session={session}>
-          <ThemeProvider defaultTheme="dark">
-            {children}
-            <Toaster />
-            <BannerCookies />
-          </ThemeProvider>
+          {children}
+          <Toaster />
+          <BannerCookies />
         </SessionProvider>
       </body>
     </html>

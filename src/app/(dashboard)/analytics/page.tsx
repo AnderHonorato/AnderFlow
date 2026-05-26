@@ -19,7 +19,7 @@ function getMonthLabel(date: Date): string {
 
 export default async function AnalyticsPage() {
   const session = await getServerSession(authOptions)
-  if (!session?.user) redirect('/login')
+  if (!session?.user) redirect('/')
 
   const user = session.user as any
   if (!cargoEhAdmin(user.role)) redirect('/dashboard')

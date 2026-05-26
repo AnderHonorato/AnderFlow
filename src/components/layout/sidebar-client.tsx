@@ -440,7 +440,7 @@ export function SidebarClient() {
                 <Link href="/profile" className="flex items-center gap-2 px-3 py-1.5 text-[13px] text-[var(--text-2)] hover:bg-[var(--surface-hover)] hover:text-[var(--text)] transition-colors" onClick={() => setProfileOpen(false)}>
                   <IconProfile className="w-[14px] h-[14px]" /> Perfil
                 </Link>
-                <button onClick={() => signOut({ callbackUrl: '/login' })} className="w-full flex items-center gap-2 px-3 py-1.5 text-[13px] text-[var(--destructive)] hover:bg-[var(--destructive-subtle)] transition-colors">
+                <button onClick={() => signOut({ callbackUrl: '/' })} className="w-full flex items-center gap-2 px-3 py-1.5 text-[13px] text-[var(--destructive)] hover:bg-[var(--destructive-subtle)] transition-colors">
                   <IconLogout className="w-[14px] h-[14px]" /> Sair
                 </button>
               </div>

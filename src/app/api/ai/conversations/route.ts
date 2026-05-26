@@ -5,7 +5,7 @@ import { getSessionUser } from '@/lib/auth-utils'
 export async function GET(request: NextRequest) {
   try {
     const user = await getSessionUser(request)
-    if (!user) return NextResponse.json({ error: 'Nao autenticado' }, { status: 401 })
+    if (!user) return NextResponse.json({ data: [] })
 
     const conversations = await prisma.aiConversation.findMany({
       where: { userId: user.id },

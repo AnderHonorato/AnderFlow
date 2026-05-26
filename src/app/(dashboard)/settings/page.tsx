@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { useTheme } from 'next-themes'
+import { useTheme } from '@/providers/theme-provider'
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -16,7 +16,7 @@ import {
   IconProject, IconAnalytics, IconAutomation, IconFile,
 } from '@/components/icons'
 import { cn } from '@/lib/utils'
-import { Send, Download, MessageSquare, Upload, FileJson } from 'lucide-react'
+import { Send, Download, MessageSquare, Upload, FileJson, Bot, Play, Pause } from 'lucide-react'
 import { TwoFactorSetup } from '@/components/ui/two-factor-setup'
 
 const categories = [
@@ -25,6 +25,7 @@ const categories = [
   { id: 'appearance', label: 'Aparência', icon: IconProject },
   { id: 'security', label: 'Segurança', icon: IconLogout },
   { id: 'modules', label: 'Módulos', icon: IconAutomation },
+  { id: 'bots', label: 'Bots IA', icon: Bot },
   { id: 'funcionalidades', label: 'Funcionalidades', icon: IconAutomation },
   { id: 'integrations', label: 'Integrações', icon: IconAutomation, href: '/settings/integrations' },
   { id: 'api-keys', label: 'Chaves de API', icon: IconSettings, href: '/settings/api-keys' },
@@ -89,6 +90,10 @@ export default function SettingsPage() {
     'clients', 'projects', 'tasks', 'tickets', 'invoices', 'contracts',
   ])
   const [exporting, setExporting] = useState(false)
+  const [botConfig, setBotConfig] = useState<{ intervalMs: number; bots: any[] }>({ intervalMs: 10000, bots: [] })
+  const [loadingBots, setLoadingBots] = useState(false)
+  const [botToggling, setBotToggling] = useState<string | null>(null)
+  const [isOwner, setIsOwner] = useState(false)
 
   useEffect(() => { setMounted(true) }, [])
 
@@ -121,6 +126,59 @@ export default function SettingsPage() {
       })
       .catch(() => setConfigCarregadas(true))
   }, [mounted])
+
+  useEffect(() => {
+    if (!mounted) return
+    fetch('/api/bots/config')
+      .then(r => r.json())
+      .then(json => {
+        if (json.data) {
+          setBotConfig({ intervalMs: json.data.intervalMs || 10000, bots: json.data.bots || [] })
+        }
+        setIsOwner(true)
+      })
+      .catch(() => {})
+  }, [mounted])
+
+  const toggleBot = async (userId: string, currentStatus: string) => {
+    setBotToggling(userId)
+    try {
+      const action = currentStatus === 'ACTIVE' ? 'deactivate' : 'activate'
+      const res = await fetch('/api/bots/toggle', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, action }),
+      })
+      const json = await res.json()
+      if (json.ok) {
+        setBotConfig(prev => ({
+          ...prev,
+          bots: prev.bots.map(b => b.id === userId ? { ...b, botStatus: json.status } : b),
+        }))
+        toast.success(`Bot ${action === 'activate' ? 'ativado' : 'pausado'}`)
+      } else {
+        toast.error(json.error || 'Erro ao alterar bot')
+      }
+    } catch {
+      toast.error('Erro ao alterar bot')
+    } finally {
+      setBotToggling(null)
+    }
+  }
+
+  const saveBotInterval = async (newInterval: number) => {
+    setBotConfig(prev => ({ ...prev, intervalMs: newInterval }))
+    try {
+      await fetch('/api/bots/config', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ intervalMs: newInterval }),
+      })
+      toast.success('Intervalo atualizado')
+    } catch {
+      toast.error('Erro ao salvar intervalo')
+    }
+  }
 
   const salvarNoBanco = useCallback(async (estado: EstadoConfig) => {
     setSaving(true)
@@ -266,9 +324,9 @@ export default function SettingsPage() {
                   <label className="text-[11px] font-[500] text-[var(--text-3)] uppercase">Tema</label>
                   <div className="grid grid-cols-3 gap-3">
                     {[
-                      { key: 'light', label: 'Claro', bg: '#f5f7fa' },
-                      { key: 'dark', label: 'Escuro', bg: '#0A0A0F' },
-                      { key: 'system', label: 'Sistema', bg: 'linear-gradient(90deg, #f5f7fa 50%, #0A0A0F 50%)' },
+                      { key: 'light' as const, label: 'Claro', bg: '#f5f7fa' },
+                      { key: 'dark' as const, label: 'Escuro', bg: '#0A0A0F' },
+                      { key: 'system' as const, label: 'Sistema', bg: 'linear-gradient(90deg, #f5f7fa 50%, #0A0A0F 50%)' },
                     ].map((opt) => {
                       const isActive = currentTheme === opt.key
                       return (
@@ -355,7 +413,7 @@ export default function SettingsPage() {
                 <div className="border-t border-[var(--border)] pt-3" />
                 {[
                   { label: 'Sessões Ativas', desc: 'Gerencie dispositivos conectados', action: 'Ver Sessões', href: '/settings/sessions' },
-                  { label: 'Alterar Senha', desc: 'Atualize sua senha de acesso', action: 'Alterar' },
+                  { label: 'Alterar Senha', desc: 'Atualize sua senha de acesso', action: 'Alterar', href: '/profile' },
                 ].map((item) => (
                   <div key={item.label} className="flex items-center justify-between py-2.5 px-2 rounded-lg hover:bg-[var(--surface-hover)]">
                     <div>
@@ -392,6 +450,85 @@ export default function SettingsPage() {
                     />
                   </div>
                 ))}
+              </CardContent>
+            </Card>
+          )}
+
+          {activeCategory === 'bots' && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Bot className="h-4 w-4" /> Bots IA
+                </CardTitle>
+                <CardDescription>Gerencie os bots autônomos de teste da plataforma</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-5">
+                {!isOwner ? (
+                  <p className="text-[13px] text-[var(--text-3)]">Apenas o Owner pode gerenciar os bots.</p>
+                ) : loadingBots ? (
+                  <p className="text-[13px] text-[var(--text-3)]">Carregando...</p>
+                ) : botConfig.bots.length === 0 ? (
+                  <p className="text-[13px] text-[var(--text-3)]">Nenhum bot encontrado. Execute o seed para criar bots.</p>
+                ) : (
+                  <>
+                    <div className="space-y-2">
+                      <label className="text-[11px] font-[500] text-[var(--text-3)] uppercase">Intervalo entre execuções</label>
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="range"
+                          min={5000}
+                          max={120000}
+                          step={5000}
+                          value={botConfig.intervalMs}
+                          onChange={(e) => saveBotInterval(Number(e.target.value))}
+                          className="flex-1 h-1.5 rounded-full appearance-none bg-[var(--border)] accent-[var(--accent)] cursor-pointer"
+                        />
+                        <span className="text-[12px] font-[500] text-[var(--text)] w-[60px] text-right">
+                          {botConfig.intervalMs / 1000}s
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-[10px] text-[var(--text-3)]">
+                        <span>5s (rápido)</span>
+                        <span>120s (lento)</span>
+                      </div>
+                    </div>
+
+                    <Separator />
+
+                    <div className="space-y-2">
+                      <label className="text-[11px] font-[500] text-[var(--text-3)] uppercase">Bots disponíveis</label>
+                      <div className="space-y-1">
+                        {botConfig.bots.map((bot: any) => (
+                          <div key={bot.id} className="flex items-center justify-between py-2.5 px-2 rounded-lg hover:bg-[var(--surface-hover)]">
+                            <div className="flex items-center gap-2">
+                              <span className={`h-2 w-2 rounded-full shrink-0 ${bot.botStatus === 'ACTIVE' ? 'bg-[var(--success)] animate-pulse' : 'bg-[var(--text-3)]'}`} />
+                              <div>
+                                <p className="text-[13px] font-[500]">{bot.name}</p>
+                                <p className="text-[10px] text-[var(--text-3)]">{bot.email}</p>
+                              </div>
+                              <Badge variant="outline" className="text-[9px]">{bot.role}</Badge>
+                            </div>
+                            <Button
+                              size="sm"
+                              variant={bot.botStatus === 'ACTIVE' ? 'outline' : 'default'}
+                              onClick={() => toggleBot(bot.id, bot.botStatus || 'IDLE')}
+                              disabled={botToggling === bot.id}
+                              className="h-7 text-[11px] gap-1"
+                            >
+                              {botToggling === bot.id ? (
+                                '...'
+                              ) : bot.botStatus === 'ACTIVE' ? (
+                                <><Pause className="h-[10px] w-[10px]" /> Pausar</>
+                              ) : (
+                                <><Play className="h-[10px] w-[10px]" /> Ativar</>
+                              )}
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                )}
               </CardContent>
             </Card>
           )}

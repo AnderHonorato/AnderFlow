@@ -19,7 +19,7 @@ import {
   CreditCard, FileText, LogOut, Headphones, Sun, Moon,
   Home, Bell, Globe, Sparkles,
 } from 'lucide-react'
-import { useTheme } from 'next-themes'
+import { useTheme } from '@/providers/theme-provider'
 import { WelcomeOverlay } from '@/components/ui/welcome-overlay'
 import { PushPermission } from '@/components/ui/push-permission'
 import { PwaInstallPrompt } from '@/components/ui/pwa-install-prompt'
@@ -61,10 +61,10 @@ function PortalSidebarContent({ children }: { children: React.ReactNode }) {
   ]
 
   useEffect(() => {
-    if (status === 'unauthenticated') router.push('/login')
+    if (status === 'unauthenticated') router.push('/')
     if (status === 'authenticated') {
       const user = session?.user as any
-      if (!user?.isAccountActive) router.push('/login?error=account_inactive')
+      if (!user?.isAccountActive) router.push('/?error=account_inactive')
       if (user?.role !== 'CLIENT' && user?.role !== 'ADMIN') router.push('/dashboard')
     }
   }, [status, session, router])
@@ -173,7 +173,7 @@ function PortalSidebarContent({ children }: { children: React.ReactNode }) {
             {theme === 'dark' ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />}
             <span>{theme === 'dark' ? 'Modo claro' : 'Modo escuro'}</span>
           </button>
-          <button onClick={() => signOut({ callbackUrl: '/login' })}
+          <button onClick={() => signOut({ callbackUrl: '/' })}
             className="flex w-full items-center gap-2.5 rounded-md px-3 py-1.5 text-xs text-[var(--text-muted)] hover:bg-[var(--surface-hover)] hover:text-[var(--text)] transition-colors">
             <LogOut className="h-3.5 w-3.5" /><span>Sair</span>
           </button>

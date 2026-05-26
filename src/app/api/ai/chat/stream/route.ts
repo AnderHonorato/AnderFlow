@@ -56,10 +56,149 @@ ${ICON_SYSTEM_PROMPT}`
   return sp
 }
 
+function buildGuestSystemPrompt(): string {
+  return `[IDENTIDADE ABSOLUTA] Voce e Metrys, IA criada exclusivamente por Anderson Honorato, integrada ao ANDERFLOW Sistemas.
+
+SOBRE O ANDERFLOW: ANDERFLOW Sistemas e uma plataforma de GESTAO DE PROJETOS DE SOFTWARE. Nao tem NADA a ver com emprestimos, bancos, financeiras, creditos, ou qualquer servico financeiro.
+
+IMPORTANTE: O usuario atual NAO esta logado. Voce nao tem acesso a dados pessoais, projetos, ou qualquer informacao interna. Responda apenas com informacoes publicas sobre a plataforma.
+
+REGRAS PARA CONVIDADO:
+1. Responda APENAS sobre ANDERFLOW. Recuse assuntos externos com educacao.
+2. NAO invente funcionalidades ou dados. Descreva apenas o que realmente existe.
+3. Sugira que o usuario crie uma conta ou faca login para ter uma experiencia completa e personalizada (acesso a projetos, suporte dedicado, etc).
+4. Forneca links uteis: criar conta (/register), fazer login (/login), contato WhatsApp (77 9 9951-2937), email contato@anderflow.com.
+5. ANDERFLOW e plataforma de GESTAO DE PROJETOS DE SOFTWARE com fluxo de 12 etapas: Briefing, Proposta/Orcamento, Contrato, Planejamento, Design, Aprovacao do Design, Desenvolvimento, Testes, Homologacao, Deploy, Entrega, Garantia.
+6. Idioma: sempre portugues do Brasil (pt-BR).
+7. NUNCA use mais que 1 icone por resposta. Prefira emojis universais.
+
+ETAPAS DO FLUXO ANDERFLOW:
+1. Briefing 2. Proposta/Orcamento 3. Contrato 4. Planejamento 5. Design 6. Aprovacao do Design
+7. Desenvolvimento 8. Testes 9. Homologacao 10. Deploy 11. Entrega 12. Garantia
+
+${ICON_SYSTEM_PROMPT}`
+}
+
+async function responderComoConvidado(request: NextRequest) {
+  const encoder = new TextEncoder()
+
+  const apiKey = process.env.DEEPSEEK_API_KEY
+  if (!apiKey) {
+    const stream = new ReadableStream({
+      start(ctrl) {
+        ctrl.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'error', code: 'NO_KEY', reply: 'Chave de API nao configurada.' })}\n\n`))
+        ctrl.close()
+      }
+    })
+    return new Response(stream, { headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive' } })
+  }
+
+  const body = await request.json()
+  const { messages, modelKey } = body as {
+    messages: { role: string; content: any }[]
+    modelKey?: string
+  }
+
+  if (!messages?.length) {
+    const stream = new ReadableStream({
+      start(ctrl) {
+        ctrl.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'error', code: 'NO_MSG', reply: 'Mensagens obrigatorias.' })}\n\n`))
+        ctrl.close()
+      }
+    })
+    return new Response(stream, { headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive' } })
+  }
+
+  const model = models[modelKey as keyof typeof models] || models['metrys-pro']
+  let sp = buildGuestSystemPrompt()
+
+  const cm: any[] = [{ role: 'system', content: sp }]
+  for (const m of messages) {
+    if (typeof m.content === 'string') cm.push({ role: m.role === 'assistant' ? 'assistant' : 'user', content: m.content })
+    else if (Array.isArray(m.content)) cm.push({ role: 'user', content: m.content })
+    else cm.push({ role: 'user', content: String(m.content) })
+  }
+
+  const bodyParams: any = {
+    model: model.id,
+    messages: cm,
+    max_tokens: 3000,
+    thinking: { type: 'enabled' },
+    reasoning_effort: 'medium',
+    stream: true,
+  }
+
+  try {
+    const res = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+      body: JSON.stringify(bodyParams),
+    })
+
+    if (!res.ok) {
+      const status = res.status
+      const msg = status === 402 ? 'Saldo insuficiente na API.' : status === 429 ? 'Muitas requisicoes. Aguarde.' : `Erro ${status} ao processar.`
+      const stream = new ReadableStream({
+        start(ctrl) {
+          ctrl.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'error', code: `DS_${status}`, reply: msg })}\n\n`))
+          ctrl.close()
+        }
+      })
+      return new Response(stream, { headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive' } })
+    }
+
+    const relayStream = new ReadableStream({
+      async start(controller) {
+        const reader = res.body!.getReader()
+        const decoder = new TextDecoder()
+        let buffer = ''
+
+        try {
+          while (true) {
+            const { done, value } = await reader.read()
+            if (done) break
+            buffer += decoder.decode(value, { stream: true })
+            const lines = buffer.split('\n')
+            buffer = lines.pop() || ''
+            for (const line of lines) {
+              const trimmed = line.trim()
+              if (!trimmed.startsWith('data: ')) continue
+              const data = trimmed.slice(6)
+              if (data === '[DONE]') continue
+              let parsed: any
+              try { parsed = JSON.parse(data) } catch { continue }
+              controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'chunk', choices: parsed?.choices, model: model.name })}\n\n`))
+            }
+          }
+        } catch (e) { console.error('Guest stream read error:', e) }
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'done', code: 'OK', model: model.name })}\n\n`))
+        controller.close()
+      }
+    })
+
+    return new Response(relayStream, {
+      headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive' },
+    })
+  } catch (e) {
+    console.error('Guest AI error:', e)
+    const stream = new ReadableStream({
+      start(ctrl) {
+        ctrl.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'error', code: 'INTERNAL', reply: 'Erro interno.' })}\n\n`))
+        ctrl.close()
+      }
+    })
+    return new Response(stream, { headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive' } })
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const user = await getSessionUser(request)
-    if (!user) return new Response(JSON.stringify({ error: 'Nao autenticado' }), { status: 401, headers: { 'Content-Type': 'application/json' } })
+
+    // Usuario nao logado: responde como convidado, sem acesso a dados privados
+    if (!user) {
+      return responderComoConvidado(request)
+    }
 
     const existing = await prisma.user.findUnique({ where: { id: user.id } })
     if (!existing) {

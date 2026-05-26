@@ -377,3 +377,26 @@ model ContextualTipDismissal {
   dismissedAt DateTime @default(now())
   @@unique([userId, tipKey])
 }
+
+model BotActionLog {
+  id          String   @id @default(cuid())
+  botId       String
+  botName     String
+  botRole     String
+  action      String
+  endpoint    String?
+  method      String?
+  requestBody Json?
+  status      String   @default("pending")
+  result      String?
+  error        String?
+  prompt       String?
+  aiResponse   String?
+  tokensUsed   Int?
+  costEstimate Float?
+  createdAt    DateTime @default(now())
+
+  @@index([botId, createdAt])
+  @@index([status])
+  @@index([createdAt])
+}

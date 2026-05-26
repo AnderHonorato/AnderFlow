@@ -33,7 +33,7 @@ function getStatusBadge(status: string) {
 
 export default async function ContractsPage() {
   const session = await getServerSession(authOptions)
-  if (!session?.user) redirect('/login')
+  if (!session?.user) redirect('/')
 
   const user = session.user as any
   const isAdminUser = cargoEhAdmin(user.role)

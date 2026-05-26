@@ -7,7 +7,7 @@ import { cargoEhDeveloperOuSuperior } from '@/lib/hierarquia'
 
 export default async function KnowledgePage() {
   const session = await getServerSession(authOptions)
-  if (!session?.user) redirect('/login')
+  if (!session?.user) redirect('/')
 
   const user = session.user as any
   const isAdminUser = cargoEhDeveloperOuSuperior(user.role)

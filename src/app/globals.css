@@ -1,5 +1,6 @@
 @import '../estilos/tokens.css';
 @import '../estilos/animacoes.css';
+@import '../estilos/landing.css';
 @import url('https://cdn.jsdelivr.net/npm/cal-sans@1.0.1/index.css');
 
 @tailwind base;
