@@ -400,3 +400,23 @@ model BotActionLog {
   @@index([status])
   @@index([createdAt])
 }
+
+model AiUsage {
+  id              String   @id @default(cuid())
+  model           String
+  feature         String
+  inputTokens     Int      @default(0)
+  outputTokens    Int      @default(0)
+  cacheHitTokens  Int      @default(0)
+  cacheMissTokens Int      @default(0)
+  costUsd         Float    @default(0)
+  durationMs      Int      @default(0)
+  userId          String?
+  success         Boolean  @default(true)
+  errorMessage    String?
+  timestamp       DateTime @default(now())
+
+  @@index([feature, timestamp])
+  @@index([userId, timestamp])
+  @@index([timestamp])
+}
