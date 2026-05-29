@@ -83,7 +83,7 @@ export function useTicketTriage(ticket?: TicketLike) {
     : null
 
   return {
-    isTriaged: isTicketTriaged(ticket || {}),
+    isTriaged: ticket ? isTicketTriaged(ticket) : false,
     triageInfo,
     badgeColor,
     sentimentColor,

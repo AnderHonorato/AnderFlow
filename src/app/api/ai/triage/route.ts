@@ -154,7 +154,7 @@ export async function POST(request: NextRequest) {
           }),
           prisma.ticket.count({ where: { creatorId: clientId } }),
           prisma.project.count({ where: { clientId } }),
-          prisma.invoice.count({ where: { userId: clientId } }),
+          prisma.invoice.count({ where: { clientId } }),
         ])
 
         if (cliente) {

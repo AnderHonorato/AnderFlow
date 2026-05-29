@@ -320,53 +320,77 @@ async function executeTool(
   }
 }
 
-function getFallbackApiUrl(): string {
-  if (DEEPSEEK_API_KEY && DEEPSEEK_ANTHROPIC_URL) {
-    return `${DEEPSEEK_ANTHROPIC_URL}/v1/messages`
-  }
-  return ANTHROPIC_API_URL
+function convertToOpenAITools(): Record<string, unknown>[] {
+  return TOOLS.map(t => ({
+    type: 'function',
+    function: {
+      name: t.name,
+      description: t.description,
+      parameters: t.input_schema
+    }
+  }))
 }
 
-function getActiveApiKey(): string | undefined {
-  return ANTHROPIC_API_KEY || DEEPSEEK_API_KEY
+function getFallbackApiUrl(): string {
+  if (DEEPSEEK_API_KEY) {
+    return 'https://api.deepseek.com/chat/completions'
+  }
+  return 'https://api.openai.com/v1/chat/completions'
+}
+
+function getActiveApiKey(model: string): { key: string; url: string; provider: string } {
+  const m = model || ''
+  if (m.startsWith('claude') && process.env.ANTHROPIC_API_KEY) {
+    return { key: process.env.ANTHROPIC_API_KEY, url: 'https://api.anthropic.com/v1/messages', provider: 'anthropic' }
+  }
+  if (m.startsWith('gpt') && process.env.OPENAI_API_KEY) {
+    return { key: process.env.OPENAI_API_KEY, url: 'https://api.openai.com/v1/chat/completions', provider: 'openai' }
+  }
+  if (m.startsWith('gemini') && process.env.GOOGLE_AI_KEY) {
+    return { key: process.env.GOOGLE_AI_KEY, url: `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent`, provider: 'gemini' }
+  }
+  if (process.env.DEEPSEEK_API_KEY) {
+    return { key: process.env.DEEPSEEK_API_KEY, url: 'https://api.deepseek.com/chat/completions', provider: 'deepseek' }
+  }
+  if (process.env.OPENAI_API_KEY) {
+    return { key: process.env.OPENAI_API_KEY, url: 'https://api.openai.com/v1/chat/completions', provider: 'openai' }
+  }
+  throw new Error('Nenhuma chave de API configurada')
 }
 
 async function callAI(
   messages: { role: string; content: unknown }[],
   systemPrompt: string,
-  maxTokens: number
+  maxTokens: number,
+  model: string
 ): Promise<Response> {
-  const apiKey = getActiveApiKey()
-  if (!apiKey) throw new Error('Nenhuma chave de API configurada (ANTHROPIC_API_KEY ou DEEPSEEK_API_KEY)')
+  const { key, url, provider } = getActiveApiKey(model)
 
-  const useAnthropic = !!ANTHROPIC_API_KEY
-  const url = useAnthropic ? ANTHROPIC_API_URL : getFallbackApiUrl()
+  const openAIMessages: { role: string; content: unknown }[] = [
+    { role: 'system', content: systemPrompt },
+    ...messages.map(m => {
+      const content = m.content
+      if (Array.isArray(content)) {
+        return { role: m.role, content: content.filter((c: any) => c && c.type !== 'tool_use').map((c: any) => c.type === 'text' ? c.text : '').join(' ') }
+      }
+      return { role: m.role, content }
+    })
+  ]
 
   const body: Record<string, unknown> = {
-    model: 'claude-sonnet-4-20250514',
+    model,
     max_tokens: maxTokens,
     stream: true,
-    system: systemPrompt,
-    messages,
-    tools: TOOLS.map(t => ({
-      name: t.name,
-      description: t.description,
-      input_schema: t.input_schema
-    }))
+    messages: openAIMessages,
+    tools: convertToOpenAITools()
   }
 
-  const fetchHeaders: Record<string, string> = {
+  const headers: Record<string, string> = {
     'Content-Type': 'application/json',
-    'anthropic-version': ANTHROPIC_VERSION
+    'Authorization': `Bearer ${key}`
   }
 
-  if (useAnthropic) {
-    fetchHeaders['x-api-key'] = apiKey
-  } else {
-    fetchHeaders['Authorization'] = `Bearer ${apiKey}`
-  }
-
-  return fetch(url, { method: 'POST', headers: fetchHeaders, body: JSON.stringify(body) })
+  return fetch(url, { method: 'POST', headers, body: JSON.stringify(body) })
 }
 
 function streamFinishedMarker(encoder: TextEncoder, controller: ReadableStreamDefaultController<Uint8Array>) {
@@ -392,11 +416,13 @@ export async function POST(request: NextRequest) {
     const {
       messages: inputMessages = [],
       sessionId,
-      mode = 'programmer'
+      mode = 'programmer',
+      model = 'deepseek-v4-flash'
     } = body as {
       messages: { role: string; content: string | unknown }[]
       sessionId?: string
       mode?: 'programmer' | 'agent' | 'explain' | 'review' | 'normal'
+      model?: string
     }
 
     if (!inputMessages.length) {
@@ -425,7 +451,7 @@ export async function POST(request: NextRequest) {
 
             let apiResponse: Response
             try {
-              apiResponse = await callAI(messages, systemPrompt, 8096)
+              apiResponse = await callAI(messages, systemPrompt, 8096, model)
             } catch (err: any) {
               controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'error', message: err.message || 'Erro ao conectar com a IA' })}\n\n`))
               streamFinishedMarker(encoder, controller)
@@ -473,6 +499,41 @@ export async function POST(request: NextRequest) {
 
                       let parsed: any
                       try { parsed = JSON.parse(data) } catch { continue }
+
+                      if (parsed.choices) {
+                        const delta = parsed.choices?.[0]?.delta
+                        const finishReason = parsed.choices?.[0]?.finish_reason
+
+                        if (delta?.content) {
+                          currentAssistantContent += delta.content
+                          enqueue({ type: 'text', content: delta.content })
+                        }
+                        if (delta?.tool_calls) {
+                          for (const tc of delta.tool_calls) {
+                            if (tc.function?.name) {
+                              currentToolName = tc.function.name
+                              currentToolInput = tc.function.arguments || ''
+                            }
+                            if (tc.function?.arguments) {
+                              currentToolInput = tc.function.arguments
+                            }
+                          }
+                        }
+                        if (finishReason === 'tool_calls' || finishReason === 'function_call') {
+                          reader.cancel()
+                          resolveStream()
+                          return
+                        }
+                        if (finishReason === 'stop') {
+                          resolveStream()
+                          return
+                        }
+                        if (parsed.usage) {
+                          totalTokensUsed += parsed.usage.total_tokens || 0
+                          enqueue({ type: 'usage', tokens: { total: totalTokensUsed, ...parsed.usage } })
+                        }
+                        continue
+                      }
 
                       switch (parsed.type) {
                         case 'message_start':

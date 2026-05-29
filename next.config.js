@@ -30,6 +30,17 @@ const nextConfig = {
       },
     ]
   },
+  async rewrites() {
+    if (process.env.NODE_ENV === 'development') {
+      return [
+        {
+          source: '/ide-api/:path*',
+          destination: 'http://localhost:3002/:path*',
+        },
+      ]
+    }
+    return []
+  },
 }
 
 module.exports = withBundleAnalyzer(nextConfig)

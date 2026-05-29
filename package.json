@@ -20,7 +20,9 @@
     "cron:monthly": "node -e \"fetch('http://localhost:3000/api/cron/monthly-report', { headers: { Authorization: 'Bearer ' + (process.env.CRON_SECRET || 'dev-secret') } }).then(r => r.json()).then(d => console.log(d))\"",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "ide-server": "tsx server/ide-server.ts",
+    "dev:full": "concurrently -n NEXT,IDE -c cyan,green \"npm run dev\" \"npm run ide-server\""
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
@@ -114,6 +116,7 @@
     "@types/react-dom": "^18.2.22",
     "@vitejs/plugin-react": "^6.0.2",
     "autoprefixer": "^10.4.18",
+    "concurrently": "^10.0.0",
     "eslint": "^8.57.1",
     "eslint-config-next": "14.1.4",
     "eslint-watch": "^8.0.0",

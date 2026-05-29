@@ -366,7 +366,7 @@ export default function AIPage() {
   return (
     <div className="flex flex-col h-[calc(100vh-65px)] max-w-4xl mx-auto">
       <button
-        onClick={() => router.push('/dashboard/ide')}
+        onClick={() => router.push('/ide')}
         className="fixed top-4 right-4 z-50 flex items-center gap-2 px-3 py-1.5
                    bg-[#1f6feb] hover:bg-[#388bfd] text-white text-xs font-medium
                    rounded-md border border-[#388bfd] transition-colors shadow-lg"

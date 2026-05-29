@@ -4,11 +4,11 @@ import { useState, useRef, useEffect, useCallback, useMemo, useId } from 'react'
 import Image from 'next/image'
 import { motion, AnimatePresence as FMAnimatePresence } from 'framer-motion'
 import { useSession } from 'next-auth/react'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { toast } from 'sonner'
-import { Send, X, Plus, Trash2, Maximize2, Minimize2, PanelLeft, Paperclip, Image as ImagemIcone, Download, ChevronLeft, ChevronRight, Pin, ThumbsUp, ThumbsDown, Reply, CornerDownRight, Brain, AlertTriangle, ChevronDown, Bug, ChevronUp, Copy } from 'lucide-react'
+import { Send, X, Plus, Trash2, Maximize2, Minimize2, PanelLeft, Paperclip, Image as ImagemIcone, Download, ChevronLeft, ChevronRight, Pin, ThumbsUp, ThumbsDown, Reply, CornerDownRight, Brain, AlertTriangle, ChevronDown, Bug, ChevronUp, Copy, Code2 } from 'lucide-react'
 import { replaceIcons } from './chat-icons'
 
 const THINKING = [
@@ -78,6 +78,8 @@ function ReasoningBox({content,msgIdx,onReport}:{content:string;msgIdx:number;on
   </div>)
 }
 
+function thinkLabel(text:string):string{const t=text.toLowerCase();if(t.includes('criar')||t.includes('gerar')||t.includes('criando'))return'Criando...';if(t.includes('editar')||t.includes('alterar')||t.includes('editando'))return'Editando...';if(t.includes('analisar')||t.includes('análise')||t.includes('analisando'))return'Analisando...';if(t.includes('pesquisar')||t.includes('buscar')||t.includes('pesquisando'))return'Pesquisando...';if(t.includes('verificar')||t.includes('validar')||t.includes('verificando'))return'Verificando...';if(t.includes('calcular')||t.includes('estimar'))return'Calculando...';if(t.includes('estruturar')||t.includes('planejar')||t.includes('organizar'))return'Estrutuado...';if(t.includes('revisar')||t.includes('corrigir')||t.includes('revisando'))return'Revisando...';if(t.includes('escrever')||t.includes('redigir')||t.includes('responder'))return'Escrevendo...';if(t.includes('pensar')||t.includes('raciocinar'))return'Pensando...';return'Processando...'}
+
 function ReasoningStream({lines,active,thinkSec,onToggle}:{lines:string[];active:boolean;thinkSec:number;onToggle:()=>void}){
   const endRef=useRef<HTMLDivElement>(null)
   const[collapsed,setCollapsed]=useState(false)
@@ -128,7 +130,7 @@ function getGreeting(){const h=new Date().getHours();if(h<6)return'Boa noite';if
 const INACTIVE_MSGS=['Ola! Sabia que voce pode acompanhar seu projeto em tempo real pelo portal?','Precisa de ajuda com o briefing? Posso te guiar em cada etapa!','Voce ja conhece o fluxo de 12 etapas do ANDERFLOW? E eficiente e transparente.','Quer enviar um feedback? Sua opiniao ajuda a melhorar a plataforma!','Tem duvidas sobre prazos ou orcamento? Me pergunte!','Sabia que pode assinar contratos diretamente pelo portal?','O dashboard mostra o progresso de todos os seus projetos.']
 
 export function AIFab(){
-  const{data:session}=useSession();const pp=usePathname()
+  const{data:session}=useSession();const pp=usePathname();const router=useRouter()
   const[op,setOp]=useState(false);const[ex,setEx]=useState(false);const[sb,setSb]=useState(false)
   const[cn,setCn]=useState<Cnv[]>([]);const[aid,setAid]=useState<string|null>(null);const[ms,setMs]=useState<Msg[]>([])
   const[inp,setInp]=useState('');const[ld,setLd]=useState(false);const[ti,setTi]=useState(0)
@@ -358,7 +360,6 @@ export function AIFab(){
 
   const af=(file:File)=>{if(file.size>10*1024*1024){toast.error(`${file.name} excede 10MB`);return};const r=new FileReader();r.onload=()=>setPf(p=>[...p,{name:file.name,url:r.result as string,type:file.type,size:file.size,isImg:file.type.startsWith('image/')}]);r.readAsDataURL(file)}
   const rf=(i:number)=>setPf(p=>p.filter((_,j)=>j!==i))
-  const thinkLabel=(text:string)=>{const t=text.toLowerCase();if(t.includes('criar')||t.includes('gerar')||t.includes('criando'))return'Criando...';if(t.includes('editar')||t.includes('alterar')||t.includes('editando'))return'Editando...';if(t.includes('analisar')||t.includes('análise')||t.includes('analisando'))return'Analisando...';if(t.includes('pesquisar')||t.includes('buscar')||t.includes('pesquisando'))return'Pesquisando...';if(t.includes('verificar')||t.includes('validar')||t.includes('verificando'))return'Verificando...';if(t.includes('calcular')||t.includes('estimar'))return'Calculando...';if(t.includes('estruturar')||t.includes('planejar')||t.includes('organizar'))return'Estrutuado...';if(t.includes('revisar')||t.includes('corrigir')||t.includes('revisando'))return'Revisando...';if(t.includes('escrever')||t.includes('redigir')||t.includes('responder'))return'Escrevendo...';if(t.includes('pensar')||t.includes('raciocinar'))return'Pensando...';return'Processando...'}
   const dw=()=>{setWv(false);setAutoMsgDisp('');setAutoMsgFull('');if(autoTypingRef.current){clearInterval(autoTypingRef.current);autoTypingRef.current=null};sessionStorage.setItem('metrys_dismiss_ts',String(Date.now()+3600000))}
   const autoShow=()=>{
     if(op||wv)return
@@ -522,6 +523,7 @@ export function AIFab(){
                 <div className="min-w-0 flex flex-col"><p className="text-[12px] font-[500] truncate">Metrys do Flow</p>{aid&&cn.find(c=>c.id===aid)&&<p className="text-[9px] text-[var(--text-3)] truncate">{cn.find(c=>c.id===aid)?.title}</p>}</div>
               </div>
               <div className="flex items-center gap-1">
+                <button onClick={() => router.push('/ide')} className="h-6 w-6 flex items-center justify-center rounded-lg text-[var(--text-3)] hover:bg-[var(--surface-hover)] hover:text-[var(--accent)]" title="Abrir IDE"><Code2 className="h-3.5 w-3.5"/></button>
                 <button onClick={()=>setEx(!ex)} className="h-6 w-6 flex items-center justify-center rounded-lg text-[var(--text-3)] hover:bg-[var(--surface-hover)]" title={ex?'Reduzir':'Expandir'}>{ex?<Minimize2 className="h-3.5 w-3.5"/>:<Maximize2 className="h-3.5 w-3.5"/>}</button>
                 <button onClick={()=>setOp(false)} className="h-6 w-6 flex items-center justify-center rounded-lg text-[var(--text-3)] hover:bg-[var(--accent-subtle)] hover:text-[var(--accent)]" title="Minimizar"><ChevronDown className="h-4 w-4"/></button>
               </div>

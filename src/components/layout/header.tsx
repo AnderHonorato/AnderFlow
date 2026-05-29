@@ -11,7 +11,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Activity, Users, Eye, BarChart3, TrendingUp } from 'lucide-react'
+import { Activity, Users, Eye, BarChart3, TrendingUp, Code2 } from 'lucide-react'
 
 interface NotificationItem {
   id: string
@@ -537,6 +537,14 @@ export function Header() {
             )}
           </AnimatePresence>
         </div>
+
+        <button
+          onClick={() => router.push('/ide')}
+          className="flex items-center justify-center h-7 w-9 rounded-md hover:bg-[var(--surface-hover)] text-[var(--text-2)] hover:text-[var(--text)] transition-colors"
+          title="Abrir IDE"
+        >
+          <Code2 className="w-[16px] h-[16px]" />
+        </button>
 
         <FocusModeButton />
 
