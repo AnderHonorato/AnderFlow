@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect, useMemo, Fragment } from 'react'
+import { useRouter } from 'next/navigation'
 import { useAIChat, type AIMessage } from '@/hooks/useAIChat'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -20,6 +21,7 @@ import {
   ChevronUp,
   Zap,
   Sparkles,
+  Code2,
 } from 'lucide-react'
 
 const SUGGESTIONS = [
@@ -322,6 +324,7 @@ function MessageBubble({ msg }: { msg: AIMessage }) {
 }
 
 export default function AIPage() {
+  const router = useRouter()
   const [input, setInput] = useState('')
   const [useThinking, setUseThinking] = useState(true)
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -362,6 +365,16 @@ export default function AIPage() {
 
   return (
     <div className="flex flex-col h-[calc(100vh-65px)] max-w-4xl mx-auto">
+      <button
+        onClick={() => router.push('/dashboard/ide')}
+        className="fixed top-4 right-4 z-50 flex items-center gap-2 px-3 py-1.5
+                   bg-[#1f6feb] hover:bg-[#388bfd] text-white text-xs font-medium
+                   rounded-md border border-[#388bfd] transition-colors shadow-lg"
+      >
+        <Code2 className="w-3.5 h-3.5" />
+        Abrir IDE
+        <span className="ml-1 px-1.5 py-0.5 bg-white/20 rounded text-[10px]">Beta</span>
+      </button>
       <div className="flex items-center justify-between px-6 py-4 shrink-0 border-b border-border/40">
         <div>
           <h1 className="text-lg font-medium">Assistente IA</h1>
