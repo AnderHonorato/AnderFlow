@@ -5,18 +5,19 @@ import { useEffect } from 'react'
 export function BotEngineInit() {
   useEffect(() => {
     let interval: ReturnType<typeof setInterval> | null = null
+    const controller = new AbortController()
 
     const run = async () => {
       try {
-        await fetch('/api/bots/engine', { method: 'POST' })
+        await fetch('/api/bots/engine', { method: 'POST', signal: controller.signal })
       } catch {}
     }
 
-    // Executa a cada 15 segundos enquanto o dashboard estiver aberto
     interval = setInterval(run, 15000)
     run()
 
     return () => {
+      controller.abort('cleanup')
       if (interval) clearInterval(interval)
     }
   }, [])

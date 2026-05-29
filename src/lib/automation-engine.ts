@@ -13,6 +13,15 @@ interface AutomationResult {
   type: string
   message: string
   actions: string[]
+  reasoning?: string
+  steps?: { step: number; action: string; result: string; timestamp: string }[]
+}
+
+function emitSocket(event: string, data: unknown) {
+  try {
+    const { io } = require('@/../server/socket')
+    if (io) io.emit(event, data)
+  } catch {}
 }
 
 const FOLLOWUP_TOOLS: DeepSeekTool[] = [
@@ -102,7 +111,10 @@ export async function runAiAutomation(
           result: result.content,
         })))
 
-        return { success: true, type, message: result.content || 'Follow-up gerado', actions }
+        emitSocket('automation:step', { type, step: 'tool_calls', results: toolCallResults })
+        const followupResult = { success: true, type, message: result.content || 'Follow-up gerado', actions, reasoning: result.reasoning }
+        emitSocket('automation:complete', followupResult)
+        return followupResult
       }
 
       case 'AUTO_PAYMENT_ALERT': {
@@ -145,7 +157,10 @@ export async function runAiAutomation(
           result: result.content,
         })))
 
-        return { success: true, type, message: result.content || 'Alerta gerado', actions }
+        emitSocket('automation:step', { type, step: 'payment_alert', fatura: fatura.number })
+        const paymentResult = { success: true, type, message: result.content || 'Alerta gerado', actions }
+        emitSocket('automation:complete', paymentResult)
+        return paymentResult
       }
 
       case 'AUTO_PROJECT_HEALTH': {
@@ -176,7 +191,10 @@ export async function runAiAutomation(
         const result = await chat(messages, { thinking: true, maxTokens: 500 })
         actions.push(`Analise de saude do projeto ${projeto.name} (${tarefasAtrasadas} tarefas atrasadas)`)
 
-        return { success: true, type, message: result.content, actions }
+        emitSocket('automation:step', { type, step: 'health_check', projeto: projeto.name, tarefas_atrasadas: tarefasAtrasadas })
+        const healthResult = { success: true, type, message: result.content, actions, reasoning: result.reasoning }
+        emitSocket('automation:complete', healthResult)
+        return healthResult
       }
 
       case 'AUTO_ONBOARDING': {
@@ -198,7 +216,9 @@ export async function runAiAutomation(
         const result = await chat(messages, { thinking: true, maxTokens: 600 })
         actions.push(`Sequencia de onboarding gerada para ${cliente.name}`)
 
-        return { success: true, type, message: result.content, actions }
+        const onboardingResult = { success: true, type, message: result.content, actions }
+        emitSocket('automation:complete', onboardingResult)
+        return onboardingResult
       }
 
       default:

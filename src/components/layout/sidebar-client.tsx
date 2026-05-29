@@ -155,7 +155,7 @@ export function SidebarClient() {
       })
     return () => {
       cancelled = true
-      controller.abort()
+      try { controller.abort() } catch {}
     }
   }, [])
 

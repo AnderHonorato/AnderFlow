@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useRef, useEffect, useCallback, useMemo, useId } from 'react'
 import Image from 'next/image'
@@ -23,6 +23,7 @@ const THINKING = [
   'Um minuto, processando dados...','Revisando antes de responder...','Buscando exemplos relevantes...',
   'Pesquisa em andamento...','Estou quase terminando a analise...',
 ]
+
 const T_FAST=10,T_MED=20,T_SLOW=32,TH_BASE=600,TH_PER=2
 const SUGS=['Como criar um novo projeto?','Quais sao as etapas do fluxo?','Como funciona o briefing?','Como acompanhar o progresso?','Como aprovar um design?','O que faz o financeiro?','Como assinar contrato?','Como ver notificacoes?','Como funciona a homologacao?','Como solicitar suporte?','Quais os prazos tipicos?','Como enviar feedback?','O que e o portal do cliente?','Como ver meus projetos?','Explicar o dashboard']
 const MODELS={pro:'metrys-pro',flash:'metrys-flash'}
@@ -43,91 +44,59 @@ function DDiv({label}:{label:string}){return(<div className="flex items-center g
 const bubbleKeys=['reasoningBubble1','reasoningBubble2','reasoningBubble3','reasoningBubble4','reasoningBubble5','reasoningBubble6']
 const BUBBLES=[{w:18,h:18,top:'15%',left:'8%',d:'2.8s',a:bubbleKeys[0]},{w:12,h:12,top:'25%',right:'12%',d:'3.2s',a:bubbleKeys[1]},{w:22,h:22,bottom:'20%',left:'15%',d:'3.6s',a:bubbleKeys[2]},{w:14,h:14,top:'50%',right:'20%',d:'2.4s',a:bubbleKeys[3]},{w:10,h:10,bottom:'35%',right:'30%',d:'4s',a:bubbleKeys[4]},{w:16,h:16,top:'60%',left:'25%',d:'3s',a:bubbleKeys[5]}]
 
+function formatReasoningLine(line:string){
+  if(!line)return'\u00A0'
+  const parts:Array<{type:'text'|'bold'|'italic'|'code'|'example';content:string}>=[]
+  let remaining=line
+  const em=remaining.match(/^(.{0,30}?(exemplo|ex:|exemplo:|por exemplo|como por exemplo|tipo|tais como|entre eles)[:\s]*)(.+)$/i)
+  if(em){if(em[1])parts.push({type:'text',content:em[1]});parts.push({type:'example',content:em[3]});remaining=''}
+  if(remaining){const rg=/(\*\*[^*]+\*\*|\*[^*]+\*|`[^`]+`)/g;let last=0;let m:RegExpExecArray|null
+    while((m=rg.exec(remaining))!==null){if(m.index>last)parts.push({type:'text',content:remaining.slice(last,m.index)})
+      const r=m[0];if(r.startsWith('**')&&r.endsWith('**'))parts.push({type:'bold',content:r.slice(2,-2)})
+      else if(r.startsWith('`')&&r.endsWith('`'))parts.push({type:'code',content:r.slice(1,-1)})
+      else if(r.startsWith('*')&&r.endsWith('*'))parts.push({type:'italic',content:r.slice(1,-1)})
+      else parts.push({type:'text',content:r});last=m.index+r.length}
+    if(last<remaining.length)parts.push({type:'text',content:remaining.slice(last)})}
+  if(!parts.length)return line
+  return parts.map((p,i)=>{switch(p.type){case'bold':return <strong key={i} className="font-[600]">{p.content}</strong>
+    case'italic':return <em key={i}>{p.content}</em>
+    case'code':return <code key={i} className="bg-[var(--accent-subtle)]/50 text-[var(--accent)] px-1 py-0.5 rounded text-[9px] font-mono">{p.content}</code>
+    case'example':return <span key={i} className="inline-block bg-[rgba(58,122,196,0.08)] border border-[var(--info)]/10 rounded-lg px-2 py-0.5 leading-relaxed">{p.content}</span>
+    default:return <span key={i}>{p.content}</span>}})
+}
+
 function ReasoningBox({content,msgIdx,onReport}:{content:string;msgIdx:number;onReport:(i:number)=>void}){
   const[open,setOpen]=useState(false)
   const[translated,setTranslated]=useState<string|null>(null)
   const[translating,setTranslating]=useState(false)
-  useEffect(()=>{
-    if(!content||content.length<15)return
-    setTranslating(true)
-    fetch('/api/ai/translate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:content})})
-      .then(r=>r.json()).then(d=>{if(d.changed)setTranslated(d.translated);setTranslating(false)})
-      .catch(()=>setTranslating(false))
-  },[content])
-  const display=translated||content
-  const lines=display.split('\n').filter(Boolean)
-  const preview=lines.slice(0,3).join('\n')
-  return(<div className="mb-2 rounded-xl overflow-hidden relative" style={{background:'rgba(58,122,196,0.06)'}} id={`reasoning-${msgIdx}`}>
-    {BUBBLES.map((b,i)=>(<div key={i} className="absolute rounded-full pointer-events-none" style={{width:b.w,height:b.h,top:b.top,left:b.left,right:b.right,bottom:b.bottom,background:'radial-gradient(circle,rgba(58,122,196,0.45) 0%,transparent 70%)',animation:`${b.a} ${b.d} ease-in-out infinite`}}/>))}
-    <button title="Expandir pensamento" onClick={()=>setOpen(!open)} className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-[var(--surface)]/30 transition-colors relative z-[1]">
-      <Brain className="h-3.5 w-3.5 text-[var(--info)]"/><span className="text-[11px] font-[500] text-[var(--info)]">Pensamento{translating&&' (traduzindo...)'}{translated&&' (traduzido)'}</span>
-      <ChevronDown className={`h-3 w-3 ml-auto text-[var(--text-3)] transition-transform ${open?'':'rotate-[-90deg]'}`}/>
-    </button>
-    <div className="px-3 pb-2.5 relative z-[1]">
-      {!open?(
-        <div className="relative" style={{maxHeight:'72px',overflow:'hidden'}}>
-          <div className="thinking-metal text-[11px] leading-[24px] whitespace-pre-wrap">{preview}</div>
-          {lines.length>3&&<div className="absolute bottom-0 left-0 right-0 h-8 pointer-events-none" style={{background:'linear-gradient(to top, rgba(58,122,196,0.06) 0%, transparent 100%)'}}/>}
-        </div>
-      ):(
-        <div className="thinking-metal text-[11px] leading-relaxed whitespace-pre-wrap max-h-[240px] overflow-y-auto scrollbar-thin">{display}</div>
-      )}
-    </div>
-    <div className="px-3 pb-1.5 flex justify-end relative z-[1]"><button title="Reportar erro" onClick={()=>onReport(msgIdx)} className="flex items-center gap-1 text-[9px] text-[var(--text-3)] hover:text-[var(--destructive)] transition-colors"><Bug className="h-2.5 w-2.5"/>Reportar erro</button></div>
+  useEffect(()=>{if(!content||content.length<15)return;setTranslating(true);fetch('/api/ai/translate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:content})}).then(r=>r.json()).then(d=>{if(d.changed)setTranslated(d.translated);setTranslating(false)}).catch(()=>setTranslating(false))},[content])
+  const display=translated||content;const lines=display.split('\n').filter(Boolean);const preview=lines.slice(0,3).join('\n')
+  return(<div className="mb-2 rounded-xl overflow-hidden" style={{background:'rgba(58,122,196,0.06)'}}>
+    <div className="flex items-center gap-2 px-3 py-2"><Brain className="h-3.5 w-3.5 text-[var(--info)]"/><span className="text-[11px] font-[500] text-[var(--info)]">Pensei por alguns segundos{translating?' (traduzindo...)':''}{translated?' (traduzido)':''}</span></div>
+    <div className="px-3 pb-2">{!open?(<div className="relative" style={{maxHeight:'60px',overflow:'hidden'}}><div className="text-[10px] leading-relaxed whitespace-pre-wrap text-[var(--text-3)]">{preview}</div>{lines.length>3&&<div className="absolute bottom-0 left-0 right-0 h-8 pointer-events-none" style={{background:'linear-gradient(to top, rgba(58,122,196,0.06) 0%, transparent 100%)'}}/>}</div>):(<div className="text-[10px] leading-relaxed whitespace-pre-wrap text-[var(--text-3)]">{display.split('\n').map((l,i)=><p key={i} className="min-h-[16px]">{formatReasoningLine(l)}</p>)}</div>)}</div>
+    <div className="px-3 pb-1.5 flex items-center justify-between"><button onClick={()=>setOpen(!open)} className="text-[10px] text-[var(--info)] hover:text-[var(--info)]/80 font-[500]">{open?'esconder':'ver mais >'}</button><button title="Reportar erro" onClick={()=>onReport(msgIdx)} className="flex items-center gap-1 text-[9px] text-[var(--text-3)] hover:text-[var(--destructive)]"><Bug className="h-2.5 w-2.5"/>Reportar erro</button></div>
   </div>)
 }
 
-function ReasoningStream({lines,active}:{lines:string[];active:boolean}){
-  const vis=lines.slice(-3)
-  while(vis.length<3)vis.unshift('')
-  const[rIdx,setRIdx]=useState(0)
-  const[charIdx,setCharIdx]=useState(0)
-  const rIdxRef=useRef(0)
-  const charIdxRef=useRef(0)
-  const animRef=useRef<ReturnType<typeof setInterval>|null>(null)
-  useEffect(()=>{
-    const vis=lines.slice(-3)
-    while(vis.length<3)vis.unshift('')
-    if(!active||vis.every(l=>!l)){rIdxRef.current=0;charIdxRef.current=0;setRIdx(0);setCharIdx(0);if(animRef.current)clearInterval(animRef.current);return}
-    rIdxRef.current=0;charIdxRef.current=0;setRIdx(0);setCharIdx(0)
-    const pump=()=>{
-      const line=vis[Math.min(rIdxRef.current,vis.length-1)]||''
-      if(charIdxRef.current>=line.length){
-        rIdxRef.current=rIdxRef.current+1
-        if(rIdxRef.current>=vis.length)rIdxRef.current=0
-        charIdxRef.current=0
-        setRIdx(rIdxRef.current)
-      }else{
-        charIdxRef.current++
-      }
-      setCharIdx(charIdxRef.current)
-    }
-    animRef.current=setInterval(pump,40+Math.random()*30)
-    return()=>{if(animRef.current)clearInterval(animRef.current)}
-  },[lines,active])
-  useEffect(()=>{if(!active){if(animRef.current)clearInterval(animRef.current);rIdxRef.current=0;charIdxRef.current=0;setRIdx(0);setCharIdx(0)}},[active])
-  const currLine=vis[Math.min(rIdx,vis.length-1)]||''
-  return(<div className={`mb-2 rounded-xl overflow-hidden relative transition-all duration-300 ${active?'opacity-100 scale-100':'opacity-0 scale-95 pointer-events-none'}`} style={{background:'rgba(58,122,196,0.06)'}}>
-    {BUBBLES.map((b,i)=>(<div key={i} className="absolute rounded-full pointer-events-none" style={{width:b.w,height:b.h,top:b.top,left:b.left,right:b.right,bottom:b.bottom,background:'radial-gradient(circle,rgba(58,122,196,0.45) 0%,transparent 70%)',animation:`${b.a} ${b.d} ease-in-out infinite`}}/>))}
-    <div className="flex items-center gap-2 px-3 py-2 border-b border-[var(--info)]/8 relative z-[1]">
-      <Brain className="h-3.5 w-3.5 text-[var(--info)]"/>
-      <span className="text-[11px] font-[500] text-[var(--info)]">Pensamento</span>
-      {active&&<span className="ml-auto text-[9px] text-[var(--text-3)] animate-pulse">gerando...</span>}
-    </div>
-    <div className="px-3 py-2 relative z-[1]" style={{height:72,overflow:'hidden',position:'relative'}}>
-      {vis.map((l,i)=>{
-        const isActive=i===rIdx&&active
-        return(<p key={i} className="absolute left-3 right-3 truncate thinking-metal transition-all duration-400" style={{
-          lineHeight:'24px',top:12+(i*24),fontSize:isActive?'12px':'10px',
-          fontWeight:isActive?500:400,opacity:i<rIdx?0.35:i===rIdx?1:0.25,
-          filter:isActive?'brightness(1.3)':'brightness(0.8)',
-        }}>
-          {l&&isActive?l.slice(0,charIdx)+(charIdx<l.length?'|':''):l||'\u00A0'}
-        </p>)
-      })}
-    </div>
+function ReasoningStream({lines,active,thinkSec,onToggle}:{lines:string[];active:boolean;thinkSec:number;onToggle:()=>void}){
+  const endRef=useRef<HTMLDivElement>(null)
+  const[collapsed,setCollapsed]=useState(false)
+  const prevLen=useRef(lines.length)
+  useEffect(()=>{if(lines.length>prevLen.current&&endRef.current)endRef.current.scrollIntoView({behavior:'smooth'});prevLen.current=lines.length},[lines.length])
+  useEffect(()=>{if(!active&&lines.length>0){const t=setTimeout(()=>setCollapsed(true),800);return()=>clearTimeout(t)}},[active,lines.length])
+  useEffect(()=>{if(active){setCollapsed(false);prevLen.current=0}},[active])
+  if(!active&&lines.length===0)return null
+  if(collapsed)return(<button onClick={()=>{setCollapsed(false);onToggle()}} className="mb-2 w-full text-left rounded-xl px-3 py-2 bg-[rgba(58,122,196,0.06)] border border-[var(--info)]/15 hover:border-[var(--info)]/30"><p className="text-[11px] font-[500] text-[var(--text-3)]">Pensei por {thinkSec||'alguns'} segundos <span className="text-[var(--info)]/80">ver mais &gt;</span></p></button>)
+  const MAX_VIS=9;const start=Math.max(0,lines.length-MAX_VIS);const vis=lines.slice(start)
+  return(<div className="mb-2 rounded-xl overflow-hidden transition-all duration-300" style={{background:'rgba(58,122,196,0.06)'}}>
+    <div className="flex items-center gap-2 px-3 py-2 border-b border-[var(--info)]/8"><Brain className={`h-3.5 w-3.5 text-[var(--info)] ${active?'animate-pulse':''}`}/><span className="text-[11px] font-[500] text-[var(--info)]">{active?'Estou pensando...':`Pensei por ${thinkSec||'alguns'} segundos`}</span>{active?<span className="ml-auto text-[9px] text-[var(--text-3)] animate-pulse">gerando...</span>:<button onClick={()=>setCollapsed(true)} className="ml-auto text-[9px] text-[var(--text-3)] hover:text-[var(--info)]">esconder</button>}</div>
+    <div className="px-3 py-2 overflow-y-auto" style={{maxHeight:180}}>{vis.reduce<JSX.Element[]>((acc,l,i)=>{const ri=start+i;const isNew=ri===lines.length-1&&active;const isPrevEmpty=i>0&&!vis[i-1].trim()
+      if(isPrevEmpty&&l.trim()){const lb=thinkLabel(l);acc.push(<div key={`lb-${ri}`} className="flex items-center gap-2 my-1.5 animate-fade-up"><span className="h-px flex-1 bg-[var(--info)]/15"/><span className="text-[9px] text-[var(--info)]/70 font-[500] px-2 py-0.5 rounded-full border border-[var(--info)]/10 bg-[var(--info-subtle)]/20 shrink-0">{lb}</span><span className="h-px flex-1 bg-[var(--info)]/15"/></div>)}
+      acc.push(<p key={ri} className={`text-[10px] leading-relaxed transition-all duration-300 text-[var(--text-3)] ${isNew?'thinking-metal':''}`} style={{opacity:1-((ri-start)/Math.max(vis.length,1))*0.35,minHeight:16}}>{formatReasoningLine(l)}</p>);return acc},[])}<div ref={endRef} style={{height:1}}/></div>
   </div>)
 }
+
+
 
 function MD({content}:{content:string}){const h=useMemo(()=>{
   let t=content.replace(/\[PENSAMENTO\][\s\S]*?\[\/PENSAMENTO\]\n?/g,'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
@@ -174,7 +143,9 @@ export function AIFab(){
   const[errTxt,setErrTxt]=useState('')
   const[errConv,setErrConv]=useState(false)
   const[errPrint,setErrPrint]=useState(false)
-  const[model,setModel]=useState<'metrys-pro'|'metrys-flash'>('metrys-pro')
+  const[model,setModel]=useState<'metrys-pro'|'metrys-flash'|'metrys-dev'>('metrys-pro')
+  const[isMobile,setIsMobile]=useState(false)
+  useEffect(()=>{const check=()=>setIsMobile(window.innerWidth<640);check();window.addEventListener('resize',check);return()=>window.removeEventListener('resize',check)},[])
   const[thinkSec,setThinkSec]=useState(0)
   const[thinkExpanded,setThinkExpanded]=useState(false)
   const autoTimer=useRef<ReturnType<typeof setTimeout>|null>(null)
@@ -188,135 +159,103 @@ export function AIFab(){
 
   const sc=useRef<HTMLDivElement>(null);const ta=useRef<HTMLTextAreaElement>(null)
   const fi=useRef<HTMLInputElement>(null);const ii=useRef<HTMLInputElement>(null)
-  const tt=useRef<ReturnType<typeof setInterval>|null>(null);const st=useRef<ReturnType<typeof setInterval>|null>(null)
+  const tt=useRef<ReturnType<typeof setInterval>|null>(null)
+  // FIX: st stores setTimeout IDs (not setInterval), so type and clear method must match
+  const st=useRef<ReturnType<typeof setTimeout>|null>(null)
   const sl=useRef(false);const spp=useRef(0);const sbb=useRef(0);const spph=useRef<'typing'|'think'|'done'>('typing');const sbl=useRef<string[]>([])
 
-  const pw=sb?`calc(${ex?'520px':'400px'} + 140px)`:(ex?'520px':'400px');const ph=ex?'620px':'520px'
+  const pw=sb?`calc(${ex?'520px':'400px'} + 170px)`:(ex?'520px':'400px');const ph=ex?'620px':'520px'
   const vim=useMemo(()=>ms.flatMap(m=>(m.attachments||[]).filter(a=>a.type.startsWith('image/'))),[ms])
   const pinCnv=useMemo(()=>cn.filter(c=>c.pinned),[cn])
   const unpinCnv=useMemo(()=>cn.filter(c=>!c.pinned),[cn])
-const buildCardSlots = () => {
-  const shuffled=[...SUGS].sort(()=>Math.random()-.5)
-  return Array.from({length:5},(_,i)=>({text:shuffled[i]||SUGS[i],visible:true,key:Math.random(),score:0,isHigh:false}))
-}
-const[cardSlots,setCardSlots]=useState<{text:string;visible:boolean;key:number;score:number;isHigh:boolean}[]>(()=>
-  Array.from({length:5},(_,i)=>({text:SUGS[i],visible:true,key:i+1,score:0,isHigh:false}))
-)
-const[cardSlotsInit,setCardSlotsInit]=useState(false)
-useEffect(()=>{if(!cardSlotsInit){setCardSlots(buildCardSlots());setCardSlotsInit(true)}},[cardSlotsInit])
-const cardSlotsRef=useRef(cardSlots)
-useEffect(()=>{cardSlotsRef.current=cardSlots},[cardSlots])
-const[welcomeIdx,setWelcomeIdx]=useState(0)
-const[welcomeVisible,setWelcomeVisible]=useState(true)
-const[welcomeStarKey,setWelcomeStarKey]=useState(0)
-const[streamActive,setStreamActive]=useState(false)
-const[reasoningLines,setReasoningLines]=useState<string[]>([])
-const[streamText,setStreamText]=useState('')
-const[streamPhase,setStreamPhase]=useState<'idle'|'thinking'|'typing'|'done'|'think'>('idle')
-const[streamBlockIdx,setStreamBlockIdx]=useState(0)
-const[autoMsgDisp,setAutoMsgDisp]=useState('')
-const[autoMsgFull,setAutoMsgFull]=useState('')
-const autoTypingRef=useRef<ReturnType<typeof setInterval>|null>(null)
-const cardItems=useMemo(()=>{
-  const scored=cardSlots.map(s=>{
-    let sc=0;const low=s.text.toLowerCase()
-    for(const[k,v]of Object.entries(PRIORITY_KEYWORDS)){if(low.includes(k)){sc+=v;break}}
-    if(cn.length>0&&(low.includes('conversa')||low.includes('projeto')))sc+=2
-    if(cn.length>4)sc+=1
-    return{...s,score:sc}
-  })
-  const sorted=[...scored].sort((a,b)=>b.score-a.score)
-  const topTexts=new Set(sorted.slice(0,Math.min(2,sorted.filter(s=>s.score>=2).length)).filter(s=>s.score>=2).map(s=>s.text))
-  return scored.map(s=>({...s,isHigh:topTexts.has(s.text)}))
-},[cardSlots,cn])
-const welcomeMsgs=useMemo(()=>{
-  if(cn.length>0){
-    return[
-      `Voce tem ${cn.length} conversa${cn.length>1?'s':''} salva${cn.length>1?'s':''}. Continue de onde parou!`,
-      `Retome qualquer conversa na barra lateral. Suas interacoes ficam salvas.`,
-      `${cn.length>1?'Varias conversas':'Uma conversa'} esta${cn.length>1?'o':''} te esperando. Escolha uma para continuar.`,
-      `Seus chats estao organizados e prontos para voce retomar a qualquer momento.`,
-    ]
-  }
-  return[
-    'Sou seu assistente para tirar duvidas sobre projetos, fluxos e funcionalidades.',
-    'Pergunte sobre briefings, etapas de desenvolvimento ou qualquer duvida do ANDERFLOW.',
-    'Estou aqui para ajudar voce com gestao de projetos de software.',
-    'Tire duvidas sobre o portal, acompanhe projetos e receba orientacoes.',
-    'Use o chat para aprender sobre o ANDERFLOW ou pedir ajuda com suas tarefas.',
-  ]
-},[cn])
-const welcomeMsg=welcomeMsgs[welcomeIdx%welcomeMsgs.length]
-const DS_CTX=64000
-const DS_INPUT_COST=0.27
-const DS_OUTPUT_COST=1.10
-const tokenStats=useMemo(()=>{
-  let totalChars=0;let inputChars=0;let outputChars=0
-  for(const m of ms){
-    const len=(m.content||'').length
-    totalChars+=len
-    if(m.role==='user')inputChars+=len
-    else outputChars+=len
-  }
-  if(streamText)outputChars+=streamText.length
-  const used=Math.round(Math.max(1,totalChars/3.5))
-  const inputTk=Math.round(Math.max(0,inputChars/3.5))
-  const outputTk=Math.round(Math.max(0,outputChars/3.5))
-  const pct=Math.min(100,Math.round((used/DS_CTX)*100))
-  const cost=(inputTk/1e6)*DS_INPUT_COST+(outputTk/1e6)*DS_OUTPUT_COST
-  return{used,inputTk,outputTk,pct,cost,limit:DS_CTX}
-},[ms,streamText])
-useEffect(()=>{
-  if(ms.length===0&&op){
-    const timers:ReturnType<typeof setTimeout>[]=[]
-    const scheduleSlot=(idx:number)=>{
-      const delay=8000+Math.random()*12000
-      const t=setTimeout(()=>{
-        setCardSlots(prev=>{
-          const next=[...prev]
-          next[idx]={...next[idx],visible:false}
-          return next
-        })
-        setTimeout(()=>{
-          const used=new Set(cardSlotsRef.current.map(s=>s.text))
-          const pool=SUGS.filter(s=>!used.has(s))
-          const pick=pool.length>0?pool[Math.floor(Math.random()*pool.length)]:SUGS[Math.floor(Math.random()*SUGS.length)]
-          setCardSlots(prev2=>{
-            const next2=[...prev2]
-            next2[idx]={text:pick,visible:true,key:Math.random(),score:0,isHigh:false}
-            return next2
-          })
-        },420+Math.random()*200)
-        scheduleSlot(idx)
-      },delay)
-      timers.push(t)
-    }
-    for(let i=0;i<5;i++){setTimeout(()=>scheduleSlot(i),i*1800+Math.random()*3000)}
-    let msgT:ReturnType<typeof setTimeout>|null=null
-    const scheduleMsg=()=>{
-      const delay=6000+Math.random()*8000
-      msgT=setTimeout(()=>{
-        setWelcomeVisible(false)
-        setTimeout(()=>{
-          setWelcomeIdx(p=>p+1)
-          setWelcomeStarKey(p=>p+1)
-          setWelcomeVisible(true)
-        },450+Math.random()*200)
-        scheduleMsg()
-      },delay)
-    }
-    setTimeout(()=>scheduleMsg(),2500+Math.random()*3000)
-    return()=>{timers.forEach(t=>clearTimeout(t));if(msgT)clearTimeout(msgT)}
-  }
-},[ms.length,op])
-useEffect(()=>{setWelcomeIdx(0);setWelcomeStarKey(p=>p+1)},[cn])
 
-  useEffect(()=>{if(op&&sc.current)sc.current.scrollTo({top:sc.current.scrollHeight,behavior:'smooth'})},[ms,op,sch])
+  const buildCardSlots = () => {
+    const shuffled=[...SUGS].sort(()=>Math.random()-.5)
+    return Array.from({length:5},(_,i)=>({text:shuffled[i]||SUGS[i],visible:true,key:Math.random(),score:0,isHigh:false}))
+  }
+  const[cardSlots,setCardSlots]=useState<{text:string;visible:boolean;key:number;score:number;isHigh:boolean}[]>(()=>
+    Array.from({length:5},(_,i)=>({text:SUGS[i],visible:true,key:i+1,score:0,isHigh:false}))
+  )
+  const[cardSlotsInit,setCardSlotsInit]=useState(false)
+  useEffect(()=>{if(!cardSlotsInit){setCardSlots(buildCardSlots());setCardSlotsInit(true)}},[cardSlotsInit])
+  const cardSlotsRef=useRef(cardSlots)
+  useEffect(()=>{cardSlotsRef.current=cardSlots},[cardSlots])
+  const[welcomeIdx,setWelcomeIdx]=useState(0)
+  const[welcomeVisible,setWelcomeVisible]=useState(true)
+  const[welcomeStarKey,setWelcomeStarKey]=useState(0)
+  const[streamActive,setStreamActive]=useState(false)
+  const[reasoningLines,setReasoningLines]=useState<string[]>([])
+  const[streamText,setStreamText]=useState('')
+  const[streamPhase,setStreamPhase]=useState<'idle'|'thinking'|'typing'|'done'|'think'>('idle')
+  const[streamBlockIdx,setStreamBlockIdx]=useState(0)
+  const[autoMsgDisp,setAutoMsgDisp]=useState('')
+  const[autoMsgFull,setAutoMsgFull]=useState('')
+  const autoTypingRef=useRef<ReturnType<typeof setInterval>|null>(null)
+  const cardItems=useMemo(()=>{
+    const scored=cardSlots.map(s=>{
+      let sc=0;const low=s.text.toLowerCase()
+      for(const[k,v]of Object.entries(PRIORITY_KEYWORDS)){if(low.includes(k)){sc+=v;break}}
+      if(cn.length>0&&(low.includes('conversa')||low.includes('projeto')))sc+=2
+      if(cn.length>4)sc+=1
+      return{...s,score:sc}
+    })
+    const sorted=[...scored].sort((a,b)=>b.score-a.score)
+    const topTexts=new Set(sorted.slice(0,Math.min(2,sorted.filter(s=>s.score>=2).length)).filter(s=>s.score>=2).map(s=>s.text))
+    return scored.map(s=>({...s,isHigh:topTexts.has(s.text)}))
+  },[cardSlots,cn])
+  const welcomeMsgs=useMemo(()=>{
+    if(cn.length>0){
+      return[
+        `Voce tem ${cn.length} conversa${cn.length>1?'s':''} salva${cn.length>1?'s':''}. Continue de onde parou!`,
+        `Retome qualquer conversa na barra lateral. Suas interacoes ficam salvas.`,
+        `${cn.length>1?'Varias conversas':'Uma conversa'} esta${cn.length>1?'o':''} te esperando. Escolha uma para continuar.`,
+        `Seus chats estao organizados e prontos para voce retomar a qualquer momento.`,
+      ]
+    }
+    return[
+      'Sou seu assistente para tirar duvidas sobre projetos, fluxos e funcionalidades.',
+      'Pergunte sobre briefings, etapas de desenvolvimento ou qualquer duvida do ANDERFLOW.',
+      'Estou aqui para ajudar voce com gestao de projetos de software.',
+      'Tire duvidas sobre o portal, acompanhe projetos e receba orientacoes.',
+      'Use o chat para aprender sobre o ANDERFLOW ou pedir ajuda com suas tarefas.',
+    ]
+  },[cn])
+  const welcomeMsg=welcomeMsgs[welcomeIdx%welcomeMsgs.length]
+  const DS_CTX=64000
+  const DS_INPUT_COST=0.27
+  const DS_OUTPUT_COST=1.10
+  const tokenStats=useMemo(()=>{
+    let totalChars=0;let inputChars=0;let outputChars=0
+    for(const m of ms){
+      const len=(m.content||'').length
+      totalChars+=len
+      if(m.role==='user')inputChars+=len
+      else outputChars+=len
+    }
+    if(streamText)outputChars+=streamText.length
+    const used=Math.round(Math.max(1,totalChars/3.5))
+    const inputTk=Math.round(Math.max(0,inputChars/3.5))
+    const outputTk=Math.round(Math.max(0,outputChars/3.5))
+    const pct=Math.min(100,Math.round((used/DS_CTX)*100))
+    const cost=(inputTk/1e6)*DS_INPUT_COST+(outputTk/1e6)*DS_OUTPUT_COST
+    return{used,inputTk,outputTk,pct,cost,limit:DS_CTX}
+  },[ms,streamText])
+
+  useEffect(()=>{setWelcomeIdx(0);setWelcomeStarKey(p=>p+1)},[cn])
+
+  const prevMsLen=useRef(0)
+  useEffect(()=>{if(op&&sc.current&&!streamActive){const el=sc.current;const prev=prevMsLen.current;prevMsLen.current=ms.length;if(ms.length>prev)el.scrollTo({top:el.scrollHeight,behavior:'instant'})}},[ms,op,streamActive])
   useEffect(()=>{if(streamActive&&streamPhase==='thinking'&&reasoningLines.length===0){const r=Math.floor(Math.random()*THINKING.length);setTi(r);tt.current=setInterval(()=>setTi(p=>{let n=Math.floor(Math.random()*THINKING.length);return n===p?(n+1)%THINKING.length:n}),3000)}else{if(tt.current)clearInterval(tt.current)}return()=>{if(tt.current)clearInterval(tt.current)}},[streamActive,streamPhase,reasoningLines.length])
   useEffect(()=>{const e=ta.current;if(!e)return;e.style.height='auto';e.style.height=Math.min(e.scrollHeight,120)+'px'},[inp])
   const exPid=useCallback(()=>{const m=pp?.match(/\/projects\/([a-zA-Z0-9_-]+)/);return m?m[1]:undefined},[pp])
   const lCnv=useCallback(async()=>{try{const r=await fetch('/api/ai/conversations');const j=await r.json();const d=Array.isArray(j.data)?j.data.filter(Boolean):[];setCn(d.map((c:Cnv)=>({...c,pinned:c.pinned||false})))}catch{setCn([])}},[])
-  const lMs=useCallback(async(id:string)=>{try{const r=await fetch(`/api/ai/conversations/${id}`);const j=await r.json();const arr=(j.data?.messages||[]).map((m:any)=>{const rn=extractReasoning(m.content||'');return{...m,reasoning:rn||undefined,content:m.content?.replace(/\[PENSAMENTO\][\s\S]*?\[\/PENSAMENTO\]\n?/g,'')||''}});setMs(arr)}catch{}},[])
+  const lMsAbortRef=useRef<AbortController|null>(null)
+  const lMs=useCallback(async(id:string)=>{
+    if(lMsAbortRef.current){lMsAbortRef.current.abort();lMsAbortRef.current=null}
+    const ac=new AbortController();lMsAbortRef.current=ac
+    try{const r=await fetch(`/api/ai/conversations/${id}`,{signal:ac.signal});const j=await r.json();const arr=(j.data?.messages||[]).map((m:any)=>{const rn=extractReasoning(m.content||'');return{...m,reasoning:rn||undefined,content:m.content?.replace(/\[PENSAMENTO\][\s\S]*?\[\/PENSAMENTO\]\n?/g,'')||''}});setMs(arr)}catch(e:any){if(e?.name!=='AbortError'){}}
+    finally{if(lMsAbortRef.current===ac)lMsAbortRef.current=null}
+  },[])
   useEffect(()=>{if(op)lCnv()},[op,lCnv])
   useEffect(()=>{if(!aid||sl.current)return;lMs(aid)},[aid,lMs])
   useEffect(()=>{
@@ -331,10 +270,9 @@ useEffect(()=>{setWelcomeIdx(0);setWelcomeStarKey(p=>p+1)},[cn])
       return()=>clearTimeout(t)
     }
     const ts=parseInt(dismissed)
-    if(!ts)return // permanent dismiss
+    if(!ts)return
     const now=Date.now()
-    if(now<ts)return // still in cooldown
-    // cooldown expired, restart
+    if(now<ts)return
     sessionStorage.removeItem('metrys_dismiss_ts')
   },[op])
   useEffect(()=>{const p=(e:ClipboardEvent)=>{if(!op)return;const it=e.clipboardData?.items;if(!it)return;for(let i=0;i<it.length;i++){if(it[i].type.startsWith('image/')){const b=it[i].getAsFile();if(b)af(b);e.preventDefault();break}}};document.addEventListener('paste',p);return()=>document.removeEventListener('paste',p)})
@@ -347,16 +285,20 @@ useEffect(()=>{setWelcomeIdx(0);setWelcomeStarKey(p=>p+1)},[cn])
     }
     if(abortRef.current){try{abortRef.current.abort()}catch{}abortRef.current=null}
     spph.current='done';setSph('done');setLd(false)
-    if(st.current)clearInterval(st.current)
+    if(tt.current)clearInterval(tt.current)
+    // FIX: st.current stores setTimeout IDs — must use clearTimeout, not clearInterval
+    if(st.current)clearTimeout(st.current)
     setSbi(-1);setSbs([]);setSReasoning('')
     setStreamActive(false);setStreamPhase('idle')
   }
+
   const stp=stopStream
+
   const sst=(txt:string,reasoning?:string)=>{
     if(reasoning){
       setReasoningLines(reasoning.split('\n').filter(Boolean))
       setStreamPhase('thinking')
-      const rTimer=setTimeout(()=>{
+      setTimeout(()=>{
         const bl=txt.split(/\n?---\n?/).filter(b=>b.trim())
         if(!bl.length)bl.push(txt)
         startAdaptiveTypewriter(bl,reasoning)
@@ -368,10 +310,11 @@ useEffect(()=>{setWelcomeIdx(0);setWelcomeStarKey(p=>p+1)},[cn])
       startAdaptiveTypewriter(bl)
     }
   }
+
   const startAdaptiveTypewriter=(blocks:string[],reasoning?:string)=>{
     pendingBlocks.current=blocks;pendingReasoning.current=reasoning||''
     thinkStart.current=Date.now();setThinkSec(0);setThinkExpanded(false)
-    let bi=0;let ci=0;let bt=0
+    let bi=0;let ci=0;let bt:ReturnType<typeof setTimeout>
     setStreamText('');setStreamPhase('typing')
     const pump=()=>{
       if(bi>=blocks.length){
@@ -386,23 +329,25 @@ useEffect(()=>{setWelcomeIdx(0);setWelcomeStarKey(p=>p+1)},[cn])
       }
       const b=blocks[bi]
       if(ci<b.length){
-        const ch=b[ci]
         const speed=getTypingSpeed(b.length)
         ci++;setStreamText(blocks.slice(0,bi).join('\n\n')+'\n\n'+b.slice(0,ci))
-        bt=window.setTimeout(pump,speed)
+        bt=setTimeout(pump,speed)
+        st.current=bt
       }else{
         bi++;ci=0
         if(bi<blocks.length){
           setStreamPhase('think')
           const nb=blocks[bi]||''
           const pause=Math.min(3000,Math.max(400,nb.length*3))
-          bt=window.setTimeout(()=>{setStreamPhase('typing');pump()},pause)
+          bt=setTimeout(()=>{setStreamPhase('typing');pump()},pause)
+          st.current=bt
         }else{pump()}
       }
     }
-    bt=window.setTimeout(pump,80)
-    st.current=bt as any
+    bt=setTimeout(pump,80)
+    st.current=bt
   }
+
   const getTypingSpeed=(blockLen:number):number=>{
     if(blockLen>500)return 6
     if(blockLen>300)return 10
@@ -413,7 +358,7 @@ useEffect(()=>{setWelcomeIdx(0);setWelcomeStarKey(p=>p+1)},[cn])
 
   const af=(file:File)=>{if(file.size>10*1024*1024){toast.error(`${file.name} excede 10MB`);return};const r=new FileReader();r.onload=()=>setPf(p=>[...p,{name:file.name,url:r.result as string,type:file.type,size:file.size,isImg:file.type.startsWith('image/')}]);r.readAsDataURL(file)}
   const rf=(i:number)=>setPf(p=>p.filter((_,j)=>j!==i))
-  const thinkLabel=(text:string)=>{const t=text.toLowerCase();if(t.includes('criar')||t.includes('gerar')||t.includes('criando'))return'Criando...';if(t.includes('editar')||t.includes('alterar')||t.includes('editando'))return'Editando...';if(t.includes('analisar')||t.includes('anális')||t.includes('analisando'))return'Analisando...';if(t.includes('pesquisar')||t.includes('buscar')||t.includes('pesquisando'))return'Pesquisando...';if(t.includes('verificar')||t.includes('validar')||t.includes('verificando'))return'Verificando...';if(t.includes('calcular')||t.includes('estimar'))return'Calculando...';if(t.includes('estruturar')||t.includes('planejar')||t.includes('organizar'))return'Estruturado...';if(t.includes('revisar')||t.includes('corrigir')||t.includes('revisando'))return'Revisando...';if(t.includes('escrever')||t.includes('redigir')||t.includes('responder'))return'Escrevendo...';if(t.includes('pensar')||t.includes('raciocinar'))return'Pensando...';return'Processando...'}
+  const thinkLabel=(text:string)=>{const t=text.toLowerCase();if(t.includes('criar')||t.includes('gerar')||t.includes('criando'))return'Criando...';if(t.includes('editar')||t.includes('alterar')||t.includes('editando'))return'Editando...';if(t.includes('analisar')||t.includes('análise')||t.includes('analisando'))return'Analisando...';if(t.includes('pesquisar')||t.includes('buscar')||t.includes('pesquisando'))return'Pesquisando...';if(t.includes('verificar')||t.includes('validar')||t.includes('verificando'))return'Verificando...';if(t.includes('calcular')||t.includes('estimar'))return'Calculando...';if(t.includes('estruturar')||t.includes('planejar')||t.includes('organizar'))return'Estrutuado...';if(t.includes('revisar')||t.includes('corrigir')||t.includes('revisando'))return'Revisando...';if(t.includes('escrever')||t.includes('redigir')||t.includes('responder'))return'Escrevendo...';if(t.includes('pensar')||t.includes('raciocinar'))return'Pensando...';return'Processando...'}
   const dw=()=>{setWv(false);setAutoMsgDisp('');setAutoMsgFull('');if(autoTypingRef.current){clearInterval(autoTypingRef.current);autoTypingRef.current=null};sessionStorage.setItem('metrys_dismiss_ts',String(Date.now()+3600000))}
   const autoShow=()=>{
     if(op||wv)return
@@ -434,6 +379,7 @@ useEffect(()=>{setWelcomeIdx(0);setWelcomeStarKey(p=>p+1)},[cn])
     else{if(autoTimer.current)clearTimeout(autoTimer.current)}
     return()=>{if(autoTimer.current)clearTimeout(autoTimer.current)}
   },[op])
+
   const nc=async()=>{stopStream();setStreamPhase('idle');setStreamActive(false);setRp(null);setErrIdx(null);setReasoningLines([]);setStreamText('');try{const r=await fetch('/api/ai/conversations',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title:'Nova conversa'})});const j=await r.json();const n=j.data;if(!n?.id)throw Error();setCn(p=>[{...n,pinned:false},...p]);setAid(n.id);setMs([])}catch{toast.error('Erro')}}
   const dc=async(id:string)=>{try{await fetch(`/api/ai/conversations/${id}`,{method:'DELETE'});if(aid===id){stopStream();setStreamPhase('idle');setStreamActive(false);setAid(null);setMs([]);setRp(null);setErrIdx(null);setReasoningLines([]);setStreamText('')};setCn(p=>p.filter(c=>c.id!==id))}catch{toast.error('Erro')}}
   const tc=async(id:string)=>{const upd=cn.map(c=>c.id===id?{...c,pinned:!c.pinned}:c);setCn(upd)}
@@ -462,15 +408,22 @@ useEffect(()=>{setWelcomeIdx(0);setWelcomeStarKey(p=>p+1)},[cn])
 
     const ac=new AbortController();abortRef.current=ac
     try{
+      const body:any={messages:payloadMessages,conversationId:aid||undefined,projectId:exPid(),files:fp,replyTo:rp?.id,modelKey:model}
+      if(model==='metrys-dev') body.tools=[
+        {type:'function',function:{name:'listar_arquivos',description:'Lista arquivos e diretorios do projeto.',parameters:{type:'object',properties:{caminho:{type:'string',description:'Caminho relativo. Ex: "src/app"'}}}}},
+        {type:'function',function:{name:'ler_arquivo',description:'Le conteudo de um arquivo do projeto.',parameters:{type:'object',properties:{caminho:{type:'string',description:'Caminho relativo do arquivo.'}},required:['caminho']}}},
+        {type:'function',function:{name:'escrever_arquivo',description:'Cria ou edita um arquivo no projeto.',parameters:{type:'object',properties:{caminho:{type:'string',description:'Caminho relativo.'},conteudo:{type:'string',description:'Conteudo completo do arquivo.'}},required:['caminho','conteudo']}}},
+        {type:'function',function:{name:'executar_comando',description:'Executa comando terminal na raiz do projeto. Use para npm install, git, testes, build.',parameters:{type:'object',properties:{comando:{type:'string',description:'Comando shell.'}},required:['comando']}}}
+      ]
       const r=await fetch('/api/ai/chat/stream',{
         method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({messages:payloadMessages,conversationId:aid||undefined,projectId:exPid(),files:fp,replyTo:rp?.id,modelKey:model}),
+        body:JSON.stringify(body),
         signal:ac.signal,
       })
       if(!r.ok){const ej=await r.json().catch(()=>({reply:'Erro de conexao'}));toast.error(ej.reply||ej.error||'Erro');stopStream();setLd(false);return}
       setStreamActive(true);setStreamPhase('thinking');setReasoningLines([]);setStreamText('')
       const reader=r.body!.getReader();const dec=new TextDecoder();let buf=''
-      let contentAcc='';let reasoningAcc='';const rLines:string[]=[]
+      let contentAcc='';let reasoningAcc=''
 
       while(true){
         const{value,done}=await reader.read()
@@ -482,8 +435,8 @@ useEffect(()=>{setWelcomeIdx(0);setWelcomeStarKey(p=>p+1)},[cn])
           const d=t.slice(6);if(!d)continue
           let p:any;try{p=JSON.parse(d)}catch{continue}
           if(p.type==='done'){
-            const newCid = p.conversationId
-            if(!aid && newCid){sl.current=true;setAid(newCid);setTimeout(()=>{sl.current=false},500)}
+            const newCid=p.conversationId
+            if(!aid&&newCid){sl.current=true;setAid(newCid);setTimeout(()=>{sl.current=false},500)}
             if(p.code==='OK'){
               const bl=(contentAcc||'').split(/\n?---\n?/).filter((b:string)=>b.trim())
               if(!bl.length)bl.push(contentAcc||'')
@@ -492,25 +445,33 @@ useEffect(()=>{setWelcomeIdx(0);setWelcomeStarKey(p=>p+1)},[cn])
             lCnv()
           }else if(p.type==='error'){
             toast.error(p.reply||'Erro');setLd(false);setStreamActive(false);setStreamPhase('idle')
-          }else if(p.type==='chunk'){
-            const delta=p?.choices?.[0]?.delta
-            if(delta?.reasoning_content){
-              reasoningAcc+=delta.reasoning_content
-              // Split into lines for 3-line rotating display
-              const newLines=reasoningAcc.split('\n').filter(Boolean)
-              setReasoningLines(newLines)
-            }
-            if(delta?.content){
-              contentAcc+=delta.content
-              setStreamPhase('thinking') // keep showing reasoning during content arrival too
-            }
+          }else if(p.type==='reasoning'){
+            reasoningAcc+=(p.content as string)||''
+            const newLines=reasoningAcc.split('\n').filter(Boolean)
+            setReasoningLines(newLines)
+          }else if(p.type==='content'){
+            contentAcc+=(p.content as string)||''
+            setStreamPhase('thinking')
+          }else if(p.type==='tool_call'&&model==='metrys-dev'){
+            const tcs=p.tool_calls||[];
+            (async()=>{
+              for(const tc of tcs){
+                const fn=tc.function?.name;const args=JSON.parse(tc.function?.arguments||'{}')
+                let result=''
+                try{
+                  const res=await fetch('/api/ai/fs',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:fn==='listar_arquivos'?'list':fn==='ler_arquivo'?'read':fn==='escrever_arquivo'?'write':fn==='executar_comando'?'exec':'',path:args.caminho||args.caminho,content:args.conteudo,command:args.comando})})
+                  const data=await res.json()
+                  result=data.error?`Erro: ${data.error}`:fn==='listar_arquivos'?`${(data.items||[]).slice(0,30).map((i:any)=>`${i.type==='dir'?'[DIR]':'[FILE]'} ${i.name}`).join('\n')||'(vazio)'}`:fn==='ler_arquivo'?data.content?.slice(0,3000)||'(vazio)':fn==='escrever_arquivo'?`Arquivo salvo: ${data.path} (${data.bytes} bytes)`:fn==='executar_comando'?data.saida?.slice(0,2000)||'(sem saida)':JSON.stringify(data)
+                }catch(e:any){result=`Erro: ${e.message}`}
+                setMs(p=>[...p,{role:'assistant',content:`\uD83D\uDD27 \`${fn}\`\n\`\`\`\n${result}\n\`\`\``,createdAt:new Date().toISOString()}])
+              }
+            })()
           }
         }
       }
     }catch(e:any){
       if(e.name==='AbortError'){
-        // Stream was interrupted by user - send was called again
-        // The new send call will handle the rest
+        // Stream abortado pelo usuario ao enviar nova mensagem
         return
       }
       sst('Erro de conexao.')
@@ -524,7 +485,7 @@ useEffect(()=>{setWelcomeIdx(0);setWelcomeStarKey(p=>p+1)},[cn])
   return(<>
     {wv&&!op&&(<div className="fixed bottom-[7rem] right-6 z-[60] max-w-[260px] rounded-2xl font-sans-dm p-3.5 shadow-xl backdrop-blur-sm" style={{background:'var(--surface)',border:'1.5px solid rgba(232,98,42,0.18)',animation:'autoMsgGlow 2.6s ease-in-out infinite, md-card-pop 0.4s var(--ease-spring) both'}}><button title="Fechar" onClick={dw} className="absolute top-1.5 right-1.5 h-5 w-5 flex items-center justify-center rounded-full hover:bg-[var(--surface-hover)] text-[var(--text-3)] transition-colors"><X className="h-3 w-3"/></button><div className="flex items-start gap-2.5"><div style={{animation:'autoMsgBgPulse 2.6s ease-in-out infinite'}} className="shrink-0 rounded-full p-1"><AIs s={28}/></div><p className="text-[12px] leading-relaxed text-[var(--text)] pr-4"><span>{autoMsgDisp||wm}</span>{autoMsgDisp&&autoMsgDisp.length<autoMsgFull.length&&<span className="typewriter-cursor"/>}</p></div></div>)}
 
-    <div style={{position:'fixed',zIndex:50,bottom:'5rem',right:'1.5rem',transform:op?'scale(0.5) translateY(12px)':'scale(1) translateY(0)',opacity:op?0:1,transition:'all 0.35s cubic-bezier(0.34,1.2,0.64,1)',pointerEvents:op?'none':'auto'}}><button onClick={()=>{setOp(true);dw()}} className={`group flex items-center h-12 rounded-full bg-[var(--surface)] border border-[var(--border)] shadow-lg hover:shadow-xl transition-all transition-duration-[300ms] transition-timing-function-[cubic-bezier(0.2,0,0,1)] w-12 hover:w-[172px] justify-center hover:justify-start hover:pl-2.5 hover:pr-4 overflow-hidden font-sans-dm ${wv?'pulse-fab':''}`} title="Assistente IA"><span className="shrink-0 w-10 h-10 flex items-center justify-center"><AIs s={44}/></span><span className="text-[12px] font-[500] text-[var(--text)] whitespace-nowrap truncate w-0 opacity-0 group-hover:w-auto group-hover:opacity-100 group-hover:ml-1.5 transition-all transition-duration-[300ms] overflow-hidden select-none">Metrys Assistente</span></button></div>
+    <div style={{position:'fixed',zIndex:50,bottom:'6.5rem',right:'1.5rem',transform:op?'scale(0.5) translateY(12px)':'scale(1) translateY(0)',opacity:op?0:1,transition:'all 0.35s cubic-bezier(0.34,1.2,0.64,1)',pointerEvents:op?'none':'auto'}}><button onClick={()=>{setOp(true);dw()}} className={`group flex items-center h-12 rounded-full bg-[var(--surface)] border border-[var(--border)] shadow-lg hover:shadow-xl transition-all transition-duration-[300ms] transition-timing-function-[cubic-bezier(0.2,0,0,1)] w-12 hover:w-[172px] justify-center hover:justify-start hover:pl-2.5 hover:pr-4 overflow-hidden font-sans-dm ${wv?'pulse-fab':''}`} title="Assistente IA"><span className="shrink-0 w-10 h-10 flex items-center justify-center"><AIs s={44}/></span><span className="text-[12px] font-[500] text-[var(--text)] whitespace-nowrap truncate w-0 opacity-0 group-hover:w-auto group-hover:opacity-100 group-hover:ml-1.5 transition-all transition-duration-[300ms] overflow-hidden select-none">Metrys Assistente</span></button></div>
 
     <FMAnimatePresence>
       {op && (
@@ -536,174 +497,150 @@ useEffect(()=>{setWelcomeIdx(0);setWelcomeStarKey(p=>p+1)},[cn])
           className="fixed bottom-6 right-6 z-[55] bg-[var(--surface)] border border-[var(--border)] rounded-2xl shadow-2xl flex overflow-hidden font-sans-dm"
           style={{ width: pw, height: ph, maxHeight: 'calc(100vh - 40px)', transformOrigin: 'bottom right' }}
         >
-      <div className={`flex flex-col overflow-hidden transition-all transition-duration-[300ms] transition-timing-function-[cubic-bezier(0.34,1.2,0.64,1)] ${sb?'w-[140px] opacity-100':'w-0 opacity-0'}`}>
-        <div className="w-[140px] flex flex-col h-full bg-[var(--surface)]">
-        <div className="px-3 py-2.5 flex items-center justify-between"><span className="text-[10px] font-[500] text-[var(--text-3)] uppercase tracking-wider">Chats</span><button onClick={nc} className="h-5 w-5 flex items-center justify-center rounded hover:bg-[var(--surface-hover)] text-[var(--text-3)]" title="Novo chat"><Plus className="h-3 w-3"/></button></div>
-        <div className="flex-1 overflow-y-auto scrollbar-thin">
-          {[...pinCnv,...unpinCnv].filter(Boolean).map(c=>(<div key={c.id} onClick={()=>{stp();setAid(c.id);setLd(false);setRp(null);setErrIdx(null)}} className={`group px-3 py-2 cursor-pointer transition-colors border-l-2 ${aid===c.id?'border-l-[var(--accent)] bg-[var(--accent-subtle)]/30':c.pinned?'border-l-[var(--warning)]':'border-l-transparent hover:bg-[var(--surface-hover)]'}`}>
-            <div className="flex items-start justify-between gap-0.5"><p className={`text-[11px] font-[500] truncate ${c.pinned?'text-[var(--warning)]':'text-[var(--text)]'}`}>{c.title}</p>
-              <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                <button onClick={e=>{e.stopPropagation();tc(c.id)}} className="h-4 w-4 flex items-center justify-center rounded hover:bg-[var(--surface-hover)]" title="Fixar"><Pin className={`h-2.5 w-2.5 ${c.pinned?'text-[var(--warning)] fill-[var(--warning)]':'text-[var(--text-3)]'}`}/></button>
-                <button onClick={e=>{e.stopPropagation();dc(c.id)}} className="h-4 w-4 flex items-center justify-center rounded hover:bg-[var(--destructive-subtle)] text-[var(--text-3)] hover:text-[var(--destructive)]" title="Apagar"><Trash2 className="h-2.5 w-2.5"/></button>
+<div className={`flex flex-col overflow-hidden transition-all transition-duration-[300ms] transition-timing-function-[cubic-bezier(0.34,1.2,0.64,1)] ${sb?'w-[170px] opacity-100':'w-0 opacity-0'}`}>
+        <div className="w-[170px] flex flex-col h-full bg-[var(--surface)]">
+              <div className="px-3 py-2.5 flex items-center justify-between"><span className="text-[10px] font-[500] text-[var(--text-3)] uppercase tracking-wider">Chats</span><button onClick={nc} className="h-5 w-5 flex items-center justify-center rounded hover:bg-[var(--surface-hover)] text-[var(--text-3)]" title="Novo chat"><Plus className="h-3 w-3"/></button></div>
+              <div className="flex-1 overflow-y-auto scrollbar-thin">
+                {[...pinCnv,...unpinCnv].filter(Boolean).map(c=>(<div key={c.id} onClick={()=>{stp();setAid(c.id);setLd(false);setRp(null);setErrIdx(null)}} className={`group px-3 py-2 cursor-pointer transition-colors border-l-2 ${aid===c.id?'border-l-[var(--accent)] bg-[var(--accent-subtle)]/30':c.pinned?'border-l-[var(--warning)]':'border-l-transparent hover:bg-[var(--surface-hover)]'}`}>
+                  <div className="flex items-start justify-between gap-0.5"><p className={`text-[11px] font-[500] truncate ${c.pinned?'text-[var(--warning)]':'text-[var(--text)]'}`}>{c.title}</p>
+                    <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button onClick={e=>{e.stopPropagation();tc(c.id)}} className="h-4 w-4 flex items-center justify-center rounded hover:bg-[var(--surface-hover)]" title="Fixar"><Pin className={`h-2.5 w-2.5 ${c.pinned?'text-[var(--warning)] fill-[var(--warning)]':'text-[var(--text-3)]'}`}/></button>
+                      <button onClick={e=>{e.stopPropagation();dc(c.id)}} className="h-4 w-4 flex items-center justify-center rounded hover:bg-[var(--destructive-subtle)] text-[var(--text-3)] hover:text-[var(--destructive)]" title="Apagar"><Trash2 className="h-2.5 w-2.5"/></button>
+                    </div>
+                  </div>
+                  <p className="text-[10px] text-[var(--text-3)] truncate mt-0.5">{c.preview||'Nova conversa'}</p>
+                  <p className="text-[8px] text-[var(--text-3)] mt-0.5 opacity-60">{fmtD(c.updatedAt)}</p>
+                </div>))}
               </div>
             </div>
-            <p className="text-[10px] text-[var(--text-3)] truncate mt-0.5">{c.preview||'Nova conversa'}</p>
-            <p className="text-[8px] text-[var(--text-3)] mt-0.5 opacity-60">{fmtD(c.updatedAt)}</p>
-          </div>))}
-        </div></div>
-      </div>
+          </div>
 
-      <div className="flex-1 flex flex-col min-w-0">
-        <div className="flex items-center justify-between px-3 py-2 shrink-0 backdrop-blur-md" style={{background:'linear-gradient(180deg, rgba(20,20,24,0.75) 0%, rgba(20,20,24,0.25) 85%, transparent 100%)'}}>
-          <div className="flex items-center gap-2 min-w-0">
-            <button onClick={()=>setSb(!sb)} className={`h-6 w-6 flex items-center justify-center rounded-lg transition-all mr-0.5 ${sb?'bg-[var(--accent-subtle)] text-[var(--accent)]':'text-[var(--text-3)] hover:bg-[var(--surface-hover)]'}`} title="Chats"><PanelLeft className="h-3.5 w-3.5"/></button>
-            <div className="min-w-0 flex flex-col"><p className="text-[12px] font-[500] truncate">Metrys do Flow</p>{aid&&cn.find(c=>c.id===aid)&&<p className="text-[9px] text-[var(--text-3)] truncate">{cn.find(c=>c.id===aid)?.title}</p>}</div>
-          </div>
-          <div className="flex items-center gap-1">
-            <button onClick={()=>setEx(!ex)} className="h-6 w-6 flex items-center justify-center rounded-lg text-[var(--text-3)] hover:bg-[var(--surface-hover)]" title={ex?'Reduzir':'Expandir'}>{ex?<Minimize2 className="h-3.5 w-3.5"/>:<Maximize2 className="h-3.5 w-3.5"/>}</button>
-            <button onClick={()=>setOp(false)} className="h-6 w-6 flex items-center justify-center rounded-lg text-[var(--text-3)] hover:bg-[var(--accent-subtle)] hover:text-[var(--accent)]" title="Minimizar"><ChevronDown className="h-4 w-4"/></button>
-          </div>
-        </div>
-        <div className="flex-1 overflow-y-auto px-3 scrollbar-thin" ref={sc}><div className="py-3">
-        {ms.length===0&&!streamActive&&streamPhase!=='typing'&&!rp?(<div className="flex flex-col h-full px-2">
-          <div className="flex items-start gap-3 mb-4 mt-4">
-            <div key={welcomeStarKey} className="animation-shine shrink-0 star-flip-3d"><AIIcon s={72}/></div>
-            <div className="text-left pt-1 min-w-0">
-              <p className="text-[14px] font-[400] text-[var(--text-3)] animate-fade-up">{getGreeting()}, <span className="text-[var(--accent)] font-[600]">{session?.user?.name?.split(' ')[0]||'Usuario'}</span>!</p>
-              <p className={`text-[18px] font-[600] text-[var(--text)] mt-1 leading-tight ${welcomeVisible?'welcome-text-in':'welcome-text-out'}`} style={{letterSpacing:'-0.02em'}}>{welcomeMsg}</p>
-            </div>
-          </div>
-           <div className="flex flex-wrap gap-2.5 w-full">
-            {cardItems.map((c,i)=>{
-              const blobKey=CARD_BLOBS[i%CARD_BLOBS.length]
-              const priColor=PRIORITY_COLORS[Math.min(c.score,PRIORITY_COLORS.length-1)]
-              return(<div key={`${i}-${c.key}`} className="relative" style={{flex:'1 1 auto',minWidth:'calc(50% - 5px)',maxWidth:'calc(50% - 5px)'}}>
-                {/* decorative ring accent (pompet style) */}
-                <div className="absolute pointer-events-none" style={{
-                  width:i===2?'42px':'32px',height:i===2?'42px':'32px',
-                  top:i%2===0?'-8px':'auto',bottom:i%2!==0?'-6px':'auto',
-                  left:i<=1?'-6px':'auto',right:i>=3?'-8px':'auto',
-                  border:`2px solid ${CARD_RING_COLORS[i%CARD_RING_COLORS.length]}`,
-                  borderRadius:'50%',opacity:c.visible?0.5:0.15,zIndex:0,
-                  transition:'opacity 0.6s ease',
-                  animation:`blobMorph${String.fromCharCode(65+i%5)} ${4+i*1.4}s ease-in-out infinite`,
-                }}/>
-                {/* organic blob background */}
-                <div className="absolute -inset-[2px] pointer-events-none" style={{
-                  borderRadius:CARD_BLOB_RADII[i%CARD_BLOB_RADII.length],
-                  background:priColor||CARD_BG[i%CARD_BG.length],
-                  opacity:c.visible?0.9:0.2,
-                  transition:'opacity 0.5s ease',
-                  zIndex:0,filter:'blur(2px)',
-                  animation:`${blobKey} ${4.5+i*1.2}s ease-in-out infinite`,
-                }}/>
-                {/* card button */}
-                <button onClick={()=>send(c.text)} className="relative w-full text-left px-3 py-3 transition-all duration-500"
-                  style={{
-                    background:'var(--surface)',
-                    borderLeft:c.score>=4?'2px solid var(--accent)':c.score>=2?'2px solid transparent':'2px solid transparent',
-                    borderRadius:CARD_SHAPES[i%CARD_SHAPES.length],
-                    opacity:c.visible?1:0.3,
-                    transition:'opacity 0.5s ease, border-color 0.3s ease, box-shadow 0.3s ease',
-                    zIndex:1,
-                    boxShadow:c.score>=2?'inset 0 0 0 1px var(--border)':'none',
-                  }}
-                  onMouseEnter={e=>{e.currentTarget.style.borderLeftColor='var(--accent)';e.currentTarget.style.boxShadow='inset 0 0 0 1px rgba(232,98,42,0.2), 0 4px 16px rgba(232,98,42,0.08)'}}
-                  onMouseLeave={e=>{e.currentTarget.style.borderLeftColor=c.score>=4?'var(--accent)':c.score>=2?'transparent':'transparent';e.currentTarget.style.boxShadow=c.score>=2?'inset 0 0 0 1px var(--border)':'none'}}>
-                  <p className={`text-[11px] leading-relaxed ${c.score>=4?'text-[var(--text)] font-[500]':c.score>=2?'text-[var(--text-2)]':'text-[var(--text-3)]'}`}>{c.text}</p>
-                </button>
-              </div>)
-            })}
-          </div>
-          <p className="text-[10px] text-[var(--text-3)] text-center mt-3 opacity-60 hover:opacity-100 transition-opacity cursor-pointer select-none" onClick={()=>setCardSlots(buildCardSlots())}>Ver mais sugestões</p>
-          </div>
-        ):(<div className="space-y-3">
-          {ms.map((msg,i)=>{const ia=msg.role==='assistant';const sd=i===0||(msg.createdAt&&ms[i-1]?.createdAt&&new Date(msg.createdAt).toDateString()!==new Date(ms[i-1].createdAt!).toDateString());const imgs=(msg.attachments||[]).filter(a=>a.type.startsWith('image/'));const docs=(msg.attachments||[]).filter(a=>!a.type.startsWith('image/'));const rpMsg=msg.replyTo?ms.find(m=>m.id===msg.replyTo):null
-          return(<div key={msg.id||i}>{sd&&msg.createdAt&&<DDiv label={fmtD(msg.createdAt)}/>}
-            {rpMsg&&(<div className={`flex mb-1 ${ia?'justify-start ml-8':'justify-end mr-8'}`}><div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-[var(--surface-2)] border-l-2 border-l-[var(--accent)] text-[10px] text-[var(--text-3)] max-w-[200px] truncate"><CornerDownRight className="h-3 w-3 shrink-0"/><span className="truncate">{rpMsg.content?.slice(0,40)||'(imagem)'}</span></div></div>)}
-            {ia&&msg.reasoning&&<ReasoningBox content={msg.reasoning} msgIdx={i} onReport={reportErr}/>}
-            <div className={`flex group ${ia?'justify-start':'justify-end'}`}><div className={`flex items-start gap-2 max-w-[90%] ${ia?'':'flex-row-reverse'}`}>
-              {ia?<AIA/>:session?.user?.image?<Image src={session.user.image} alt="" width={28} height={28} className="rounded-full shrink-0 mt-0.5 object-cover"/>:<div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--accent)] text-[10px] font-[500] text-white mt-0.5">{session?.user?.name?.slice(0,2).toUpperCase()||'VC'}</div>}
-              <div className="min-w-0">
-                {imgs.length>0&&(<div className={`flex gap-1.5 flex-wrap mb-1.5 ${ia?'':'justify-end'}`}>{imgs.map((img,ii)=>(<button key={ii} title={`Ver ${img.name}`} onClick={()=>setVi(vim.indexOf(img))} className="rounded-xl border border-[var(--border)] overflow-hidden hover:ring-2 ring-[var(--accent)]/40 transition-all"><Image src={img.url} alt={img.name} width={64} height={64} className="object-cover"/></button>))}</div>)}
-                {docs.length>0&&(<div className={`flex gap-1.5 flex-wrap mb-1.5 ${ia?'':'justify-end'}`}>{docs.map((doc,di)=>(<div key={di} className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-[var(--surface)] border border-[var(--border)] text-[11px] text-[var(--text-3)]"><Paperclip className="h-3 w-3"/>{doc.name}</div>))}</div>)}
-                {msg.content&&(ia?<div className="text-[12px] leading-relaxed whitespace-pre-wrap break-words"><MD content={msg.content}/></div>:<div className="rounded-2xl px-3 py-2 bg-[var(--surface-2)] rounded-tr-sm"><p className="text-[12px] leading-relaxed whitespace-pre-wrap break-words text-[var(--text)]">{msg.content}</p></div>)}
-                {msg.liked!==undefined&&(<p className="text-[9px] text-[var(--success)] mt-0.5 px-1">Agradecemos pelo feedback!</p>)}
-                <div className={`flex items-center gap-1 mt-0.5 px-1 ${ia?'':'justify-end'}`}>
-                  <span className="text-[9px] text-[var(--text-3)]">{fmtT(msg.createdAt)}</span>
-                  {ia&&(<div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5 ml-1">
-                    <button title="Gostei" onClick={()=>{if(msg.liked===undefined){sfb(i,true);setFbk('')}}} className={`h-4 w-4 flex items-center justify-center rounded ${msg.liked===true?'text-[var(--success)]':'text-[var(--text-3)] hover:text-[var(--success)]'}`}><ThumbsUp className="h-3 w-3"/></button>
-                    <button title="Nao gostei" onClick={()=>{if(msg.liked===undefined)sfb(i,false)}} className={`h-4 w-4 flex items-center justify-center rounded ${msg.liked===false?'text-[var(--destructive)]':'text-[var(--text-3)] hover:text-[var(--destructive)]'}`}><ThumbsDown className="h-3 w-3"/></button>
-                    <button title="Responder" onClick={()=>setRp(msg)} className="h-4 w-4 flex items-center justify-center rounded text-[var(--text-3)] hover:text-[var(--accent)]"><Reply className="h-3 w-3"/></button>
-                    <button title="Copiar" onClick={()=>{const t=msg.content||'';try{if(navigator.clipboard&&window.isSecureContext){navigator.clipboard.writeText(t).then(()=>toast.success('Copiado!'))}else{const el=document.createElement('textarea');el.value=t;el.style.position='fixed';el.style.opacity='0';document.body.appendChild(el);el.select();document.execCommand('copy');document.body.removeChild(el);toast.success('Copiado!')}}catch{toast.error('Falha ao copiar')}}} className="h-4 w-4 flex items-center justify-center rounded text-[var(--text-3)] hover:text-[var(--info)]"><Copy className="h-3 w-3"/></button>
-    </div>)}
-
-          </div>
-          </div>
-            </div></div></div>)})}
-          {/* Streaming reasoning display - 3 linhas rotativas com card arredondado visivel durante geracao */}
-          {streamActive&&reasoningLines.length>0&&<div className="flex justify-start"><div className="flex items-start gap-2"><AIA rr={streamPhase==='thinking'}/><div className="min-w-0 flex-1"><ReasoningStream lines={reasoningLines} active={streamPhase==='thinking'||streamPhase==='typing'}/></div></div></div>}
-          {/* Loading fallback while waiting for first chunk */}
-          {streamActive&&reasoningLines.length===0&&streamPhase==='thinking'&&(<div className="flex justify-start"><div className="flex items-start gap-2"><AIA rr/><div className="min-w-0"><div className="rounded-xl border border-[var(--info)]/20 bg-[var(--info-subtle)]/30 px-3 py-2 animate-pulse"><p className="text-[11px] text-[var(--info)] font-[500]">Pensamento iniciando...</p></div></div></div></div>)}
-          {/* Fallback - thinking message when no stream active but loading (backward compat) */}
-          {!streamActive&&ld&&(reasoningLines.length>0?<div className="flex justify-start"><div className="flex items-start gap-2"><AIA rr/><div className="min-w-0 flex-1"><ReasoningStream lines={reasoningLines} active={true}/></div></div></div>:
-          streamPhase==='idle'&&!streamActive?<div className="flex justify-start"><div className="flex items-start gap-2"><AIA rr/><div className="min-w-0"><div className="text-[12px] italic font-[500] thinking-metal animate-fade-up">{THINKING[ti]}</div></div></div></div>:null)}
-          {/* Typewriter display */}
-          {streamPhase==='typing'&&streamText&&(<div className="flex justify-start"><div className="flex items-start gap-2"><AIA rr/><div className="min-w-0"><div className="text-[12px] leading-relaxed whitespace-pre-wrap break-words"><MD content={streamText}/></div></div></div></div>)}
-          {/* Thinking pause between blocks */}
-          {streamPhase==='think'&&streamText&&(<div className="flex justify-start"><div className="flex items-start gap-2"><AIA rr/><div className="min-w-0"><div className="rounded-2xl rounded-tl-sm px-3 py-2 bg-[var(--surface-2)] border border-[var(--border)]"><p className="text-[11px] text-[var(--text-3)] italic">Estruturado resposta...</p></div></div></div></div>)}
-          {/* Done - show think time */}
-          {!ld&&streamPhase==='done'&&ms.length>0&&ms[ms.length-1]?.role==='assistant'&&(<div className="flex justify-start"><div className="flex items-start gap-2"><AIA/><div className="min-w-0"><button onClick={()=>{const r=ms[ms.length-1]?.reasoning;if(r){const idx=ms.length-1;const el=document.getElementById(`reasoning-${idx}`);if(el)el.classList.toggle('hidden')}}} className="text-[9px] font-[500] thinking-metal hover:opacity-100 opacity-60 transition-opacity">Pensou por {thinkSec||'alguns'} segundos</button></div></div></div>)}
-        </div>)}
-        </div></div>
-
-        {errIdx!==null&&(<div className="px-3 pb-1"><div className="bg-[var(--surface-2)] rounded-xl border border-[var(--destructive)]/20 px-3 py-2"><p className="text-[10px] font-[500] text-[var(--destructive)] mb-1">Reportar erro</p><textarea placeholder="Descreva o erro..." value={errTxt} onChange={e=>setErrTxt(e.target.value)} className="w-full text-[11px] bg-transparent border border-[var(--border)] rounded-lg outline-none placeholder:text-[var(--text-3)] text-[var(--text)] p-1.5 min-h-[36px] resize-none scrollbar-thin"/>
-          <div className="flex flex-col gap-1 mt-1.5">
-            <label className="flex items-center gap-1.5 text-[10px] text-[var(--text-2)] cursor-pointer"><input type="checkbox" checked={errConv} onChange={e=>setErrConv(e.target.checked)} className="accent-[var(--accent)] h-3 w-3"/>Enviar conversa completa (obrigatorio)</label>
-            <label className="flex items-center gap-1.5 text-[10px] text-[var(--text-2)] cursor-pointer"><input type="checkbox" checked={errPrint} onChange={e=>setErrPrint(e.target.checked)} className="accent-[var(--accent)] h-3 w-3"/>Incluir print da tela (Ctrl+Shift+S)</label>
-          </div>
-          <div className="flex items-center gap-1.5 mt-2"><button onClick={sendReport} disabled={!errConv} className="text-[10px] text-[var(--accent)] font-[500] px-2 py-0.5 rounded bg-[var(--accent-subtle)] hover:bg-[var(--accent)] hover:text-white transition-colors disabled:opacity-30">Enviar reporte</button><button title="Cancelar" onClick={()=>setErrIdx(null)} className="text-[var(--text-3)] hover:text-[var(--destructive)] ml-auto"><X className="h-3.5 w-3.5"/></button></div></div></div>)}
-
-        {fbk!==null&&(<div className="px-3 pb-1"><div className="flex items-center gap-1.5 bg-[var(--surface-2)] rounded-xl border border-[var(--border)] px-3 py-1.5"><input autoFocus placeholder="Feedback opcional..." value={fbk} onChange={e=>setFbk(e.target.value)} onBlur={()=>{if(fbk===null)return;const li=ms.findIndex(m=>m.liked===undefined&&m.role==='assistant');if(li>=0)sfb(li,true,fbk);setFbk(null)}} className="flex-1 text-[11px] bg-transparent border-none outline-none placeholder:text-[var(--text-3)] text-[var(--text)]"/><button title="Enviar feedback" onClick={()=>{const li=ms.findIndex(m=>m.liked===undefined&&m.role==='assistant');if(li>=0)sfb(li,true,fbk);setFbk(null)}} className="text-[10px] text-[var(--accent)] font-[500]">Enviar</button></div></div>)}
-
-        {rp&&(<div className="px-3 pb-1"><div className="flex items-center gap-2 bg-[var(--surface-2)] rounded-lg border border-[var(--border)] px-2.5 py-1.5"><div className="flex-1 min-w-0"><p className="text-[10px] text-[var(--text-3)]">Respondendo a {rp.role==='assistant'?'Metrys':session?.user?.name||'Voce'}</p><p className="text-[11px] text-[var(--text)] truncate">{rp.content?.slice(0,60)||'(imagem)'}</p></div><button title="Cancelar resposta" onClick={()=>setRp(null)} className="text-[var(--text-3)] hover:text-[var(--destructive)]"><X className="h-3.5 w-3.5"/></button></div></div>)}
-
-        {pf.length>0&&(<div className="px-3 pb-1 flex gap-1.5 flex-wrap">{pf.map((f,i)=>(<div key={i} className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-[var(--surface-2)] border border-[var(--border)] text-[11px]">{f.isImg?<Image src={f.url} alt={f.name} width={20} height={20} className="rounded object-cover"/>:<><Paperclip className="h-3 w-3 text-[var(--text-3)]"/><span className="text-[var(--text-2)] truncate max-w-[100px]">{f.name}</span></>}<button title="Remover anexo" onClick={()=>rf(i)} className="text-[var(--text-3)] hover:text-[var(--destructive)]"><X className="h-3 w-3"/></button></div>))}</div>)}
-
-        <div className="px-2 pb-1"><div className="relative">
-          <input title="Selecionar imagens" type="file" ref={ii} multiple accept="image/*" className="hidden" onChange={e=>{if(e.target.files)Array.from(e.target.files).forEach(f=>af(f));if(ii.current)ii.current.value=''}}/>
-          <input title="Selecionar arquivos" type="file" ref={fi} multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.json,.xml,.md" className="hidden" onChange={e=>{if(e.target.files)Array.from(e.target.files).forEach(f=>af(f));if(fi.current)fi.current.value=''}}/>
-          <textarea ref={ta} rows={1} aria-label={rp?'Responder mensagem':'Perguntar algo'} placeholder={rp?'Responder...':'Pergunte algo...'} value={inp} onChange={e=>setInp(e.target.value)} onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send()}}} className="w-full text-[12px] bg-[var(--surface-2)] border border-[var(--border)] rounded-2xl outline-none resize-none placeholder:text-[var(--text-3)] text-[var(--text)] leading-relaxed px-3 pt-3.5 pb-[52px] min-h-[64px] max-h-[180px] transition-all duration-200 focus:bg-[var(--surface)] focus:border-[var(--accent)]/20 focus:scale-[1.01] overflow-y-auto" style={{scrollbarWidth:'thin',scrollbarColor:'rgba(255,255,255,0.06) transparent'}}/>
-          <div className="absolute bottom-2 left-3 right-3 flex items-center gap-1">
-            <div className="flex rounded-full bg-[var(--surface)] border border-[var(--border)] shrink-0 overflow-hidden">
-              <button onClick={()=>setModel('metrys-pro')} className={`px-1.5 py-0.5 text-[9px] font-[500] transition-colors ${model==='metrys-pro'?'bg-[var(--accent)] text-white':'text-[var(--text-3)] hover:text-[var(--text)]'}`}>Pro</button>
-              <button onClick={()=>setModel('metrys-flash')} className={`px-1.5 py-0.5 text-[9px] font-[500] transition-colors ${model==='metrys-flash'?'bg-[var(--accent)] text-white':'text-[var(--text-3)] hover:text-[var(--text)]'}`}>Flash</button>
-            </div>
-            <button onClick={()=>ii.current?.click()} className="h-7 w-7 flex items-center justify-center rounded-lg text-[var(--text-3)] hover:text-[var(--accent)] hover:bg-[var(--accent-subtle)] transition-all shrink-0" title="Imagem"><ImagemIcone className="h-3.5 w-3.5"/></button>
-            <button onClick={()=>fi.current?.click()} className="h-7 w-7 flex items-center justify-center rounded-lg text-[var(--text-3)] hover:text-[var(--accent)] hover:bg-[var(--accent-subtle)] transition-all shrink-0" title="Arquivo"><Paperclip className="h-3.5 w-3.5"/></button>
-            {ms.length>0&&(<div className="group/tok relative shrink-0 flex items-center">
-              <button title="Tokens" className="h-7 px-1.5 flex items-center gap-1 rounded-lg text-[var(--text-3)] hover:bg-[var(--surface-hover)] transition-all shrink-0">
-                <div className="w-10 h-1.5 rounded-full bg-[var(--surface-2)] overflow-hidden">
-                  <div className="h-full rounded-full transition-all duration-500" style={{width:`${tokenStats.pct}%`,background:tokenStats.pct>80?'var(--destructive)':tokenStats.pct>50?'var(--accent)':'var(--success)'}}/>
-                </div>
-                <span className="text-[9px] tabular-nums font-[500]" style={{color:tokenStats.pct>80?'var(--destructive)':tokenStats.pct>50?'var(--accent)':'var(--success)'}}>{tokenStats.pct}%</span>
-              </button>
-              <div className="absolute bottom-full right-0 mb-1.5 opacity-0 group-hover/tok:opacity-100 transition-opacity duration-200 pointer-events-none">
-                <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl shadow-xl px-3 py-2.5 text-left whitespace-nowrap" style={{minWidth:'220px'}}>
-                  <div className="flex items-center justify-between gap-3 mb-1.5"><span className="text-[10px] text-[var(--text-3)]">Tokens usados</span><span className="text-[11px] font-[600] text-[var(--text)]">{tokenStats.used.toLocaleString()} / {tokenStats.limit.toLocaleString()}</span></div>
-                  <div className="w-full h-1.5 rounded-full bg-[var(--surface-2)] mb-2 overflow-hidden"><div className="h-full rounded-full transition-all duration-500" style={{width:`${tokenStats.pct}%`,background:tokenStats.pct>80?'var(--destructive)':tokenStats.pct>50?'var(--accent)':'var(--success)'}}/></div>
-                  <div className="flex items-center justify-between gap-3 mb-1"><span className="text-[9px] text-[var(--text-3)]">Input / Output</span><span className="text-[10px] text-[var(--text-2)]">{tokenStats.inputTk.toLocaleString()} / {tokenStats.outputTk.toLocaleString()}</span></div>
-                  <div className="flex items-center justify-between gap-3"><span className="text-[9px] text-[var(--text-3)]">Custo estimado</span><span className="text-[10px] font-[500] text-[var(--warning)]">${tokenStats.cost<0.01?'<0.01':tokenStats.cost.toFixed(tokenStats.cost<0.1?3:2)}</span></div>
-                  <div className="mt-1.5 pt-1.5 border-t border-[var(--border)]"><p className="text-[8px] text-[var(--text-3)]">DeepSeek V3 · 64K contexto · $0.27/$1.10 por 1M tokens</p></div>
-                </div>
+          <div className="flex-1 flex flex-col min-w-0">
+            <div className="flex items-center justify-between px-3 py-2 shrink-0 backdrop-blur-md" style={{background:'linear-gradient(180deg, rgba(20,20,24,0.75) 0%, rgba(20,20,24,0.25) 85%, transparent 100%)'}}>
+              <div className="flex items-center gap-2 min-w-0">
+                <button onClick={()=>setSb(!sb)} className={`h-6 w-6 flex items-center justify-center rounded-lg transition-all mr-0.5 ${sb?'bg-[var(--accent-subtle)] text-[var(--accent)]':'text-[var(--text-3)] hover:bg-[var(--surface-hover)]'}`} title="Chats"><PanelLeft className="h-3.5 w-3.5"/></button>
+                <div className="min-w-0 flex flex-col"><p className="text-[12px] font-[500] truncate">Metrys do Flow</p>{aid&&cn.find(c=>c.id===aid)&&<p className="text-[9px] text-[var(--text-3)] truncate">{cn.find(c=>c.id===aid)?.title}</p>}</div>
               </div>
-            </div>)}
-            <div className="flex-1"/>
-            <Button size="icon" className="h-8 w-8 shrink-0 rounded-xl" disabled={(!inp.trim()&&pf.length===0)||(streamPhase==='typing'||streamPhase==='think')} onClick={()=>send()}><Send className="h-3.5 w-3.5"/></Button>
+              <div className="flex items-center gap-1">
+                <button onClick={()=>setEx(!ex)} className="h-6 w-6 flex items-center justify-center rounded-lg text-[var(--text-3)] hover:bg-[var(--surface-hover)]" title={ex?'Reduzir':'Expandir'}>{ex?<Minimize2 className="h-3.5 w-3.5"/>:<Maximize2 className="h-3.5 w-3.5"/>}</button>
+                <button onClick={()=>setOp(false)} className="h-6 w-6 flex items-center justify-center rounded-lg text-[var(--text-3)] hover:bg-[var(--accent-subtle)] hover:text-[var(--accent)]" title="Minimizar"><ChevronDown className="h-4 w-4"/></button>
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto px-3 scrollbar-thin" ref={sc}><div className="py-3">
+              {ms.length===0&&!streamActive&&streamPhase!=='typing'&&!rp?(<div className="flex flex-col px-2 relative">
+                <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-2xl" style={{background:'linear-gradient(135deg, rgba(232,98,42,0.04) 0%, rgba(58,122,196,0.03) 30%, rgba(139,92,246,0.04) 60%, rgba(232,98,42,0.02) 100%)'}}>
+                  <div style={{position:'absolute',top:'-20%',right:'-10%',width:'200px',height:'200px',borderRadius:'60% 40% 50% 50% / 45% 55% 45% 55%',background:'radial-gradient(ellipse, rgba(232,98,42,0.08) 0%, transparent 70%)',animation:'blobMorphA 8s ease-in-out infinite'}}/>
+                  <div style={{position:'absolute',bottom:'10%',left:'-5%',width:'140px',height:'140px',borderRadius:'55% 45% 55% 45% / 50% 50% 50% 50%',background:'radial-gradient(ellipse, rgba(139,92,246,0.06) 0%, transparent 65%)',animation:'blobMorphB 10s ease-in-out infinite'}}/>
+                </div>
+                <div className="relative z-[1] flex items-start gap-3 mb-4 mt-4">
+                  <div key={welcomeStarKey} className="animation-shine shrink-0 star-flip-3d"><AIIcon s={100}/></div>
+                  <div className="text-left pt-1 min-w-0">
+                    <p className="text-[14px] font-[400] text-[var(--text-3)] animate-fade-up">{getGreeting()}, <span className="text-[var(--accent)] font-[600]">{session?.user?.name?.split(' ')[0]||'Usuario'}</span>!</p>
+                    <p className={`text-[16px] font-[500] text-[var(--text)] mt-1 leading-tight ${welcomeVisible?'welcome-text-in':'welcome-text-out'}`} style={{letterSpacing:'-0.01em'}}>{welcomeMsg}</p>
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-2 w-full relative z-[1]">
+                  {cardItems.map((c,i)=>(
+                    <button key={`${i}-${c.key}`} onClick={()=>send(c.text)} className="text-left px-3 py-2.5 rounded-xl border border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--accent-subtle)] hover:border-[var(--accent)]/30 transition-all duration-200 text-[11px] leading-relaxed" style={{flex:'1 1 auto',minWidth:'calc(50% - 4px)',maxWidth:'calc(50% - 4px)',opacity:c.visible?1:0.6}}>
+                      <span className={c.score>=4?'text-[var(--text)] font-[500]':c.score>=2?'text-[var(--text-2)]':'text-[var(--text-3)]'}>{c.text}</span>
+                    </button>
+                  ))}
+                </div>
+                <p className="text-[10px] text-[var(--accent)] text-center mt-3 opacity-70 hover:opacity-100 transition-all cursor-pointer select-none relative z-[1] font-[500]" onClick={()=>setCardSlots(buildCardSlots())}>Ver mais sugestoes</p>
+              </div>
+              ):(<div className="space-y-3">
+                {ms.map((msg,i)=>{
+                  const ia=msg.role==='assistant'
+                  const sd=i===0||(msg.createdAt&&ms[i-1]?.createdAt&&new Date(msg.createdAt).toDateString()!==new Date(ms[i-1].createdAt!).toDateString())
+                  const imgs=(msg.attachments||[]).filter(a=>a.type.startsWith('image/'))
+                  const docs=(msg.attachments||[]).filter(a=>!a.type.startsWith('image/'))
+                  const rpMsg=msg.replyTo?ms.find(m=>m.id===msg.replyTo):null
+                  return(<div key={msg.id||i}>
+                    {sd&&msg.createdAt&&<DDiv label={fmtD(msg.createdAt)}/>}
+                    {rpMsg&&(<div className={`flex mb-1 ${ia?'justify-start ml-8':'justify-end mr-8'}`}><div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-[var(--surface-2)] border-l-2 border-l-[var(--accent)] text-[10px] text-[var(--text-3)] max-w-[200px] truncate"><CornerDownRight className="h-3 w-3 shrink-0"/><span className="truncate">{rpMsg.content?.slice(0,40)||'(imagem)'}</span></div></div>)}
+                    {ia&&msg.reasoning&&<ReasoningBox content={msg.reasoning} msgIdx={i} onReport={reportErr}/>}
+                    <div className={`flex group ${ia?'justify-start':'justify-end'}`}><div className={`flex items-start gap-2 max-w-[90%] ${ia?'':'flex-row-reverse'}`}>
+                      {ia?<AIA/>:session?.user?.image?<Image src={session.user.image} alt="" width={28} height={28} className="rounded-full shrink-0 mt-0.5 object-cover"/>:<div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--accent)] text-[10px] font-[500] text-white mt-0.5">{session?.user?.name?.slice(0,2).toUpperCase()||'VC'}</div>}
+                      <div className="min-w-0">
+                        {imgs.length>0&&(<div className={`flex gap-1.5 flex-wrap mb-1.5 ${ia?'':'justify-end'}`}>{imgs.map((img,ii)=>(<button key={ii} title={`Ver ${img.name}`} onClick={()=>setVi(vim.indexOf(img))} className="rounded-xl border border-[var(--border)] overflow-hidden hover:ring-2 ring-[var(--accent)]/40 transition-all"><Image src={img.url} alt={img.name} width={64} height={64} className="object-cover"/></button>))}</div>)}
+                        {docs.length>0&&(<div className={`flex gap-1.5 flex-wrap mb-1.5 ${ia?'':'justify-end'}`}>{docs.map((doc,di)=>(<div key={di} className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-[var(--surface)] border border-[var(--border)] text-[11px] text-[var(--text-3)]"><Paperclip className="h-3 w-3"/>{doc.name}</div>))}</div>)}
+                        {msg.content&&(ia?<div className="text-[13px] leading-relaxed whitespace-pre-wrap break-words"><MD content={msg.content}/></div>:<div className="rounded-2xl px-3 py-2 bg-[var(--surface-2)] rounded-tr-sm"><p className="text-[13px] leading-relaxed whitespace-pre-wrap break-words text-[var(--text)]">{msg.content}</p></div>)}
+                        {msg.liked!==undefined&&(<p className="text-[9px] text-[var(--success)] mt-0.5 px-1">Agradecemos pelo feedback!</p>)}
+                        <div className={`flex items-center gap-1 mt-0.5 px-1 ${ia?'':'justify-end'}`}>
+                          <span className="text-[9px] text-[var(--text-3)]">{fmtT(msg.createdAt)}</span>
+                          {ia&&(<div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5 ml-1">
+                            <button title="Gostei" onClick={()=>{if(msg.liked===undefined){sfb(i,true);setFbk('')}}} className={`h-4 w-4 flex items-center justify-center rounded ${msg.liked===true?'text-[var(--success)]':'text-[var(--text-3)] hover:text-[var(--success)]'}`}><ThumbsUp className="h-3 w-3"/></button>
+                            <button title="Nao gostei" onClick={()=>{if(msg.liked===undefined)sfb(i,false)}} className={`h-4 w-4 flex items-center justify-center rounded ${msg.liked===false?'text-[var(--destructive)]':'text-[var(--text-3)] hover:text-[var(--destructive)]'}`}><ThumbsDown className="h-3 w-3"/></button>
+                            <button title="Responder" onClick={()=>setRp(msg)} className="h-4 w-4 flex items-center justify-center rounded text-[var(--text-3)] hover:text-[var(--accent)]"><Reply className="h-3 w-3"/></button>
+                            <button title="Copiar" onClick={()=>{const t=msg.content||'';try{if(navigator.clipboard&&window.isSecureContext){navigator.clipboard.writeText(t).then(()=>toast.success('Copiado!'))}else{const el=document.createElement('textarea');el.value=t;el.style.position='fixed';el.style.opacity='0';document.body.appendChild(el);el.select();document.execCommand('copy');document.body.removeChild(el);toast.success('Copiado!')}}catch{toast.error('Falha ao copiar')}}} className="h-4 w-4 flex items-center justify-center rounded text-[var(--text-3)] hover:text-[var(--info)]"><Copy className="h-3 w-3"/></button>
+                          </div>)}
+                        </div>
+                      </div>
+                    </div></div>
+                  </div>)
+                })}
+
+                {/* Streaming reasoning - card com 3 linhas rotativas */}
+                {streamActive&&reasoningLines.length>0&&<div className="flex justify-start"><div className="flex items-start gap-2"><AIA rr={streamPhase==='thinking'}/><div className="min-w-0 flex-1"><ReasoningStream lines={reasoningLines} active={streamPhase==='thinking'||streamPhase==='typing'} thinkSec={Math.round((Date.now()-(thinkStart.current||Date.now()))/1000)} onToggle={()=>{}}/></div></div></div>}
+                {streamActive&&reasoningLines.length===0&&streamPhase==='thinking'&&(<div className="flex justify-start"><div className="flex items-start gap-2"><AIA rr/><div className="min-w-0"><div className="rounded-xl border border-[var(--info)]/20 bg-[var(--info-subtle)]/30 px-3 py-2 animate-pulse"><p className="text-[11px] text-[var(--info)] font-[500]">Estou pensando...</p></div></div></div></div>)}
+                {!streamActive&&ld&&(reasoningLines.length>0?<div className="flex justify-start"><div className="flex items-start gap-2"><AIA rr/><div className="min-w-0 flex-1"><ReasoningStream lines={reasoningLines} active={false} thinkSec={thinkSec} onToggle={()=>{}}/></div></div></div>:
+                streamPhase==='idle'&&!streamActive?<div className="flex justify-start"><div className="flex items-start gap-2"><AIA rr/><div className="min-w-0"><div className="text-[12px] italic font-[500] text-[var(--text-3)] animate-fade-up">{THINKING[ti]}</div></div></div></div>:null)}
+                {streamPhase==='typing'&&streamText&&(<div className="flex justify-start"><div className="flex items-start gap-2"><AIA rr/><div className="min-w-0"><div className="text-[13px] leading-relaxed whitespace-pre-wrap break-words animate-fade-up"><MD content={streamText}/></div></div></div></div>)}
+                {streamPhase==='think'&&streamText&&(<div className="flex justify-start"><div className="flex items-start gap-2"><AIA rr/><div className="min-w-0"><div className="rounded-2xl rounded-tl-sm px-3 py-2 bg-[var(--surface-2)] border border-[var(--border)]"><p className="text-[11px] text-[var(--text-3)] italic">Estruturado resposta...</p></div></div></div></div>)}
+                {!ld&&streamPhase==='done'&&reasoningLines.length>0&&ms.length>0&&ms[ms.length-1]?.role==='assistant'&&<ReasoningStream lines={reasoningLines} active={false} thinkSec={thinkSec} onToggle={()=>{}}/>}
+              </div>)}
+            </div></div>
+
+            {errIdx!==null&&(<div className="px-3 pb-1"><div className="bg-[var(--surface-2)] rounded-xl border border-[var(--destructive)]/20 px-3 py-2"><p className="text-[10px] font-[500] text-[var(--destructive)] mb-1">Reportar erro</p><textarea placeholder="Descreva o erro..." value={errTxt} onChange={e=>setErrTxt(e.target.value)} className="w-full text-[11px] bg-transparent border border-[var(--border)] rounded-lg outline-none placeholder:text-[var(--text-3)] text-[var(--text)] p-1.5 min-h-[36px] resize-none scrollbar-thin"/>
+              <div className="flex flex-col gap-1 mt-1.5">
+                <label className="flex items-center gap-1.5 text-[10px] text-[var(--text-2)] cursor-pointer"><input type="checkbox" checked={errConv} onChange={e=>setErrConv(e.target.checked)} className="accent-[var(--accent)] h-3 w-3"/>Enviar conversa completa (obrigatorio)</label>
+                <label className="flex items-center gap-1.5 text-[10px] text-[var(--text-2)] cursor-pointer"><input type="checkbox" checked={errPrint} onChange={e=>setErrPrint(e.target.checked)} className="accent-[var(--accent)] h-3 w-3"/>Incluir print da tela (Ctrl+Shift+S)</label>
+              </div>
+              <div className="flex items-center gap-1.5 mt-2"><button onClick={sendReport} disabled={!errConv} className="text-[10px] text-[var(--accent)] font-[500] px-2 py-0.5 rounded bg-[var(--accent-subtle)] hover:bg-[var(--accent)] hover:text-white transition-colors disabled:opacity-30">Enviar reporte</button><button title="Cancelar" onClick={()=>setErrIdx(null)} className="text-[var(--text-3)] hover:text-[var(--destructive)] ml-auto"><X className="h-3.5 w-3.5"/></button></div></div></div>)}
+
+            {fbk!==null&&(<div className="px-3 pb-1"><div className="flex items-center gap-1.5 bg-[var(--surface-2)] rounded-xl border border-[var(--border)] px-3 py-1.5"><input autoFocus placeholder="Feedback opcional..." value={fbk} onChange={e=>setFbk(e.target.value)} onBlur={()=>{if(fbk===null)return;const li=ms.findIndex(m=>m.liked===undefined&&m.role==='assistant');if(li>=0)sfb(li,true,fbk);setFbk(null)}} className="flex-1 text-[11px] bg-transparent border-none outline-none placeholder:text-[var(--text-3)] text-[var(--text)]"/><button title="Enviar feedback" onClick={()=>{const li=ms.findIndex(m=>m.liked===undefined&&m.role==='assistant');if(li>=0)sfb(li,true,fbk);setFbk(null)}} className="text-[10px] text-[var(--accent)] font-[500]">Enviar</button></div></div>)}
+
+            {rp&&(<div className="px-3 pb-1"><div className="flex items-center gap-2 bg-[var(--surface-2)] rounded-lg border border-[var(--border)] px-2.5 py-1.5"><div className="flex-1 min-w-0"><p className="text-[10px] text-[var(--text-3)]">Respondendo a {rp.role==='assistant'?'Metrys':session?.user?.name||'Voce'}</p><p className="text-[11px] text-[var(--text)] truncate">{rp.content?.slice(0,60)||'(imagem)'}</p></div><button title="Cancelar resposta" onClick={()=>setRp(null)} className="text-[var(--text-3)] hover:text-[var(--destructive)]"><X className="h-3.5 w-3.5"/></button></div></div>)}
+
+            {pf.length>0&&(<div className="px-3 pb-1 flex gap-1.5 flex-wrap">{pf.map((f,i)=>(<div key={i} className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-[var(--surface-2)] border border-[var(--border)] text-[11px]">{f.isImg?<Image src={f.url} alt={f.name} width={20} height={20} className="rounded object-cover"/>:<><Paperclip className="h-3 w-3 text-[var(--text-3)]"/><span className="text-[var(--text-2)] truncate max-w-[100px]">{f.name}</span></>}<button title="Remover anexo" onClick={()=>rf(i)} className="text-[var(--text-3)] hover:text-[var(--destructive)]"><X className="h-3 w-3"/></button></div>))}</div>)}
+
+            <div className="px-2 pb-1"><div className="relative">
+              {model==='metrys-dev'&&(<div className="px-1 pb-1.5"><span className="inline-flex items-center gap-1 text-[9px] text-green-600 dark:text-green-400 font-[500]"><span className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse"/>Modo Programador — IA pode ler/escrever arquivos e executar comandos</span></div>)}
+              <input title="Selecionar imagens" type="file" ref={ii} multiple accept="image/*" className="hidden" onChange={e=>{if(e.target.files)Array.from(e.target.files).forEach(f=>af(f));if(ii.current)ii.current.value=''}}/>
+              <input title="Selecionar arquivos" type="file" ref={fi} multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.json,.xml,.md" className="hidden" onChange={e=>{if(e.target.files)Array.from(e.target.files).forEach(f=>af(f));if(fi.current)fi.current.value=''}}/>
+              <textarea ref={ta} rows={1} aria-label={rp?'Responder mensagem':'Perguntar algo'} placeholder={rp?'Responder...':'Pergunte algo...'} value={inp} onChange={e=>setInp(e.target.value)} onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send()}}} className="w-full text-[12px] bg-[var(--surface-2)] border border-[var(--border)] rounded-2xl outline-none resize-none placeholder:text-[var(--text-3)] text-[var(--text)] leading-relaxed px-3 pt-3.5 pb-[52px] min-h-[64px] max-h-[180px] transition-all duration-200 focus:bg-[var(--surface)] focus:border-[var(--accent)]/20 focus:scale-[1.01] overflow-y-auto" style={{scrollbarWidth:'thin',scrollbarColor:'rgba(255,255,255,0.06) transparent'}}/>
+              <div className="absolute bottom-2 left-3 right-3 flex items-center gap-1">
+                <div className="flex rounded-full bg-[var(--surface)] border border-[var(--border)] shrink-0 overflow-hidden">
+                  <button onClick={()=>setModel('metrys-pro')} className={`px-1.5 py-0.5 text-[9px] font-[500] transition-colors ${model==='metrys-pro'?'bg-[var(--accent)] text-white':'text-[var(--text-3)] hover:text-[var(--text)]'}`}>Pro</button>
+                  <button onClick={()=>setModel('metrys-flash')} className={`px-1.5 py-0.5 text-[9px] font-[500] transition-colors ${model==='metrys-flash'?'bg-[var(--accent)] text-white':'text-[var(--text-3)] hover:text-[var(--text)]'}`}>Flash</button>
+                  <button onClick={()=>setModel('metrys-dev')} className={`px-1.5 py-0.5 text-[9px] font-[500] transition-colors ${model==='metrys-dev'?'bg-green-600 text-white':'text-[var(--text-3)] hover:text-[var(--text)]'}`}>Dev</button>
+                </div>
+                <button onClick={()=>ii.current?.click()} className="h-7 w-7 flex items-center justify-center rounded-lg text-[var(--text-3)] hover:text-[var(--accent)] hover:bg-[var(--accent-subtle)] transition-all shrink-0" title="Imagem"><ImagemIcone className="h-3.5 w-3.5"/></button>
+                <button onClick={()=>fi.current?.click()} className="h-7 w-7 flex items-center justify-center rounded-lg text-[var(--text-3)] hover:text-[var(--accent)] hover:bg-[var(--accent-subtle)] transition-all shrink-0" title="Arquivo"><Paperclip className="h-3.5 w-3.5"/></button>
+                {ms.length>0&&(<div className="group/tok relative shrink-0 flex items-center">
+                  <button title="Tokens" className="h-7 px-1.5 flex items-center gap-1 rounded-lg text-[var(--text-3)] hover:bg-[var(--surface-hover)] transition-all shrink-0">
+                    <div className="w-10 h-1.5 rounded-full bg-[var(--surface-2)] overflow-hidden">
+                      <div className="h-full rounded-full transition-all duration-500" style={{width:`${tokenStats.pct}%`,background:tokenStats.pct>80?'var(--destructive)':tokenStats.pct>50?'var(--accent)':'var(--success)'}}/>
+                    </div>
+                    <span className="text-[9px] tabular-nums font-[500]" style={{color:tokenStats.pct>80?'var(--destructive)':tokenStats.pct>50?'var(--accent)':'var(--success)'}}>{tokenStats.pct}%</span>
+                  </button>
+                  <div className="absolute bottom-full right-0 mb-1.5 opacity-0 group-hover/tok:opacity-100 transition-opacity duration-200 pointer-events-none">
+                    <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl shadow-xl px-3 py-2.5 text-left whitespace-nowrap" style={{minWidth:'220px'}}>
+                      <div className="flex items-center justify-between gap-3 mb-1.5"><span className="text-[10px] text-[var(--text-3)]">Tokens usados</span><span className="text-[11px] font-[600] text-[var(--text)]">{tokenStats.used.toLocaleString()} / {tokenStats.limit.toLocaleString()}</span></div>
+                      <div className="w-full h-1.5 rounded-full bg-[var(--surface-2)] mb-2 overflow-hidden"><div className="h-full rounded-full transition-all duration-500" style={{width:`${tokenStats.pct}%`,background:tokenStats.pct>80?'var(--destructive)':tokenStats.pct>50?'var(--accent)':'var(--success)'}}/></div>
+                      <div className="flex items-center justify-between gap-3 mb-1"><span className="text-[9px] text-[var(--text-3)]">Input / Output</span><span className="text-[10px] text-[var(--text-2)]">{tokenStats.inputTk.toLocaleString()} / {tokenStats.outputTk.toLocaleString()}</span></div>
+                      <div className="flex items-center justify-between gap-3"><span className="text-[9px] text-[var(--text-3)]">Custo estimado</span><span className="text-[10px] font-[500] text-[var(--warning)]">${tokenStats.cost<0.01?'<0.01':tokenStats.cost.toFixed(tokenStats.cost<0.1?3:2)}</span></div>
+                      <div className="mt-1.5 pt-1.5 border-t border-[var(--border)]"><p className="text-[8px] text-[var(--text-3)]">DeepSeek V3 · 64K contexto · $0.27/$1.10 por 1M tokens</p></div>
+                    </div>
+                  </div>
+                </div>)}
+                <div className="flex-1"/>
+                <Button size="icon" className="h-8 w-8 shrink-0 rounded-xl" disabled={(!inp.trim()&&pf.length===0)||(streamPhase==='typing'||streamPhase==='think')} onClick={()=>send()}><Send className="h-3.5 w-3.5"/></Button>
+              </div>
+            </div></div>
+            <div className="pb-1.5 text-center flex items-center justify-center gap-3"><p className="text-[9px] text-[var(--text-3)]">Metrys e uma IA e pode cometer erros.</p><span className="text-[9px] text-[var(--text-3)] opacity-50">{tokenStats.used.toLocaleString()} tokens · ${tokenStats.cost.toFixed(4)}</span></div>
           </div>
-        </div></div>
-        <div className="pb-1.5 text-center"><p className="text-[9px] text-[var(--text-3)]">Metrys e uma IA e pode cometer erros.</p></div>
-      </div>
         </motion.div>
       )}
     </FMAnimatePresence>

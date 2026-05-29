@@ -11,15 +11,22 @@ export function FetchErrorSuppressor({ children }: { children: React.ReactNode }
   useEffect(() => {
     const originalConsoleError = console.error.bind(console)
 
-    const isExtensionError = (args: any[]): boolean => {
+    const isExpectedError = (args: any[]): boolean => {
       const msg = args[0]
-      if (typeof msg === 'string' && msg.includes('Failed to fetch')) {
-        return true
+      if (typeof msg === 'string') {
+        if (msg.includes('Failed to fetch')) return true
+        if (msg.includes('AbortError')) return true
+        return false
       }
-      if (msg instanceof Error && msg.message === 'Failed to fetch') {
-        const stack = msg.stack || ''
-        if (stack.includes('chrome-extension://') || stack.includes('moz-extension://')) {
-          return true
+      if (msg && typeof msg === 'object') {
+        if ((msg as any).name === 'AbortError') return true
+        if (msg instanceof Error) {
+          if (msg.message === 'Failed to fetch') {
+            const stack = msg.stack || ''
+            if (stack.includes('chrome-extension://') || stack.includes('moz-extension://')) {
+              return true
+            }
+          }
         }
       }
       return false
@@ -27,11 +34,19 @@ export function FetchErrorSuppressor({ children }: { children: React.ReactNode }
 
     const rejectionHandler = (event: PromiseRejectionEvent) => {
       const reason = event.reason
-      if (reason instanceof Error && reason.message === 'Failed to fetch') {
-        const stack = reason.stack || ''
-        if (stack.includes('chrome-extension://') || stack.includes('moz-extension://')) {
+      if (reason && typeof reason === 'object') {
+        if ((reason as any).name === 'AbortError') {
           event.preventDefault()
           return
+        }
+      }
+      if (reason instanceof Error) {
+        if (reason.message === 'Failed to fetch') {
+          const stack = reason.stack || ''
+          if (stack.includes('chrome-extension://') || stack.includes('moz-extension://')) {
+            event.preventDefault()
+            return
+          }
         }
       }
       if (reason instanceof TypeError && reason.message === 'Failed to fetch') {
@@ -44,7 +59,7 @@ export function FetchErrorSuppressor({ children }: { children: React.ReactNode }
     }
 
     console.error = (...args: any[]) => {
-      if (!isExtensionError(args)) {
+      if (!isExpectedError(args)) {
         originalConsoleError(...args)
       }
     }

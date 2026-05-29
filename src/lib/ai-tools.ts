@@ -1,6 +1,6 @@
 // ============================================
 // AI TOOLS — Tool/Function definitions for DeepSeek Tool Calling
-// Conecta a IA diretamente às APIs do sistema
+// Conecta a IA diretamente as APIs do sistema
 // ============================================
 
 import type { DeepSeekTool } from '@/lib/deepseek-types'
@@ -16,24 +16,24 @@ export const AI_TOOLS: DeepSeekTool[] = [
     type: 'function',
     function: {
       name: 'buscar_projetos',
-      description: 'Busca projetos do sistema ANDERFLOW com filtros opcionais. Retorna lista de projetos com nome, status, progresso e cliente.',
+      description: 'Busca projetos do sistema ANDERFLOW com filtros opcionais. Retorna lista de projetos com nome, status, progresso, cliente e ID.',
       parameters: {
         type: 'object',
         properties: {
           status: {
             type: 'string',
-            enum: ['DRAFT', 'PENDING', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED', 'PENDING_APPROVAL'],
-            description: 'Filtrar por status do projeto (opcional)',
+            enum: ['ativo', 'pausado', 'concluido', 'cancelado'],
+            description: 'Filtrar por status do projeto. ativo=IN_PROGRESS, pausado=PENDING, concluido=COMPLETED, cancelado=CANCELLED',
           },
-          cliente_nome: {
+          cliente_id: {
             type: 'string',
-            description: 'Nome do cliente para filtrar (opcional)',
+            description: 'ID do cliente para filtrar projetos (opcional)',
           },
           limit: {
             type: 'integer',
             minimum: 1,
             maximum: 50,
-            description: 'Numero maximo de projetos a retornar (default: 10)',
+            description: 'Numero maximo de projetos a retornar. Default: 10',
           },
         },
       },
@@ -68,21 +68,21 @@ export const AI_TOOLS: DeepSeekTool[] = [
             type: 'string',
             description: 'Titulo da tarefa',
           },
-          projeto_nome: {
+          projeto_id: {
             type: 'string',
-            description: 'Nome do projeto onde criar a tarefa',
+            description: 'ID do projeto onde criar a tarefa',
           },
           prioridade: {
             type: 'string',
-            enum: ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'],
-            description: 'Prioridade da tarefa',
+            enum: ['baixa', 'media', 'alta', 'urgente'],
+            description: 'Prioridade da tarefa. baixa=LOW, media=MEDIUM, alta=HIGH, urgente=HIGH',
           },
           descricao: {
             type: 'string',
             description: 'Descricao detalhada da tarefa (opcional)',
           },
         },
-        required: ['titulo', 'projeto_nome'],
+        required: ['titulo', 'projeto_id'],
       },
     },
   },
@@ -90,14 +90,14 @@ export const AI_TOOLS: DeepSeekTool[] = [
     type: 'function',
     function: {
       name: 'resumo_financeiro',
-      description: 'Retorna metricas financeiras do periodo especificado: receita, faturas pendentes, inadimplencia.',
+      description: 'Retorna metricas financeiras do periodo especificado: receita total, faturas pendentes, inadimplencia, projetos ativos, clientes ativos.',
       parameters: {
         type: 'object',
         properties: {
           periodo: {
             type: 'string',
             enum: ['7d', '30d', '90d', '365d'],
-            description: 'Periodo de analise',
+            description: 'Periodo de analise financeira',
           },
         },
         required: ['periodo'],
@@ -108,69 +108,20 @@ export const AI_TOOLS: DeepSeekTool[] = [
     type: 'function',
     function: {
       name: 'listar_tickets_abertos',
-      description: 'Lista tickets de suporte em aberto no ANDERFLOW, com opcao de filtrar por prioridade.',
+      description: 'Lista tickets de suporte em aberto com prioridade e categoria.',
       parameters: {
         type: 'object',
         properties: {
           prioridade: {
             type: 'string',
-            enum: ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'],
-            description: 'Filtrar por prioridade (opcional)',
+            enum: ['baixa', 'media', 'alta', 'critica'],
+            description: 'Filtrar por prioridade (opcional). baixa=LOW, media=MEDIUM, alta=HIGH, critica=HIGH',
           },
           limit: {
             type: 'integer',
             minimum: 1,
             maximum: 30,
-            description: 'Numero maximo de tickets (default: 5)',
-          },
-        },
-      },
-    },
-  },
-  {
-    type: 'function',
-    function: {
-      name: 'estatisticas_gerais',
-      description: 'Retorna estatisticas gerais do ANDERFLOW: total de projetos, usuarios, tarefas, tickets e metricas resumidas.',
-      parameters: {
-        type: 'object',
-        properties: {},
-      },
-    },
-  },
-  {
-    type: 'function',
-    function: {
-      name: 'buscar_tarefas_projeto',
-      description: 'Busca todas as tarefas de um projeto especifico com status e responsaveis.',
-      parameters: {
-        type: 'object',
-        properties: {
-          projeto_nome: {
-            type: 'string',
-            description: 'Nome do projeto para buscar tarefas',
-          },
-        },
-        required: ['projeto_nome'],
-      },
-    },
-  },
-  {
-    type: 'function',
-    function: {
-      name: 'listar_faturas',
-      description: 'Lista faturas do sistema com filtros de status e periodo.',
-      parameters: {
-        type: 'object',
-        properties: {
-          status: {
-            type: 'string',
-            enum: ['PENDING', 'PAID', 'OVERDUE', 'CANCELLED'],
-            description: 'Status da fatura (opcional)',
-          },
-          cliente_nome: {
-            type: 'string',
-            description: 'Nome do cliente para filtrar (opcional)',
+            description: 'Numero maximo de tickets. Default: 5',
           },
         },
       },
@@ -178,8 +129,101 @@ export const AI_TOOLS: DeepSeekTool[] = [
   },
 ]
 
+export const PROGRAMMER_TOOLS: DeepSeekTool[] = [
+  {
+    type: 'function',
+    function: {
+      name: 'listar_arquivos',
+      description: 'Lista arquivos e diretorios do projeto ANDERFLOW.',
+      parameters: {
+        type: 'object',
+        properties: {
+          caminho: {
+            type: 'string',
+            description: 'Caminho relativo a raiz do projeto. Ex: "src/app", "prisma". Vazio = raiz.',
+          },
+        },
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'ler_arquivo',
+      description: 'Le o conteudo de um arquivo do projeto.',
+      parameters: {
+        type: 'object',
+        properties: {
+          caminho: {
+            type: 'string',
+            description: 'Caminho relativo do arquivo. Ex: "src/lib/deepseek.ts", "package.json".',
+          },
+        },
+        required: ['caminho'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'escrever_arquivo',
+      description: 'Cria ou sobrescreve um arquivo no projeto ANDERFLOW.',
+      parameters: {
+        type: 'object',
+        properties: {
+          caminho: {
+            type: 'string',
+            description: 'Caminho relativo do arquivo a criar/editar. Ex: "src/components/novo.tsx".',
+          },
+          conteudo: {
+            type: 'string',
+            description: 'Conteudo completo do arquivo a ser escrito.',
+          },
+        },
+        required: ['caminho', 'conteudo'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'executar_comando',
+      description: 'Executa um comando de terminal na raiz do projeto ANDERFLOW. Use para: npm install, git status, rodar testes, build, lint, etc.',
+      parameters: {
+        type: 'object',
+        properties: {
+          comando: {
+            type: 'string',
+            description: 'Comando shell a executar. Ex: "npx tsc --noEmit", "git log --oneline -5", "npm run dev".',
+          },
+        },
+        required: ['comando'],
+      },
+    },
+  },
+]
+
 // ============================================
-// TOOL EXECUTOR — executa ferramentas contra APIs reais
+// STATUS MAPPING (user-friendly → API values)
+// ============================================
+
+const STATUS_MAP: Record<string, string> = {
+  ativo: 'IN_PROGRESS',
+  pausado: 'PENDING',
+  concluido: 'COMPLETED',
+  cancelado: 'CANCELLED',
+}
+
+const PRIORITY_MAP: Record<string, string> = {
+  baixa: 'LOW',
+  media: 'MEDIUM',
+  alta: 'HIGH',
+  urgente: 'HIGH',
+  critica: 'HIGH',
+}
+
+// ============================================
+// TOOL EXECUTOR
 // ============================================
 
 export async function executeToolCall(
@@ -192,169 +236,195 @@ export async function executeToolCall(
     headers.Cookie = `next-auth.session-token=${sessionToken}`
   }
 
-  switch (toolName) {
-    case 'buscar_projetos': {
-      const params = new URLSearchParams()
-      if (args.status) params.set('status', args.status as string)
-      if (args.cliente_nome) params.set('search', args.cliente_nome as string)
-      if (args.limit) params.set('limit', String(args.limit))
-      const res = await fetch(`${BASE_URL}/api/projects?${params}`, { headers })
-      const data = await res.json()
-      const projects = (data.projects || data.data || []).slice(0, (args.limit as number) || 10)
-      if (!projects.length) return JSON.stringify({ message: 'Nenhum projeto encontrado.', total: 0 })
-      return JSON.stringify({
-        total: projects.length,
-        projetos: projects.map((p: any) => ({
-          nome: p.name,
-          status: p.status,
-          progresso: p.progress ? `${p.progress}%` : 'N/A',
-          cliente: p.client?.name || p.clientName || 'N/A',
-          id: p.id,
-        })),
-      })
+  try {
+    switch (toolName) {
+      case 'buscar_projetos': {
+        const params = new URLSearchParams()
+        const mappedStatus = args.status ? STATUS_MAP[args.status as string] : undefined
+        if (mappedStatus) params.set('status', mappedStatus)
+        if (args.limit) params.set('limit', String(args.limit))
+        const url = `${BASE_URL}/api/projects${params.toString() ? '?' + params.toString() : ''}`
+        const res = await fetch(url, { headers })
+        if (!res.ok) return JSON.stringify({ error: `Erro ${res.status} ao buscar projetos` })
+        const data = await res.json()
+        const projects = (data.projects || data.data || [])
+        const clientFilter = args.cliente_id as string | undefined
+        const filtered = clientFilter
+          ? projects.filter((p: any) => p.client?.id === clientFilter || p.clientId === clientFilter)
+          : projects
+        const limited = filtered.slice(0, (args.limit as number) || 10)
+        if (!limited.length) return JSON.stringify({ message: 'Nenhum projeto encontrado.', total: 0 })
+        return JSON.stringify({
+          total: limited.length,
+          projetos: limited.map((p: any) => ({
+            id: p.id,
+            nome: p.name,
+            status: p.status,
+            progresso: p.progress != null ? `${p.progress}%` : 'N/A',
+            cliente: p.client?.name || p.clientName || 'N/A',
+          })),
+        })
+      }
+
+      case 'buscar_cliente': {
+        const query = encodeURIComponent(args.query as string)
+        const res = await fetch(`${BASE_URL}/api/clients?search=${query}&limit=5`, { headers })
+        if (!res.ok) return JSON.stringify({ error: `Erro ${res.status} ao buscar cliente` })
+        const data = await res.json()
+        const clients = data.clients || data.data || []
+        if (!clients.length) return JSON.stringify({ message: 'Cliente nao encontrado.' })
+        return JSON.stringify({
+          encontrados: clients.length,
+          clientes: clients.slice(0, 5).map((c: any) => ({
+            id: c.id,
+            nome: c.name,
+            email: c.email,
+            empresa: c.company || 'N/A',
+            telefone: c.phone || 'N/A',
+            plano: c.plan || 'N/A',
+            ativo: c.isActive !== false,
+          })),
+        })
+      }
+
+      case 'criar_tarefa': {
+        const projectId = args.projeto_id as string
+        const res = await fetch(`${BASE_URL}/api/tasks`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            title: args.titulo,
+            description: args.descricao || '',
+            projectId,
+            priority: PRIORITY_MAP[args.prioridade as string] || 'MEDIUM',
+          }),
+        })
+        const data = await res.json()
+        if (!res.ok) return JSON.stringify({ error: data.error || data.message || `Erro ${res.status} ao criar tarefa` })
+        const created = data.data || data
+        return JSON.stringify({
+          sucesso: true,
+          tarefa: {
+            id: created.id,
+            titulo: created.title || args.titulo,
+            status: created.status,
+            prioridade: created.priority,
+            projeto_id: projectId,
+          },
+        })
+      }
+
+      case 'resumo_financeiro': {
+        const periodo = args.periodo as string
+        const res = await fetch(`${BASE_URL}/api/dashboard`, { headers })
+        if (!res.ok) return JSON.stringify({ error: `Erro ${res.status} ao buscar metricas` })
+        const data = await res.json()
+        const stats = data.stats || data
+        return JSON.stringify({
+          periodo,
+          receita_total: stats.totalRevenue || stats.receita || 0,
+          receita_mes_atual: stats.paidThisMonth || 0,
+          faturas_pendentes: stats.pendingRevenue || 0,
+          projetos_ativos: stats.activeProjects || 0,
+          clientes_ativos: stats.activeClients || 0,
+          projetos_concluidos: stats.completedProjects || 0,
+          taxa_conversao: stats.conversionRate
+            ? `${stats.conversionRate}%`
+            : 'N/A',
+        })
+      }
+
+      case 'listar_tickets_abertos': {
+        const params = new URLSearchParams()
+        params.set('status', 'OPEN')
+        if (args.prioridade) {
+          params.set('priority', PRIORITY_MAP[args.prioridade as string] || '')
+        }
+        if (args.limit) params.set('limit', String(args.limit))
+        const res = await fetch(`${BASE_URL}/api/tickets?${params}`, { headers })
+        if (!res.ok) return JSON.stringify({ error: `Erro ${res.status} ao buscar tickets` })
+        const data = await res.json()
+        const tickets = (data.tickets || data.data || []).slice(0, (args.limit as number) || 5)
+        if (!tickets.length) return JSON.stringify({ message: 'Nenhum ticket aberto encontrado.', total: 0 })
+        return JSON.stringify({
+          total: tickets.length,
+          tickets: tickets.map((t: any) => ({
+            id: t.id,
+            titulo: t.title,
+            prioridade: t.priority,
+            categoria: t.category || t.aiCategory || 'NAO_CLASSIFICADO',
+            criado_em: t.createdAt,
+            criador: t.creator?.name || t.creatorName || 'N/A',
+          })),
+        })
+      }
+
+      case 'listar_arquivos': {
+        const caminho = args.caminho as string || ''
+        const res = await fetch(`${BASE_URL}/api/ai/fs`, {
+          method: 'POST', headers,
+          body: JSON.stringify({ action: 'list', path: caminho }),
+        })
+        const data = await res.json()
+        if (data.error) return JSON.stringify({ error: data.error })
+        return JSON.stringify({
+          caminho: caminho || 'raiz',
+          total: data.items?.length || 0,
+          itens: (data.items || []).map((i: any) => `${i.type === 'dir' ? '[DIR]' : '[FILE]'} ${i.name} ${i.type === 'file' ? `(${i.size} bytes)` : ''}`),
+        })
+      }
+
+      case 'ler_arquivo': {
+        const caminho = args.caminho as string
+        const res = await fetch(`${BASE_URL}/api/ai/fs`, {
+          method: 'POST', headers,
+          body: JSON.stringify({ action: 'read', path: caminho }),
+        })
+        const data = await res.json()
+        if (data.error) return JSON.stringify({ error: data.error })
+        return JSON.stringify({
+          caminho,
+          tamanho: data.size,
+          truncado: data.truncated || false,
+          conteudo: data.content || '',
+        })
+      }
+
+      case 'escrever_arquivo': {
+        const caminho = args.caminho as string
+        const conteudo = args.conteudo as string
+        const res = await fetch(`${BASE_URL}/api/ai/fs`, {
+          method: 'POST', headers,
+          body: JSON.stringify({ action: 'write', path: caminho, content: conteudo }),
+        })
+        const data = await res.json()
+        if (data.error) return JSON.stringify({ error: data.error })
+        return JSON.stringify({ sucesso: true, caminho, bytes: data.bytes })
+      }
+
+      case 'executar_comando': {
+        const comando = args.comando as string
+        const res = await fetch(`${BASE_URL}/api/ai/fs`, {
+          method: 'POST', headers,
+          body: JSON.stringify({ action: 'exec', command: comando }),
+        })
+        const data = await res.json()
+        if (data.error) return JSON.stringify({ error: data.error })
+        const output = [data.stdout, data.stderr].filter(Boolean).join('\n')
+        return JSON.stringify({
+          comando,
+          exit_code: data.code || 0,
+          saida: output.slice(0, 4000) || '(sem saida)',
+          truncado: output.length > 4000,
+        })
+      }
+
+      default:
+        return JSON.stringify({ error: `Ferramenta desconhecida: ${toolName}` })
     }
-
-    case 'buscar_cliente': {
-      const query = encodeURIComponent(args.query as string)
-      const res = await fetch(`${BASE_URL}/api/clients?search=${query}`, { headers })
-      const data = await res.json()
-      const clients = data.clients || data.data || []
-      if (!clients.length) return JSON.stringify({ message: 'Cliente nao encontrado.' })
-      return JSON.stringify({
-        encontrados: clients.length,
-        clientes: clients.slice(0, 5).map((c: any) => ({
-          nome: c.name,
-          email: c.email,
-          empresa: c.company || 'N/A',
-          id: c.id,
-          status: c.status || 'ATIVO',
-        })),
-      })
-    }
-
-    case 'criar_tarefa': {
-      const projetoNome = args.projeto_nome as string
-      const projRes = await fetch(`${BASE_URL}/api/projects?search=${encodeURIComponent(projetoNome)}`, { headers })
-      const projData = await projRes.json()
-      const projects = projData.projects || projData.data || []
-      if (!projects.length) return JSON.stringify({ error: `Projeto "${projetoNome}" nao encontrado.` })
-
-      const res = await fetch(`${BASE_URL}/api/tasks`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
-          title: args.titulo,
-          description: args.descricao || '',
-          projectId: projects[0].id,
-          priority: args.prioridade || 'MEDIUM',
-        }),
-      })
-      const data = await res.json()
-      if (data.error) return JSON.stringify({ error: data.error })
-      return JSON.stringify({
-        sucesso: true,
-        tarefa: {
-          id: data.id || data.data?.id,
-          titulo: args.titulo,
-          projeto: projetoNome,
-        },
-      })
-    }
-
-    case 'resumo_financeiro': {
-      const periodo = args.periodo || '30d'
-      const res = await fetch(`${BASE_URL}/api/dashboard?period=${periodo}`, { headers })
-      const data = await res.json()
-      return JSON.stringify({
-        periodo,
-        receita: data.revenue || data.totalRevenue || 0,
-        faturas_pendentes: data.pendingInvoices || 0,
-        faturas_pagas: data.paidInvoices || 0,
-        inadimplencia: data.overdueCount || 0,
-        novos_clientes: data.newClients || 0,
-        projetos_ativos: data.activeProjects || 0,
-      })
-    }
-
-    case 'listar_tickets_abertos': {
-      const params = new URLSearchParams()
-      params.set('status', 'OPEN')
-      if (args.prioridade) params.set('priority', args.prioridade as string)
-      if (args.limit) params.set('limit', String(args.limit))
-      const res = await fetch(`${BASE_URL}/api/tickets?${params}`, { headers })
-      const data = await res.json()
-      const tickets = (data.tickets || data.data || []).slice(0, (args.limit as number) || 5)
-      if (!tickets.length) return JSON.stringify({ message: 'Nenhum ticket aberto encontrado.', total: 0 })
-      return JSON.stringify({
-        total: tickets.length,
-        tickets: tickets.map((t: any) => ({
-          titulo: t.title,
-          prioridade: t.priority || t.aiPriority || 'MEDIUM',
-          categoria: t.category || t.aiCategory || 'NAO_CLASSIFICADO',
-          id: t.id,
-          criado_em: t.createdAt,
-        })),
-      })
-    }
-
-    case 'estatisticas_gerais': {
-      const [projRes, ticketRes, taskRes, userRes] = await Promise.all([
-        fetch(`${BASE_URL}/api/projects?limit=1`, { headers }).then(r => r.json()).catch(() => ({})),
-        fetch(`${BASE_URL}/api/tickets?limit=1`, { headers }).then(r => r.json()).catch(() => ({})),
-        fetch(`${BASE_URL}/api/tasks?limit=1`, { headers }).then(r => r.json()).catch(() => ({})),
-        fetch(`${BASE_URL}/api/users?limit=1`, { headers }).then(r => r.json()).catch(() => ({})),
-      ])
-      return JSON.stringify({
-        total_projetos: projRes.total || projRes.count || 0,
-        total_tickets: ticketRes.total || ticketRes.count || 0,
-        total_tarefas: taskRes.total || taskRes.count || 0,
-        total_usuarios: userRes.total || userRes.count || 0,
-      })
-    }
-
-    case 'buscar_tarefas_projeto': {
-      const projetoNome = args.projeto_nome as string
-      const projRes = await fetch(`${BASE_URL}/api/projects?search=${encodeURIComponent(projetoNome)}`, { headers })
-      const projData = await projRes.json()
-      const projects = projData.projects || projData.data || []
-      if (!projects.length) return JSON.stringify({ error: `Projeto "${projetoNome}" nao encontrado.` })
-
-      const taskRes = await fetch(`${BASE_URL}/api/tasks?projectId=${projects[0].id}`, { headers })
-      const taskData = await taskRes.json()
-      const tasks = taskData.tasks || taskData.data || []
-      return JSON.stringify({
-        projeto: projetoNome,
-        total_tarefas: tasks.length,
-        tarefas: tasks.map((t: any) => ({
-          titulo: t.title,
-          status: t.status,
-          prioridade: t.priority,
-          responsavel: t.assignee?.name || t.assigneeName || 'Nao atribuido',
-        })),
-      })
-    }
-
-    case 'listar_faturas': {
-      const params = new URLSearchParams()
-      if (args.status) params.set('status', args.status as string)
-      if (args.cliente_nome) params.set('search', args.cliente_nome as string)
-      const res = await fetch(`${BASE_URL}/api/invoices?${params}`, { headers })
-      const data = await res.json()
-      const invoices = (data.invoices || data.data || []).slice(0, 20)
-      if (!invoices.length) return JSON.stringify({ message: 'Nenhuma fatura encontrada.', total: 0 })
-      return JSON.stringify({
-        total: invoices.length,
-        faturas: invoices.map((i: any) => ({
-          valor: i.amount || i.value,
-          status: i.status,
-          vencimento: i.dueDate,
-          cliente: i.client?.name || i.clientName || 'N/A',
-        })),
-      })
-    }
-
-    default:
-      return JSON.stringify({ error: `Ferramenta desconhecida: ${toolName}` })
+  } catch (e) {
+    console.error(`[executeToolCall] ${toolName} error:`, e)
+    return JSON.stringify({ error: `Falha ao executar ${toolName}: ${(e as Error).message}` })
   }
 }
 

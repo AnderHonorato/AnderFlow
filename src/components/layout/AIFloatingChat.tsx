@@ -124,10 +124,10 @@ export function AIFloatingChat() {
 
   const {
     messages,
-    isLoading,
+    isStreaming,
     error,
     streamingContent,
-    streamingReasoning,
+    reasoningContent: streamingReasoning,
     sendMessage,
     clearMessages,
     stopGeneration,
@@ -142,11 +142,11 @@ export function AIFloatingChat() {
   const handleSend = useCallback(
     (text?: string) => {
       const content = (text ?? input).trim()
-      if (!content || isLoading) return
+      if (!content || isStreaming) return
       setInput('')
-      sendMessage(content, useReasoning ? 'metrys-flash' : 'metrys-pro')
+      sendMessage(content, useReasoning)
     },
-    [input, isLoading, sendMessage, useReasoning],
+    [input, isStreaming, sendMessage, useReasoning],
   )
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -220,7 +220,7 @@ export function AIFloatingChat() {
                 </div>
               </div>
               <div className="flex items-center gap-1">
-                {messages.length > 0 && !isLoading && (
+                {messages.length > 0 && !isStreaming && (
                   <button
                     onClick={clearMessages}
                     className="h-7 w-7 flex items-center justify-center rounded-lg hover:bg-[var(--surface-hover)] text-[var(--text-3)]"
@@ -240,7 +240,7 @@ export function AIFloatingChat() {
             </div>
 
             <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-3 scrollbar-thin">
-              {messages.length === 0 && !isLoading && !streamingContent && (
+              {messages.length === 0 && !isStreaming && !streamingContent && (
                 <div className="flex flex-col items-center text-center gap-3 pt-4">
                   <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--accent-subtle)]">
                     <Sparkles className="h-5 w-5 text-[var(--accent)]" />
@@ -335,7 +335,7 @@ export function AIFloatingChat() {
                   </div>
                 )}
 
-                {isLoading && !streamingContent && !streamingReasoning && (
+                {isStreaming && !streamingContent && !streamingReasoning && (
                   <div className="flex gap-2 justify-start">
                     <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--accent-subtle)]">
                       <Bot className="h-3 w-3 text-[var(--accent)]" />
@@ -359,7 +359,7 @@ export function AIFloatingChat() {
                 <Switch
                   checked={useReasoning}
                   onCheckedChange={setUseReasoning}
-                  disabled={isLoading}
+                  disabled={isStreaming}
                 />
                 <Label className="text-[10px] text-[var(--text-3)] cursor-pointer flex items-center gap-1">
                   <Brain className="h-3 w-3" />
@@ -378,10 +378,10 @@ export function AIFloatingChat() {
                     el.style.height = Math.min(el.scrollHeight, 100) + 'px'
                   }}
                   onKeyDown={handleKeyDown}
-                  disabled={isLoading}
+                  disabled={isStreaming}
                   className="flex-1 text-xs bg-[var(--surface-2)] border border-[var(--border)] rounded-xl outline-none resize-none px-3 py-2 placeholder:text-[var(--text-3)] focus:border-[var(--accent)]/30 transition-colors max-h-[100px] text-[var(--text)]"
                 />
-                {isLoading ? (
+                {isStreaming ? (
                   <button
                     onClick={stopGeneration}
                     className="h-8 w-8 flex items-center justify-center rounded-xl bg-[var(--destructive-subtle)] text-[var(--destructive)] hover:bg-[var(--destructive)]/20 transition-colors shrink-0"
@@ -392,7 +392,7 @@ export function AIFloatingChat() {
                 ) : (
                   <button
                     onClick={() => handleSend()}
-                    disabled={!input.trim() || isLoading}
+                    disabled={!input.trim() || isStreaming}
                     className="h-8 w-8 flex items-center justify-center rounded-xl bg-[var(--accent)] text-white hover:bg-[var(--accent)]/90 transition-colors shrink-0 disabled:opacity-40"
                     title="Enviar"
                   >

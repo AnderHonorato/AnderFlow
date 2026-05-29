@@ -5,10 +5,52 @@ import { cargoEhAdmin } from '@/lib/hierarquia'
 import { ICON_SYSTEM_PROMPT } from '@/components/ui/chat-icons'
 
 const API_URL = 'https://api.deepseek.com/chat/completions'
+const RETRYABLE_STATUSES = new Set([429, 503])
+const MAX_RETRIES = 3
 
 const models: Record<string, { id: string; name: string; isPro: boolean }> = {
   'metrys-pro': { id: 'deepseek-v4-pro', name: 'Metrys v4 Pro', isPro: true },
   'metrys-flash': { id: 'deepseek-v4-flash', name: 'Metrys v4 Flash', isPro: false },
+}
+
+function getErrorMessage(status: number): string {
+  switch (status) {
+    case 400: return 'Formato de requisicao invalido'
+    case 401: return 'Chave de API invalida'
+    case 402: return 'Saldo insuficiente na API'
+    case 429: return 'Muitas requisicoes. Aguarde'
+    case 503: return 'Servidor sobrecarregado'
+    default: return `Erro ${status}`
+  }
+}
+
+async function fetchWithRetry(apiKey: string, bodyParams: Record<string, unknown>): Promise<Response> {
+  let lastError: Error | null = null
+
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      const res = await fetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+        body: JSON.stringify(bodyParams),
+      })
+
+      if (res.ok || !RETRYABLE_STATUSES.has(res.status) || attempt === MAX_RETRIES) {
+        return res
+      }
+
+      console.warn(`[Stream] Retry ${attempt + 1}/${MAX_RETRIES} — status ${res.status}`)
+      const delay = Math.min(1000 * Math.pow(2, attempt), 8000)
+      await new Promise((r) => setTimeout(r, delay))
+    } catch (e) {
+      lastError = e as Error
+      if (attempt === MAX_RETRIES) throw e
+      const delay = Math.min(1000 * Math.pow(2, attempt), 8000)
+      await new Promise((r) => setTimeout(r, delay))
+    }
+  }
+
+  throw lastError || new Error('Max retries exceeded')
 }
 
 async function saveToDb(conversationId: string, lastText: string, reply: string, reasoning: string) {
@@ -38,11 +80,11 @@ SEU PENSAMENTO E VISIVEL: Seu raciocinio (reasoning) aparece para o usuario. NUN
 IDIOMA: Pensamento e resposta em portugues do Brasil (pt-BR). NUNCA use ingles.
 
 REGRAS:
-1. Responda APENAS sobre ANDERFLOW. Recuse assuntos externos com educacao.
-2. ${isAdmin ? 'Admin: acesso TOTAL aos dados.' : 'Nao revele dados sensiveis.'}
+1. ${isAdmin ? 'Admin: acesso IRRESTRITO. Voce pode pesquisar qualquer assunto, gerar codigo, criar apps, discutir arquitetura, integrar servicos, e executar qualquer acao necessaria para o desenvolvimento do ANDERFLOW. Sem restricoes de topico.' : 'Responda APENAS sobre ANDERFLOW. Recuse assuntos externos com educacao.'}
+2. ${isAdmin ? 'Admin: acesso TOTAL aos dados. Pode criar, modificar e excluir qualquer recurso.' : 'Nao revele dados sensiveis.'}
 3. Para separar topicos distintos use "---" em linha propria com MODERACAO. Cada bloco com conteudo UNICO, nao repita informacao.
 4. NAO use mais que 1 icone por resposta inteira. Prefira emojis universais. NUNCA use badges (hot/novo/beta).
-5. NAO invente funcionalidades. ANDERFLOW e plataforma de GESTAO DE PROJETOS DE SOFTWARE com 12 etapas.
+5. NAO invente funcionalidades. ANDERFLOW e plataforma de GESTAO DE PROJETOS DE SOFTWARE com 12 etapas.${isAdmin ? ' Para duvidas tecnicas, responda com profundidade, inclua exemplos de codigo quando relevante.' : ''}
 
 ETAPAS DO FLUXO ANDERFLOW:
 1. Briefing 2. Proposta/Orcamento 3. Contrato 4. Planejamento 5. Design 6. Aprovacao do Design
@@ -79,18 +121,115 @@ ETAPAS DO FLUXO ANDERFLOW:
 ${ICON_SYSTEM_PROMPT}`
 }
 
+function relayDeepSeekStream(
+  res: Response,
+  encoder: TextEncoder,
+  modelLabel: string,
+  realModel: string,
+  onFinal: (fullContent: string, fullReasoning: string, usage: Record<string, number> | null) => void,
+): ReadableStream {
+  return new ReadableStream({
+    async start(controller) {
+      const reader = res.body!.getReader()
+      const decoder = new TextDecoder()
+      let buffer = ''
+      let fullContent = ''
+      let fullReasoning = ''
+      let finalUsage: Record<string, number> | null = null
+
+      try {
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+
+          buffer += decoder.decode(value, { stream: true })
+          const lines = buffer.split('\n')
+          buffer = lines.pop() || ''
+
+          for (const line of lines) {
+            const trimmed = line.trim()
+            if (!trimmed.startsWith('data: ')) continue
+            const data = trimmed.slice(6)
+            if (data === '[DONE]') continue
+
+            let parsed: any
+            try { parsed = JSON.parse(data) } catch { continue }
+
+            const delta = parsed?.choices?.[0]?.delta
+            const finishReason = parsed?.choices?.[0]?.finish_reason
+
+            if (delta?.reasoning_content) {
+              fullReasoning += delta.reasoning_content
+              controller.enqueue(encoder.encode(
+                `data: ${JSON.stringify({ type: 'reasoning', content: delta.reasoning_content })}\n\n`,
+              ))
+            }
+
+            if (delta?.content) {
+              fullContent += delta.content
+              controller.enqueue(encoder.encode(
+                `data: ${JSON.stringify({ type: 'content', content: delta.content })}\n\n`,
+              ))
+            }
+
+            if (delta?.tool_calls?.length) {
+              controller.enqueue(encoder.encode(
+                `data: ${JSON.stringify({ type: 'tool_call', tool_calls: delta.tool_calls, finish_reason: finishReason || null })}\n\n`,
+              ))
+            }
+
+            if (parsed.usage) {
+              finalUsage = {
+                prompt_tokens: parsed.usage.prompt_tokens || 0,
+                completion_tokens: parsed.usage.completion_tokens || 0,
+                total_tokens: parsed.usage.total_tokens || 0,
+                cache_hit_tokens: parsed.usage.prompt_cache_hit_tokens || 0,
+                cache_miss_tokens: parsed.usage.prompt_cache_miss_tokens || 0,
+              }
+            }
+          }
+        }
+      } catch (e) {
+        console.error('[Stream] Read error:', e)
+      }
+
+      const donePayload: Record<string, unknown> = {
+        type: 'done',
+        code: 'OK',
+        model: modelLabel,
+      }
+      if (finalUsage) donePayload.usage = finalUsage
+
+      controller.enqueue(encoder.encode(`data: ${JSON.stringify(donePayload)}\n\n`))
+      controller.close()
+
+      onFinal(fullContent, fullReasoning, finalUsage)
+    },
+  })
+}
+
+async function streamError(encoder: TextEncoder, code: string, reply: string) {
+  const stream = new ReadableStream({
+    start(ctrl) {
+      ctrl.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'error', code, reply })}\n\n`))
+      ctrl.close()
+    },
+  })
+  return new Response(stream, {
+    headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive' },
+  })
+}
+
+function sseHeaders(): Record<string, string> {
+  return { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive' }
+}
+
 async function responderComoConvidado(request: NextRequest) {
   const encoder = new TextEncoder()
-
   const apiKey = process.env.DEEPSEEK_API_KEY
+
   if (!apiKey) {
-    const stream = new ReadableStream({
-      start(ctrl) {
-        ctrl.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'error', code: 'NO_KEY', reply: 'Chave de API nao configurada.' })}\n\n`))
-        ctrl.close()
-      }
-    })
-    return new Response(stream, { headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive' } })
+    return streamError(encoder, 'NO_KEY', 'Chave de API nao configurada.')
   }
 
   const body = await request.json()
@@ -100,17 +239,11 @@ async function responderComoConvidado(request: NextRequest) {
   }
 
   if (!messages?.length) {
-    const stream = new ReadableStream({
-      start(ctrl) {
-        ctrl.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'error', code: 'NO_MSG', reply: 'Mensagens obrigatorias.' })}\n\n`))
-        ctrl.close()
-      }
-    })
-    return new Response(stream, { headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive' } })
+    return streamError(encoder, 'NO_MSG', 'Mensagens obrigatorias.')
   }
 
   const model = models[modelKey as keyof typeof models] || models['metrys-pro']
-  let sp = buildGuestSystemPrompt()
+  const sp = buildGuestSystemPrompt()
 
   const cm: any[] = [{ role: 'system', content: sp }]
   for (const m of messages) {
@@ -129,73 +262,28 @@ async function responderComoConvidado(request: NextRequest) {
   }
 
   try {
-    const res = await fetch(API_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
-      body: JSON.stringify(bodyParams),
-    })
+    const res = await fetchWithRetry(apiKey, bodyParams)
 
     if (!res.ok) {
       const status = res.status
-      const msg = status === 402 ? 'Saldo insuficiente na API.' : status === 429 ? 'Muitas requisicoes. Aguarde.' : `Erro ${status} ao processar.`
-      const stream = new ReadableStream({
-        start(ctrl) {
-          ctrl.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'error', code: `DS_${status}`, reply: msg })}\n\n`))
-          ctrl.close()
-        }
-      })
-      return new Response(stream, { headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive' } })
+      return streamError(encoder, `DS_${status}`, getErrorMessage(status))
     }
 
-    const relayStream = new ReadableStream({
-      async start(controller) {
-        const reader = res.body!.getReader()
-        const decoder = new TextDecoder()
-        let buffer = ''
+    const sseStream = relayDeepSeekStream(res, encoder, model.name, model.id, () => {})
 
-        try {
-          while (true) {
-            const { done, value } = await reader.read()
-            if (done) break
-            buffer += decoder.decode(value, { stream: true })
-            const lines = buffer.split('\n')
-            buffer = lines.pop() || ''
-            for (const line of lines) {
-              const trimmed = line.trim()
-              if (!trimmed.startsWith('data: ')) continue
-              const data = trimmed.slice(6)
-              if (data === '[DONE]') continue
-              let parsed: any
-              try { parsed = JSON.parse(data) } catch { continue }
-              controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'chunk', choices: parsed?.choices, model: model.name })}\n\n`))
-            }
-          }
-        } catch (e) { console.error('Guest stream read error:', e) }
-        controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'done', code: 'OK', model: model.name })}\n\n`))
-        controller.close()
-      }
-    })
-
-    return new Response(relayStream, {
-      headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive' },
-    })
+    return new Response(sseStream, { headers: sseHeaders() })
   } catch (e) {
-    console.error('Guest AI error:', e)
-    const stream = new ReadableStream({
-      start(ctrl) {
-        ctrl.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'error', code: 'INTERNAL', reply: 'Erro interno.' })}\n\n`))
-        ctrl.close()
-      }
-    })
-    return new Response(stream, { headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive' } })
+    console.error('[Stream] Guest error:', e)
+    return streamError(encoder, 'INTERNAL', 'Erro interno.')
   }
 }
 
 export async function POST(request: NextRequest) {
+  const encoder = new TextEncoder()
+
   try {
     const user = await getSessionUser(request)
 
-    // Usuario nao logado: responde como convidado, sem acesso a dados privados
     if (!user) {
       return responderComoConvidado(request)
     }
@@ -216,9 +304,12 @@ export async function POST(request: NextRequest) {
       files?: { name: string; type: string; content: string }[]
     }
 
-    if (!messages?.length) return new Response(JSON.stringify({ error: 'Mensagens obrigatorias' }), { status: 400, headers: { 'Content-Type': 'application/json' } })
+    if (!messages?.length) {
+      return new Response(JSON.stringify({ error: 'Mensagens obrigatorias' }), {
+        status: 400, headers: { 'Content-Type': 'application/json' },
+      })
+    }
 
-    // Auto-cria conversa se nao foi fornecida
     let convId = conversationId || ''
     if (!convId) {
       try {
@@ -231,14 +322,7 @@ export async function POST(request: NextRequest) {
 
     const apiKey = process.env.DEEPSEEK_API_KEY
     if (!apiKey) {
-      const encoder = new TextEncoder()
-      const stream = new ReadableStream({
-        start(ctrl) {
-          ctrl.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'error', code: 'NO_KEY', reply: 'Chave de API nao configurada.' })}\n\n`))
-          ctrl.close()
-        }
-      })
-      return new Response(stream, { headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive' } })
+      return streamError(encoder, 'NO_KEY', 'Chave de API nao configurada.')
     }
 
     const model = models[modelKey as keyof typeof models] || models['metrys-pro']
@@ -255,18 +339,22 @@ export async function POST(request: NextRequest) {
     } catch {}
     if (isAdmin) {
       try {
-        const uc = await prisma.user.count(); const pc = await prisma.project.count({ where: { status: { notIn: ['COMPLETED', 'CANCELLED'] } } })
+        const uc = await prisma.user.count()
+        const pc = await prisma.project.count({ where: { status: { notIn: ['COMPLETED', 'CANCELLED'] } } })
         sp += `\nStats: ${uc} usuarios, ${pc} projetos ativos.`
       } catch {}
     }
     if (projectId) {
       try {
-        const p = await prisma.project.findUnique({ where: { id: projectId }, select: { name: true, status: true, progress: true, type: true, description: true, deadline: true, budget: true, client: { select: { name: true } } } })
-        if (p) sp += `\nProjeto: ${p.name} [${p.status}] ${p.progress}% | ${p.client?.name || ''} | ${p.deadline ? 'Prazo: '+new Date(p.deadline).toLocaleDateString('pt-BR') : ''}`
+        const p = await prisma.project.findUnique({
+          where: { id: projectId },
+          select: { name: true, status: true, progress: true, type: true, description: true, deadline: true, budget: true, client: { select: { name: true } } },
+        })
+        if (p) sp += `\nProjeto: ${p.name} [${p.status}] ${p.progress}% | ${p.client?.name || ''} | ${p.deadline ? 'Prazo: ' + new Date(p.deadline).toLocaleDateString('pt-BR') : ''}`
       } catch {}
     }
     if (files?.length) {
-      sp += '\nArquivos: ' + files.map(f => `${f.name}: ${(f.content||'').slice(0, 1500)}`).join('\n')
+      sp += '\nArquivos: ' + files.map(f => `${f.name}: ${(f.content || '').slice(0, 1500)}`).join('\n')
     }
 
     const cm: any[] = [{ role: 'system', content: sp }]
@@ -286,90 +374,24 @@ export async function POST(request: NextRequest) {
       stream: true,
     }
 
-    const res = await fetch(API_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
-      body: JSON.stringify(bodyParams),
-    })
+    const res = await fetchWithRetry(apiKey, bodyParams)
 
     if (!res.ok) {
-      const status = res.status
-      const msg = status === 401 ? 'Erro de autenticacao. Verifique a chave API.' :
-                  status === 402 ? 'Saldo insuficiente na API.' :
-                  status === 429 ? 'Muitas requisicoes. Aguarde.' :
-                  status >= 500 ? 'Servidor ocupado. Tente novamente.' :
-                  `Erro ${status} ao processar.`
-      const encoder = new TextEncoder()
-      const stream = new ReadableStream({
-        start(ctrl) {
-          ctrl.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'error', code: `DS_${status}`, reply: msg })}\n\n`))
-          ctrl.close()
-        }
-      })
-      return new Response(stream, { headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive' } })
+      return streamError(encoder, `DS_${res.status}`, getErrorMessage(res.status))
     }
 
-    const encoder = new TextEncoder()
     const lastMsg = messages[messages.length - 1]
     const lastText = typeof lastMsg?.content === 'string' ? lastMsg.content : '(imagem)'
-    let fullContent = ''
-    let fullReasoning = ''
 
-    const stream = new ReadableStream({
-      async start(controller) {
-        const reader = res.body!.getReader()
-        const decoder = new TextDecoder()
-        let buffer = ''
-
-        try {
-          while (true) {
-            const { done, value } = await reader.read()
-            if (done) break
-
-            buffer += decoder.decode(value, { stream: true })
-            const lines = buffer.split('\n')
-            buffer = lines.pop() || ''
-
-            for (const line of lines) {
-              const trimmed = line.trim()
-              if (!trimmed.startsWith('data: ')) continue
-              const data = trimmed.slice(6)
-              if (data === '[DONE]') continue
-
-              let parsed: any
-              try { parsed = JSON.parse(data) } catch { continue }
-
-              const delta = parsed?.choices?.[0]?.delta
-              if (delta?.content) fullContent += delta.content
-              if (delta?.reasoning_content) fullReasoning += delta.reasoning_content
-
-              controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'chunk', choices: parsed?.choices, model: model.name })}\n\n`))
-            }
-          }
-        } catch (e) {
-          console.error('Stream read error:', e)
-        }
-
-        if (convId && (fullContent || fullReasoning)) {
-          await saveToDb(convId, lastText, fullContent, fullReasoning)
-        }
-        controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'done', code: 'OK', model: model.name, conversationId: convId })}\n\n`))
-        controller.close()
+    const sseStream = relayDeepSeekStream(res, encoder, model.name, model.id, (fullContent, fullReasoning) => {
+      if (convId && (fullContent || fullReasoning)) {
+        saveToDb(convId, lastText, fullContent, fullReasoning)
       }
     })
 
-    return new Response(stream, {
-      headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive' },
-    })
+    return new Response(sseStream, { headers: sseHeaders() })
   } catch (e) {
-    console.error('AI stream error:', e)
-    const encoder = new TextEncoder()
-    const stream = new ReadableStream({
-      start(ctrl) {
-        ctrl.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'error', code: 'INTERNAL', reply: 'Erro interno.' })}\n\n`))
-        ctrl.close()
-      }
-    })
-    return new Response(stream, { headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive' } })
+    console.error('[Stream] Fatal error:', e)
+    return streamError(encoder, 'INTERNAL', 'Erro interno.')
   }
 }

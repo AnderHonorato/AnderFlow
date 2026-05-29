@@ -3,7 +3,16 @@ import { prisma } from '@/lib/prisma'
 import { getSessionUser, isAdmin } from '@/lib/auth-utils'
 import { chatJson } from '@/lib/deepseek'
 import { getSystemPrompt } from '@/lib/ai-system-prompts'
-import type { ChatMessage } from '@/lib/deepseek'
+import type { ChatMessage, ChatResult } from '@/lib/deepseek'
+
+interface CRMInsightData {
+  leads_quentes: Array<{ nome: string; score: number; probabilidade_conversao: number; acao_recomendada: string }>
+  leads_esfriando: Array<{ nome: string; dias_sem_contato: number; acao_recomendada: string }>
+  metricas_pipeline: { valor_total: number; ticket_medio: number; taxa_conversao_estimada: number }
+  tempo_medio_estagio: string
+  acoes_prioritarias: string[]
+  insight_resumo: string
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -96,8 +105,8 @@ ANALISE e retorne EXATAMENTE um JSON com os campos abaixo. Inclua a palavra "jso
       { role: 'user', content: userPrompt },
     ]
 
-    const { data } = await chatJson(messages, { maxTokens: 1500, thinking: true, model: process.env.DEEPSEEK_MODEL })
-    return NextResponse.json(data)
+    const { data, reasoning } = await chatJson<CRMInsightData>(messages, { maxTokens: 1500, thinking: true, model: process.env.DEEPSEEK_MODEL })
+    return NextResponse.json({ ...data, reasoning } as unknown as Record<string, unknown>)
   } catch (error: any) {
     console.error('[crm-insights]', error)
     return NextResponse.json({ error: error?.message || 'Erro ao gerar insights CRM' }, { status: 500 })
