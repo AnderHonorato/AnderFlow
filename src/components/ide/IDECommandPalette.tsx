@@ -6,9 +6,9 @@ import {
   FilePlus, File as FileIcon, FolderOpen, Save, SaveAll, RefreshCw,
   Bot, Settings, AlertCircle, GitCommit, Plus, Download, Code2
 } from 'lucide-react'
+import { getIDEHeaders } from '@/lib/ide-workspace'
 
 const IDE_SERVER_URL = process.env.NEXT_PUBLIC_IDE_SERVER_URL || 'http://localhost:3002'
-const IDE_KEY = process.env.NEXT_PUBLIC_IDE_KEY || 'anderflow-ide-dev-key'
 
 interface CommandItem {
   id: string
@@ -128,7 +128,7 @@ export function IDECommandPalette({
     try {
       const params = new URLSearchParams({ query: q })
       const res = await fetch(`${IDE_SERVER_URL}/files/search?${params}`, {
-        headers: { 'X-IDE-Key': IDE_KEY },
+        headers: getIDEHeaders(),
         signal: AbortSignal.timeout(5000)
       })
       const data = await res.json()
@@ -145,7 +145,7 @@ export function IDECommandPalette({
     try {
       const params = new URLSearchParams({ path: activeFilePath })
       const res = await fetch(`${IDE_SERVER_URL}/lsp/symbols?${params}`, {
-        headers: { 'X-IDE-Key': IDE_KEY },
+        headers: getIDEHeaders(),
         signal: AbortSignal.timeout(5000)
       })
       const data = await res.json()
@@ -164,7 +164,7 @@ export function IDECommandPalette({
   const fetchSessions = useCallback(async () => {
     try {
       const res = await fetch(`${IDE_SERVER_URL}/sessions/list`, {
-        headers: { 'X-IDE-Key': IDE_KEY },
+        headers: getIDEHeaders(),
         signal: AbortSignal.timeout(5000)
       })
       const data = await res.json()

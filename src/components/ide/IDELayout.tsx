@@ -11,7 +11,10 @@ import { IDETerminal } from './IDETerminal'
 import { IDEBottomBar } from './IDEBottomBar'
 import { IDECommandPalette } from './IDECommandPalette'
 import { IDESettings, loadSettings, DEFAULTS as DEFAULT_SETTINGS } from './IDESettings'
+import { getIDEHeaders } from '@/lib/ide-workspace'
 import type { Tab, FileContent, GitStats, Diagnostic, AIMode } from './ide-types'
+
+const IDE_SERVER_URL = process.env.NEXT_PUBLIC_IDE_SERVER_URL || 'http://localhost:3002'
 
 const LS_KEYS = {
   openFiles: 'ide_open_files',
@@ -53,12 +56,12 @@ function buildGridStyle(
 
   return {
     display: 'grid',
-    gridTemplateRows: '28px 1fr 0px 28px',
+    gridTemplateRows: `28px 1fr ${terminalRow} 28px`,
     gridTemplateColumns: `${sidebarCol} 4px 1fr 4px ${chatCol}`,
     gridTemplateAreas: `
       "statusbar statusbar statusbar statusbar statusbar"
       "sidebar   sb-resize editor    ch-resize chat"
-      "sidebar   sb-resize terminal  ch-resize terminal"
+      "sidebar   sb-resize terminal  ch-resize ."
       "bottombar bottombar bottombar bottombar bottombar"
     `,
   }
@@ -115,6 +118,23 @@ export function IDELayout({ onClose }: IDELayoutProps) {
   }, [])
 
   const [settings, setSettingsState] = useState(DEFAULT_SETTINGS)
+
+  const fetchDiagnostics = useCallback(async () => {
+    try {
+      const res = await fetch(`${IDE_SERVER_URL}/lsp/diagnostics`, {
+        headers: getIDEHeaders()
+      })
+      if (!res.ok) return
+      const data = await res.json()
+      setDiagnostics(data.diagnostics || [])
+    } catch { /* ignore */ }
+  }, [])
+
+  useEffect(() => {
+    if (activeFile) {
+      fetchDiagnostics()
+    }
+  }, [activeFile?.path, fetchDiagnostics])
 
   const handleTabSelect = useCallback((tabId: string) => {
     setActiveTabId(tabId)
@@ -294,6 +314,8 @@ export function IDELayout({ onClose }: IDELayoutProps) {
           onToggle={() => setChatOpen(false)}
           activeFilePath={activeFile?.path}
           activeFileContent={activeFile?.content}
+          onModeChange={(m) => { setCurrentMode(m) }}
+          onTokenUpdate={(t) => { setTokenCount(t) }}
         />
       )}
 

@@ -202,11 +202,11 @@ Regras:
 - Nao adicione comentarios a menos que sejam essenciais`
 }
 
-async function fetchProjectContext(): Promise<string | null> {
+async function fetchProjectContext(workspaceRoot?: string): Promise<string | null> {
   try {
-    const res = await fetch(`${IDE_SERVER_URL}/context/project`, {
-      headers: { 'X-IDE-Key': IDE_KEY }
-    })
+    const headers: Record<string, string> = { 'X-IDE-Key': IDE_KEY }
+    if (workspaceRoot) headers['X-IDE-Workspace'] = workspaceRoot
+    const res = await fetch(`${IDE_SERVER_URL}/context/project`, { headers })
     if (!res.ok) return null
     const data = await res.json()
     return JSON.stringify(data, null, 2)
@@ -218,12 +218,14 @@ async function fetchProjectContext(): Promise<string | null> {
 async function executeTool(
   name: string,
   input: Record<string, unknown>,
-  operationId: string | undefined
+  operationId: string | undefined,
+  workspaceRoot?: string
 ): Promise<unknown> {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     'X-IDE-Key': IDE_KEY
   }
+  if (workspaceRoot) headers['X-IDE-Workspace'] = workspaceRoot
   if (operationId) {
     headers['X-Checkpoint-Operation-Id'] = operationId
     headers['X-Checkpoint-Name'] = name
@@ -417,12 +419,14 @@ export async function POST(request: NextRequest) {
       messages: inputMessages = [],
       sessionId,
       mode = 'programmer',
-      model = 'deepseek-v4-flash'
+      model = 'deepseek-v4-flash',
+      workspaceRoot
     } = body as {
       messages: { role: string; content: string | unknown }[]
       sessionId?: string
       mode?: 'programmer' | 'agent' | 'explain' | 'review' | 'normal'
       model?: string
+      workspaceRoot?: string
     }
 
     if (!inputMessages.length) {
@@ -432,7 +436,7 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    const projectContext = await fetchProjectContext()
+    const projectContext = await fetchProjectContext(workspaceRoot)
     const systemPrompt = buildSystemPrompt(projectContext)
 
     const operationId = sessionId || `session_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
@@ -613,7 +617,7 @@ export async function POST(request: NextRequest) {
 
                 let toolResult: unknown
                 try {
-                  toolResult = await executeTool(currentToolName, toolInput, operationId)
+                  toolResult = await executeTool(currentToolName, toolInput, operationId, workspaceRoot)
                 } catch (err: any) {
                   toolResult = { error: err.message }
                 }

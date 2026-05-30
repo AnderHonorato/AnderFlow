@@ -1,13 +1,45 @@
 "use client"
 
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { RefreshCw, EyeOff, Search, FilePlus, FolderPlus, Trash2, Terminal, Copy, Pencil } from 'lucide-react'
+import { RefreshCw, EyeOff, Search, FilePlus, FolderPlus, Trash2, Terminal, Copy, Pencil, FolderOpen, Check, Plus, X } from 'lucide-react'
 import type { Diagnostic } from './ide-types'
+import { setWorkspaceRoot, getIDEHeaders } from '@/lib/ide-workspace'
 
 const IDE_SERVER_URL = process.env.NEXT_PUBLIC_IDE_SERVER_URL || 'http://localhost:3002'
 const IDE_KEY = process.env.NEXT_PUBLIC_IDE_KEY || 'anderflow-ide-dev-key'
 
 const SKIP_DIRS = new Set(['node_modules', '.git', '.next', 'dist', 'build', '.turbo', '.ide-trash'])
+
+interface Workspace {
+  id: string
+  name: string
+  rootPath: string
+}
+
+const WS_KEY = 'ide_workspaces'
+const WS_ACTIVE_KEY = 'ide_active_workspace_id'
+
+function loadWorkspaces(): Workspace[] {
+  try {
+    const raw = localStorage.getItem(WS_KEY)
+    return raw ? JSON.parse(raw) : []
+  } catch { return [] }
+}
+
+function saveWorkspaces(workspaces: Workspace[]) {
+  try { localStorage.setItem(WS_KEY, JSON.stringify(workspaces)) } catch { /* ignore */ }
+}
+
+function loadActiveWorkspaceId(): string | null {
+  try { return localStorage.getItem(WS_ACTIVE_KEY) } catch { return null }
+}
+
+function saveActiveWorkspaceId(id: string | null) {
+  try {
+    if (id) localStorage.setItem(WS_ACTIVE_KEY, id)
+    else localStorage.removeItem(WS_ACTIVE_KEY)
+  } catch { /* ignore */ }
+}
 
 interface FileNode {
   name: string
@@ -99,7 +131,17 @@ export function IDEFileExplorer({ onOpenFile, activeFilePath, diagnostics }: IDE
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null)
   const searchRef = useRef<HTMLInputElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
+  const workspaceDropdownRef = useRef<HTMLDivElement>(null)
   const gitStatusRef = useRef<Map<string, string>>(new Map())
+
+  const [workspaces, setWorkspaces] = useState<Workspace[]>(loadWorkspaces)
+  const [activeWorkspaceId, setActiveWorkspaceId] = useState<string | null>(loadActiveWorkspaceId)
+  const [showWorkspaceDropdown, setShowWorkspaceDropdown] = useState(false)
+  const [showNewWorkspace, setShowNewWorkspace] = useState(false)
+  const [newWorkspacePath, setNewWorkspacePath] = useState('')
+  const [newWorkspaceName, setNewWorkspaceName] = useState('')
+
+  const activeWorkspace = workspaces.find(w => w.id === activeWorkspaceId) || null
 
   const diagMap = flatDiagnosticsMap(diagnostics)
 
@@ -121,7 +163,7 @@ export function IDEFileExplorer({ onOpenFile, activeFilePath, diagnostics }: IDE
   const fetchGitStatus = useCallback(async () => {
     try {
       const res = await fetch(`${IDE_SERVER_URL}/git/status`, {
-        headers: { 'X-IDE-Key': IDE_KEY }
+        headers: getIDEHeaders()
       })
       if (!res.ok) return
       const data = await res.json()
@@ -144,11 +186,15 @@ export function IDEFileExplorer({ onOpenFile, activeFilePath, diagnostics }: IDE
   }, [])
 
   const fetchTree = useCallback(async () => {
+    if (!activeWorkspaceId || !activeWorkspace) return
     setLoading(true)
     try {
+      const root = activeWorkspace?.rootPath
+      const params = new URLSearchParams({ path: '.' })
+      if (root) params.set('root', root)
       const [treeRes] = await Promise.all([
-        fetch(`${IDE_SERVER_URL}/files/list?path=.`, {
-          headers: { 'X-IDE-Key': IDE_KEY }
+        fetch(`${IDE_SERVER_URL}/files/list?${params}`, {
+          headers: getIDEHeaders()
         }),
         fetchGitStatus()
       ])
@@ -178,12 +224,13 @@ export function IDEFileExplorer({ onOpenFile, activeFilePath, diagnostics }: IDE
       setTree(nodes)
     } catch { /* ignore */ }
     setLoading(false)
-  }, [fetchGitStatus, mergeGitStatus])
+  }, [activeWorkspaceId, fetchGitStatus, mergeGitStatus])
 
   useEffect(() => {
-    fetchTree()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+    if (activeWorkspaceId) {
+      fetchTree()
+    }
+  }, [activeWorkspaceId, fetchTree])
 
   useEffect(() => {
     if (showSearch && searchRef.current) {
@@ -192,10 +239,81 @@ export function IDEFileExplorer({ onOpenFile, activeFilePath, diagnostics }: IDE
   }, [showSearch])
 
   useEffect(() => {
-    const handleClickOutside = () => setContextMenu(null)
+    const handleClickOutside = (e: MouseEvent) => {
+      if (workspaceDropdownRef.current && !workspaceDropdownRef.current.contains(e.target as Node)) {
+        setShowWorkspaceDropdown(false)
+      }
+      setContextMenu(null)
+    }
     document.addEventListener('click', handleClickOutside)
     return () => document.removeEventListener('click', handleClickOutside)
   }, [])
+
+  useEffect(() => {
+    saveWorkspaces(workspaces)
+  }, [workspaces])
+
+  useEffect(() => {
+    saveActiveWorkspaceId(activeWorkspaceId)
+    setWorkspaceRoot(activeWorkspace?.rootPath || null)
+  }, [activeWorkspaceId, activeWorkspace])
+
+  const handleSelectWorkspace = (ws: Workspace) => {
+    setActiveWorkspaceId(ws.id)
+    setShowWorkspaceDropdown(false)
+  }
+
+  const handleCreateWorkspace = () => {
+    const path = newWorkspacePath.trim()
+    const name = newWorkspaceName.trim() || path.split(/[\\/]/).pop() || path
+    if (!path) return
+    const id = `ws_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`
+    const ws: Workspace = { id, name, rootPath: path }
+    const next = [...workspaces, ws]
+    setWorkspaces(next)
+    setActiveWorkspaceId(id)
+    setShowNewWorkspace(false)
+    setNewWorkspacePath('')
+    setNewWorkspaceName('')
+    setShowWorkspaceDropdown(false)
+  }
+
+  const handleDeleteWorkspace = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+    const next = workspaces.filter(w => w.id !== id)
+    setWorkspaces(next)
+    if (activeWorkspaceId === id) {
+      const newActive = next.length > 0 ? next[0].id : null
+      setActiveWorkspaceId(newActive)
+      if (!newActive) {
+        setTree([])
+        setLoading(false)
+      }
+    }
+    setShowWorkspaceDropdown(false)
+  }
+
+  const handleBrowseFolder = async () => {
+    try {
+      if ('showDirectoryPicker' in window) {
+        const dirHandle = await (window as any).showDirectoryPicker({ mode: 'read' })
+        const name = dirHandle.name
+        setNewWorkspaceName(name)
+        if (!newWorkspacePath) {
+          setNewWorkspacePath(name)
+        }
+      }
+    } catch (err: any) {
+      if (err?.name === 'AbortError') return
+    }
+  }
+
+  const handleCloseWorkspace = () => {
+    setActiveWorkspaceId(null)
+    setTree([])
+    setLoading(false)
+    setShowWorkspaceDropdown(false)
+  }
 
   const toggleFolder = (nodePath: string) => {
     setExpanded(prev => ({ ...prev, [nodePath]: !prev[nodePath] }))
@@ -221,7 +339,7 @@ export function IDEFileExplorer({ onOpenFile, activeFilePath, diagnostics }: IDE
     try {
       await fetch(`${IDE_SERVER_URL}/files/create`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-IDE-Key': IDE_KEY },
+        headers: getIDEHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ path: `${parentNode.path}/${name}`, type: 'file' })
       })
       fetchTree()
@@ -234,7 +352,7 @@ export function IDEFileExplorer({ onOpenFile, activeFilePath, diagnostics }: IDE
     try {
       await fetch(`${IDE_SERVER_URL}/files/create`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-IDE-Key': IDE_KEY },
+        headers: getIDEHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ path: `${parentNode.path}/${name}`, type: 'dir' })
       })
       fetchTree()
@@ -246,7 +364,7 @@ export function IDEFileExplorer({ onOpenFile, activeFilePath, diagnostics }: IDE
     try {
       await fetch(`${IDE_SERVER_URL}/files/delete`, {
         method: 'DELETE',
-        headers: { 'Content-Type': 'application/json', 'X-IDE-Key': IDE_KEY },
+        headers: getIDEHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ path: node.path })
       })
       fetchTree()
@@ -259,7 +377,7 @@ export function IDEFileExplorer({ onOpenFile, activeFilePath, diagnostics }: IDE
     try {
       await fetch(`${IDE_SERVER_URL}/files/rename`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-IDE-Key': IDE_KEY },
+        headers: getIDEHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ path: node.path, newName })
       })
       fetchTree()
@@ -269,6 +387,17 @@ export function IDEFileExplorer({ onOpenFile, activeFilePath, diagnostics }: IDE
   const handleCopyPath = (node: FileNode) => {
     navigator.clipboard.writeText(node.path).catch(() => {})
     setContextMenu(null)
+  }
+
+  const countVisibleChildren = (nodes: FileNode[]): number => {
+    let count = 0
+    for (const n of nodes) {
+      count += 1
+      if (n.type === 'directory' && expanded[n.path] && n.children) {
+        count += countVisibleChildren(n.children)
+      }
+    }
+    return count
   }
 
   const renderNode = (node: FileNode, depth: number) => {
@@ -341,7 +470,7 @@ export function IDEFileExplorer({ onOpenFile, activeFilePath, diagnostics }: IDE
           <div
             className="overflow-hidden"
             style={{
-              maxHeight: isExpanded ? `${(node.children.length + 1) * 24}px` : '0px',
+              maxHeight: isExpanded ? `${countVisibleChildren(node.children) * 24}px` : '0px',
               transition: 'max-height 0.2s ease-in-out'
             }}
           >
@@ -355,14 +484,81 @@ export function IDEFileExplorer({ onOpenFile, activeFilePath, diagnostics }: IDE
   return (
     <div
       ref={containerRef}
-      className="flex flex-col overflow-hidden border-r border-[#30363d]"
+      className="flex flex-col overflow-hidden border-r border-[#30363d] relative"
       style={{ gridArea: 'sidebar', background: '#0d1117' }}
     >
       <div
         className="flex items-center gap-2 px-3 shrink-0 border-b border-[#21262d]"
         style={{ height: '35px', background: '#161b22' }}
       >
-        <span className="text-[10px] font-medium text-[#8b949e] uppercase tracking-wider">Explorador</span>
+        <div className="relative" ref={workspaceDropdownRef}>
+          <button
+            onClick={() => setShowWorkspaceDropdown(!showWorkspaceDropdown)}
+            className="flex items-center gap-1.5 text-[11px] text-[#e6edf3] hover:text-white px-1.5 py-0.5 rounded hover:bg-[#21262d] max-w-[160px]"
+            title={activeWorkspace?.rootPath || 'Selecionar espaço de trabalho'}
+          >
+            <FolderOpen className="w-3.5 h-3.5 shrink-0 text-[#8b949e]" />
+            <span className="truncate">{activeWorkspace?.name || 'Espaços de Trabalho'}</span>
+            <svg viewBox="0 0 16 16" className="w-2.5 h-2.5 shrink-0 text-[#8b949e]" fill="currentColor"><path d="M8 10L3 5h10L8 10z"/></svg>
+          </button>
+
+          {showWorkspaceDropdown && (
+            <div className="absolute top-full left-0 mt-1 w-64 bg-[#161b22] border border-[#30363d] rounded-lg shadow-xl z-50 py-1">
+              {workspaces.map(ws => (
+                <button
+                  key={ws.id}
+                  onClick={() => handleSelectWorkspace(ws)}
+                  className={`flex items-center gap-2 w-full px-3 py-1.5 text-left text-[12px] group ${
+                    ws.id === activeWorkspaceId
+                      ? 'bg-[#1f6feb]/20 text-[#58a6ff]'
+                      : 'text-[#e6edf3] hover:bg-[#1c2128]'
+                  }`}
+                >
+                  <FolderOpen className="w-3.5 h-3.5 shrink-0 text-[#8b949e]" />
+                  <div className="flex-1 min-w-0">
+                    <div className="truncate">{ws.name}</div>
+                    <div className="text-[9px] text-[#484f58] truncate">{ws.rootPath}</div>
+                  </div>
+                  {ws.id === activeWorkspaceId && (
+                    <Check className="w-3.5 h-3.5 shrink-0 text-[#58a6ff]" />
+                  )}
+                  <span
+                    onClick={(e) => handleDeleteWorkspace(ws.id, e)}
+                    className="p-0.5 rounded hover:bg-[#30363d] opacity-0 group-hover:opacity-100 text-[#8b949e] hover:text-red-400 shrink-0 cursor-pointer"
+                    title="Remover"
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => { if (e.key === 'Enter') handleDeleteWorkspace(ws.id, e as any) }}
+                  >
+                    <X className="w-3 h-3" />
+                  </span>
+                </button>
+              ))}
+
+              {activeWorkspaceId && (
+                <button
+                  onClick={handleCloseWorkspace}
+                  className="flex items-center gap-2 w-full px-3 py-1.5 text-left text-[12px] text-[#8b949e] hover:bg-[#1c2128] hover:text-[#e6edf3]"
+                >
+                  <X className="w-3.5 h-3.5" />
+                  Fechar Espaço de Trabalho
+                </button>
+              )}
+              {workspaces.length > 0 && (
+                <div className="my-1 border-t border-[#21262d]" />
+              )}
+
+              <button
+                onClick={() => { setShowNewWorkspace(true); setShowWorkspaceDropdown(false) }}
+                className="flex items-center gap-2 w-full px-3 py-1.5 text-left text-[12px] text-[#8b949e] hover:bg-[#1c2128] hover:text-[#e6edf3]"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                Novo Espaço de Trabalho
+              </button>
+            </div>
+          )}
+        </div>
+
         <div className="flex-1" />
         {showSearch && (
           <input
@@ -397,7 +593,20 @@ export function IDEFileExplorer({ onOpenFile, activeFilePath, diagnostics }: IDE
       </div>
 
       <div className="flex-1 overflow-y-auto scrollbar-thin py-1">
-        {loading && tree.length === 0 ? (
+        {!activeWorkspaceId ? (
+          <div className="flex flex-col items-center justify-center h-full text-center px-4 py-10">
+            <FolderOpen className="w-8 h-8 text-[#30363d] mb-3" />
+            <p className="text-[12px] text-[#8b949e] mb-1">Nenhum espaço de trabalho</p>
+            <p className="text-[10px] text-[#484f58] mb-3">Abra uma pasta para começar</p>
+            <button
+              onClick={() => setShowNewWorkspace(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-[#1f6feb] text-white text-[11px] hover:bg-[#1f6feb]/80 transition-colors"
+            >
+              <FolderOpen className="w-3.5 h-3.5" />
+              Abrir Pasta
+            </button>
+          </div>
+        ) : loading && tree.length === 0 ? (
           <p className="text-[11px] text-[#484f58] text-center py-6">Carregando...</p>
         ) : visibleTree.length === 0 ? (
           <p className="text-[11px] text-[#484f58] text-center py-6">
@@ -407,6 +616,74 @@ export function IDEFileExplorer({ onOpenFile, activeFilePath, diagnostics }: IDE
           visibleTree.map(node => renderNode(node, 0))
         )}
       </div>
+
+      {showNewWorkspace && (
+        <div className="absolute inset-0 z-[210] flex items-start justify-center pt-16 bg-black/60 backdrop-blur-sm">
+          <div
+            className="bg-[#161b22] border border-[#30363d] rounded-xl shadow-2xl w-[420px] max-w-[90vw] overflow-hidden"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-4 py-3 border-b border-[#21262d]">
+              <span className="text-[13px] font-medium text-[#e6edf3]">Novo Espaço de Trabalho</span>
+              <button
+                onClick={() => { setShowNewWorkspace(false); setNewWorkspacePath(''); setNewWorkspaceName('') }}
+                className="text-[#8b949e] hover:text-[#e6edf3]"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="p-4 space-y-3">
+              <div>
+                <label className="text-[11px] text-[#8b949e] block mb-1">Caminho da pasta do projeto</label>
+                <div className="flex gap-2">
+                  <input
+                    value={newWorkspacePath}
+                    onChange={(e) => setNewWorkspacePath(e.target.value)}
+                    placeholder="Ex: C:\Projetos\meu-app"
+                    className="flex-1 bg-[#0d1117] border border-[#30363d] rounded px-3 py-2 text-[12px] text-[#e6edf3] placeholder-[#484f58] outline-none focus:border-[#1f6feb]"
+                    autoFocus
+                    onKeyDown={(e) => { if (e.key === 'Enter') handleCreateWorkspace() }}
+                  />
+                  {'showDirectoryPicker' in window && (
+                    <button
+                      onClick={handleBrowseFolder}
+                      className="flex items-center gap-1.5 px-3 py-2 rounded bg-[#21262d] text-[#e6edf3] text-[12px] hover:bg-[#30363d] border border-[#30363d] shrink-0"
+                    >
+                      <FolderOpen className="w-3.5 h-3.5 text-[#58a6ff]" />
+                      Procurar
+                    </button>
+                  )}
+                </div>
+              </div>
+              <div>
+                <label className="text-[11px] text-[#8b949e] block mb-1">Nome (opcional)</label>
+                <input
+                  value={newWorkspaceName}
+                  onChange={(e) => setNewWorkspaceName(e.target.value)}
+                  placeholder="Nome para identificar o projeto"
+                  className="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-2 text-[12px] text-[#e6edf3] placeholder-[#484f58] outline-none focus:border-[#1f6feb]"
+                  onKeyDown={(e) => { if (e.key === 'Enter') handleCreateWorkspace() }}
+                />
+              </div>
+            </div>
+            <div className="flex items-center justify-end gap-2 px-4 py-3 border-t border-[#21262d]">
+              <button
+                onClick={() => { setShowNewWorkspace(false); setNewWorkspacePath(''); setNewWorkspaceName('') }}
+                className="px-3 py-1.5 rounded text-[12px] text-[#8b949e] hover:bg-[#21262d]"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleCreateWorkspace}
+                disabled={!newWorkspacePath.trim()}
+                className="px-4 py-1.5 rounded bg-[#1f6feb] text-white text-[12px] hover:bg-[#1f6feb]/80 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                Abrir
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {contextMenu && (
         <div

@@ -3,9 +3,9 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { XCircle, Copy, Wand2, Pencil, Save, X, GitCompare, Eye, PanelLeftOpen } from 'lucide-react'
 import type { Tab, FileContent, Diagnostic } from './ide-types'
+import { getIDEHeaders } from '@/lib/ide-workspace'
 
 const IDE_SERVER_URL = process.env.NEXT_PUBLIC_IDE_SERVER_URL || 'http://localhost:3002'
-const IDE_KEY = process.env.NEXT_PUBLIC_IDE_KEY || 'anderflow-ide-dev-key'
 
 interface IDEEditorProps {
   openFiles: Tab[]
@@ -148,6 +148,21 @@ export function IDEEditor({
   const activeTab = openFiles.find(t => t.id === activeTabId)
 
   useEffect(() => {
+    if (!activeTab || activeTab.content) return
+    const loadContent = async () => {
+      try {
+        const res = await fetch(`${IDE_SERVER_URL}/files/read?path=${encodeURIComponent(activeTab.path)}`, {
+          headers: getIDEHeaders()
+        })
+        if (!res.ok) return
+        const data = await res.json()
+        onUpdateTab(activeTab.id, { content: data.content, language: data.language, isDirty: false })
+      } catch { /* ignore */ }
+    }
+    loadContent()
+  }, [activeTab?.id])
+
+  useEffect(() => {
     if (isEditing && textareaRef.current) {
       textareaRef.current.focus()
     }
@@ -176,7 +191,7 @@ export function IDEEditor({
     try {
       await fetch(`${IDE_SERVER_URL}/files/write`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-IDE-Key': IDE_KEY },
+        headers: getIDEHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ path: activeFile.path, content: editContent })
       })
       onUpdateTab(activeTab.id, { content: editContent, isDirty: false })
@@ -354,60 +369,6 @@ export function IDEEditor({
             </div>
           ))
         )}
-      </div>
-    )
-  }
-
-  const renderWelcome = () => (
-    <div className="flex flex-col items-center justify-center h-full text-[#484f58] gap-4">
-      <span className="text-[11px] font-mono text-[#58a6ff] tracking-wider">ANDERFLOW IDE</span>
-      <span className="text-sm">v1.0.0</span>
-      <div className="flex flex-col items-center gap-1">
-        <p className="text-[12px]">Pressione <kbd className="px-1.5 py-0.5 rounded bg-[#161b22] border border-[#30363d] text-[11px] text-[#e6edf3]">Ctrl+P</kbd> para buscar arquivos</p>
-      </div>
-      <div className="flex flex-col gap-1 mt-4 text-[11px] text-[#8b949e]">
-        <span>Ctrl+S — Salvar</span>
-        <span>Ctrl+Shift+P — Paleta de comandos</span>
-        <span>Ctrl+E — Foco explorer</span>
-      </div>
-    </div>
-  )
-
-  const isMdPreview = activeFile && (activeFile.path.endsWith('.md') || activeFile.path.endsWith('.MD'))
-
-  return (
-    <div className="flex flex-col overflow-hidden" style={{ gridArea: 'editor' }}>
-      <div
-        ref={tabsScrollRef}
-        className="flex items-center shrink-0 border-b border-[#21262d] bg-[#161b22] overflow-x-auto scrollbar-none"
-        style={{ height: '32px' }}
-      >
-        {openFiles.map(tab => {
-          const ext = getExt(tab.name)
-          return (
-            <div
-              key={tab.id}
-              onClick={() => onTabSelect(tab.id)}
-              className={`flex items-center gap-1.5 px-3 cursor-pointer border-r border-[#21262d] shrink-0 select-none group h-full ${
-                tab.id === activeTabId
-                  ? 'bg-[#0d1117] text-[#e6edf3] border-t-[1px] border-t-[#1f6feb]'
-                  : 'text-[#8b949e] hover:bg-[#21262d]'
-              }`}
-            >
-              <span className="w-3.5 h-3.5 flex items-center justify-center shrink-0"
-                dangerouslySetInnerHTML={{ __html: getFileIcon(ext) }} />
-              <span className="text-[12px] truncate max-w-[140px]">{tab.name}</span>
-              {tab.isDirty && <span className="text-orange-400 text-[10px] leading-none">●</span>}
-              <button
-                onClick={(e) => { e.stopPropagation(); onTabClose(tab.id) }}
-                className={`p-0.5 rounded hover:bg-[#30363d] ${tab.id === activeTabId ? '' : 'opacity-0 group-hover:opacity-100'}`}
-              >
-                <XCircle className="w-3 h-3" />
-              </button>
-            </div>
-          )
-        })}
-
         <div className="flex-1" />
 
         <button

@@ -8,6 +8,7 @@ import {
 import type { AIMode } from './ide-types'
 import { SlashCommandMenu, SLASH_COMMANDS, type SlashCommand } from './SlashCommandMenu'
 import { IDEAgentMode } from './IDEAgentMode'
+import { getIDEHeaders, getWorkspaceRoot } from '@/lib/ide-workspace'
 import { loadSettings, saveSettings } from './IDESettings'
 
 const MODEL_OPTIONS = [
@@ -23,7 +24,6 @@ const MODEL_OPTIONS = [
 ]
 
 const IDE_SERVER_URL = process.env.NEXT_PUBLIC_IDE_SERVER_URL || 'http://localhost:3002'
-const IDE_KEY = process.env.NEXT_PUBLIC_IDE_KEY || 'anderflow-ide-dev-key'
 
 interface Message {
   id: string
@@ -47,6 +47,8 @@ interface IDEChatProps {
   onToggle: () => void
   activeFileContent?: string
   activeFilePath?: string
+  onModeChange?: (mode: AIMode) => void
+  onTokenUpdate?: (tokens: number) => void
 }
 
 const MODES: { key: AIMode; label: string; icon: string; desc: string; placeholder: string }[] = [
@@ -73,7 +75,7 @@ function simpleMarkdown(text: string): string {
   return html
 }
 
-export function IDEChat({ onToggle, activeFileContent, activeFilePath }: IDEChatProps) {
+export function IDEChat({ onToggle, activeFileContent, activeFilePath, onModeChange, onTokenUpdate }: IDEChatProps) {
   const [mode, setMode] = useState<AIMode>('programmer')
   const [showModeDropdown, setShowModeDropdown] = useState(false)
   const [messages, setMessages] = useState<Message[]>([])
@@ -82,6 +84,8 @@ export function IDEChat({ onToggle, activeFileContent, activeFilePath }: IDEChat
   const [streamingContent, setStreamingContent] = useState('')
   const [showToolLog, setShowToolLog] = useState(false)
   const [showSessions, setShowSessions] = useState(false)
+  const [sessionsList, setSessionsList] = useState<{ id: string; updatedAt: string; messageCount: number }[]>([])
+  const [loadingSessions, setLoadingSessions] = useState(false)
   const [contextFiles, setContextFiles] = useState<{ name: string; content: string }[]>([])
   const [showAutocomplete, setShowAutocomplete] = useState(false)
   const [autocompleteQuery, setAutocompleteQuery] = useState('')
@@ -99,6 +103,7 @@ export function IDEChat({ onToggle, activeFileContent, activeFilePath }: IDEChat
   const modeDropdownRef = useRef<HTMLDivElement>(null)
   const modelDropdownRef = useRef<HTMLDivElement>(null)
   const abortRef = useRef<AbortController | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const currentMode = MODES.find(m => m.key === mode) || MODES[0]
 
@@ -114,6 +119,12 @@ export function IDEChat({ onToggle, activeFileContent, activeFilePath }: IDEChat
     document.addEventListener('mousedown', handleClick)
     return () => document.removeEventListener('mousedown', handleClick)
   }, [])
+
+  useEffect(() => {
+    if (mode === 'agent') {
+      setShowSessions(false)
+    }
+  }, [mode])
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -176,7 +187,7 @@ export function IDEChat({ onToggle, activeFileContent, activeFilePath }: IDEChat
     try {
       const params = new URLSearchParams({ query, fileTypes: '.ts,.tsx,.js,.jsx,.css,.json,.prisma,.md' })
       const res = await fetch(`${IDE_SERVER_URL}/files/search?${params}`, {
-        headers: { 'X-IDE-Key': IDE_KEY }
+        headers: getIDEHeaders()
       })
       const data = await res.json()
       setAutocompleteFiles((data.results || []).map((r: any) => ({
@@ -194,7 +205,7 @@ export function IDEChat({ onToggle, activeFileContent, activeFilePath }: IDEChat
     try {
       const params = new URLSearchParams({ path: file.path })
       const res = await fetch(`${IDE_SERVER_URL}/files/read?${params}`, {
-        headers: { 'X-IDE-Key': IDE_KEY }
+        headers: getIDEHeaders()
       })
       const data = await res.json()
       if (data.content) {
@@ -246,6 +257,7 @@ export function IDEChat({ onToggle, activeFileContent, activeFilePath }: IDEChat
           sessionId,
           mode,
           model: selectedModel,
+          workspaceRoot: getWorkspaceRoot() || undefined,
           context: { files: contextFiles.map(f => ({ path: f.name, content: f.content })) }
         }),
         signal: ac.signal
@@ -298,6 +310,9 @@ export function IDEChat({ onToggle, activeFileContent, activeFilePath }: IDEChat
                 tc.duration = Date.now() - new Date(tc.id.replace('tool_', '')).getTime()
               }
               setStreamingContent(assistantContent)
+              break
+            case 'usage':
+              onTokenUpdate?.(parsed.tokens?.total || 0)
               break
             case 'done':
               break
@@ -381,12 +396,66 @@ export function IDEChat({ onToggle, activeFileContent, activeFilePath }: IDEChat
     localStorage.removeItem(`ide_chat_${sessionId}`)
   }
 
+  const fetchSessions = async () => {
+    setLoadingSessions(true)
+    try {
+      const res = await fetch(`${IDE_SERVER_URL}/sessions/list`, {
+        headers: getIDEHeaders()
+      })
+      if (!res.ok) return
+      const data = await res.json()
+      setSessionsList(data.sessions || [])
+    } catch { /* ignore */ }
+    setLoadingSessions(false)
+  }
+
+  const loadSession = async (id: string) => {
+    try {
+      const res = await fetch(`${IDE_SERVER_URL}/sessions/${id}`, {
+        headers: getIDEHeaders()
+      })
+      if (!res.ok) return
+      const data = await res.json()
+      if (data.messages) {
+        setMessages(data.messages.map((m: any) => ({
+          id: `${Date.now()}_${Math.random()}`,
+          role: m.role,
+          content: typeof m.content === 'string' ? m.content : JSON.stringify(m.content),
+          timestamp: new Date().toISOString()
+        })))
+      }
+      setShowSessions(false)
+    } catch { /* ignore */ }
+  }
+
+  useEffect(() => {
+    if (showSessions) fetchSessions()
+  }, [showSessions])
+
+  const handleAttachFile = () => {
+    fileInputRef.current?.click()
+  }
+
+  const handleFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    if (!files) return
+    for (const file of Array.from(files)) {
+      const content = await file.text()
+      setContextFiles(prev => {
+        const exists = prev.find(f => f.name === file.name)
+        if (exists) return prev.map(f => f.name === file.name ? { ...f, content } : f)
+        return [...prev, { name: file.name, content }]
+      })
+    }
+    e.target.value = ''
+  }
+
   const applyToFile = async (code: string) => {
     if (!activeFilePath) return
     try {
       await fetch(`${IDE_SERVER_URL}/files/write`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-IDE-Key': IDE_KEY },
+        headers: getIDEHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ path: activeFilePath, content: code, createDirs: false })
       })
     } catch { /* ignore */ }
@@ -409,7 +478,7 @@ export function IDEChat({ onToggle, activeFileContent, activeFilePath }: IDEChat
               {MODES.map(m => (
                 <button
                   key={m.key}
-                  onClick={() => { setMode(m.key); setShowModeDropdown(false) }}
+                  onClick={() => { setMode(m.key); setShowModeDropdown(false); onModeChange?.(m.key) }}
                   className={`flex items-start gap-2 w-full px-3 py-2 text-left hover:bg-[#1c2128] ${mode === m.key ? 'bg-[#1f6feb]/10' : ''}`}
                 >
                   <span className="text-[14px] shrink-0 mt-0.5">{m.icon}</span>
@@ -453,9 +522,35 @@ export function IDEChat({ onToggle, activeFileContent, activeFilePath }: IDEChat
           <button onClick={handleNewChat} className="p-1 rounded hover:bg-[#21262d] text-[#8b949e] hover:text-[#e6edf3]" title="Nova conversa">
             <Plus className="w-3.5 h-3.5" />
           </button>
-          <button onClick={() => setShowSessions(!showSessions)} className="p-1 rounded hover:bg-[#21262d] text-[#8b949e] hover:text-[#e6edf3]" title="Sessões">
-            <History className="w-3.5 h-3.5" />
-          </button>
+          <div className="relative">
+            <button onClick={() => setShowSessions(!showSessions)} className="p-1 rounded hover:bg-[#21262d] text-[#8b949e] hover:text-[#e6edf3]" title="Sessões">
+              <History className="w-3.5 h-3.5" />
+            </button>
+            {showSessions && (
+              <div className="absolute top-full right-0 mt-1 w-64 bg-[#161b22] border border-[#30363d] rounded-lg shadow-xl z-50 py-1 max-h-80 overflow-y-auto">
+                <div className="px-3 py-1.5 text-[10px] text-[#8b949e] uppercase tracking-wider">Histórico</div>
+                {loadingSessions ? (
+                  <p className="px-3 py-4 text-[11px] text-[#484f58] text-center">Carregando...</p>
+                ) : sessionsList.length === 0 ? (
+                  <p className="px-3 py-4 text-[11px] text-[#484f58] text-center">Nenhuma sessão</p>
+                ) : (
+                  sessionsList.map((s: any) => (
+                    <button
+                      key={s.id}
+                      onClick={() => loadSession(s.id)}
+                      className="flex items-center gap-2 w-full px-3 py-1.5 text-left hover:bg-[#1c2128] text-[11px]"
+                    >
+                      <History className="w-3 h-3 shrink-0 text-[#8b949e]" />
+                      <div className="flex-1 min-w-0">
+                        <div className="text-[#e6edf3] truncate">{s.id?.slice(0, 16)}...</div>
+                        <div className="text-[9px] text-[#484f58]">{s.messageCount || 0} mensagens</div>
+                      </div>
+                    </button>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
           <button onClick={onToggle} className="p-1 rounded hover:bg-[#21262d] text-[#8b949e] hover:text-[#e6edf3]" title="Fechar">
             <X className="w-3.5 h-3.5" />
           </button>
@@ -614,9 +709,18 @@ export function IDEChat({ onToggle, activeFileContent, activeFilePath }: IDEChat
             </div>
           )}
           <div className="absolute bottom-1.5 left-3 right-3 flex items-center gap-1.5">
-            <button className="p-1 rounded hover:bg-[#21262d] text-[#8b949e]" title="Anexar arquivo">
+            <button
+              onClick={handleAttachFile}
+              className="p-1 rounded hover:bg-[#21262d] text-[#8b949e]" title="Anexar arquivo">
               <Paperclip className="w-3.5 h-3.5" />
             </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              onChange={handleFileSelected}
+              className="hidden"
+              multiple
+            />
             <span className="text-[9px] text-[#484f58] mx-auto">~{tokenEstimate}k / 200k</span>
             <button
               onClick={handleSend}

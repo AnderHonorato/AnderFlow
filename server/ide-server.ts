@@ -151,9 +151,23 @@ function log(level: string, msg: string, meta?: unknown) {
   fs.appendFileSync(LOG_FILE, line)
 }
 
-function isPathSafe(targetPath: string): boolean {
+function isPathSafe(targetPath: string, effectiveRoot: string = ROOT_PATH): boolean {
   const resolved = path.resolve(targetPath)
-  return resolved.startsWith(ROOT_PATH) && !resolved.includes('..')
+  return resolved.startsWith(effectiveRoot) && !resolved.includes('..')
+}
+
+function getRequestRoot(req: Request): string {
+  const queryRoot = req.query.root as string | undefined
+  const headerRoot = req.headers['x-ide-workspace'] as string | undefined
+  const requestedRoot = queryRoot || headerRoot
+  if (!requestedRoot) return ROOT_PATH
+  try {
+    const resolved = path.resolve(requestedRoot)
+    if (fs.existsSync(resolved) && fs.statSync(resolved).isDirectory()) {
+      return resolved
+    }
+  } catch { /* fall through */ }
+  return ROOT_PATH
 }
 
 function rateLimiter(req: Request, res: Response, next: NextFunction) {
@@ -383,8 +397,9 @@ app.use((req: Request, _res: Response, next: NextFunction) => {
 // ═══ FILESYSTEM ROUTES ═══
 
 app.get('/files/list', (req: Request, res: Response) => {
-  const target = path.resolve(ROOT_PATH, (req.query.path as string) || '.')
-  if (!isPathSafe(target)) return res.status(403).json({ error: 'Path not allowed' })
+  const root = getRequestRoot(req)
+  const target = path.resolve(root, (req.query.path as string) || '.')
+  if (!isPathSafe(target, root)) return res.status(403).json({ error: 'Path not allowed' })
   const tree = walkDir(target)
   const totalFiles = countFiles(tree)
   const totalSize = humanSize(totalSizeBytes(tree))
@@ -392,8 +407,9 @@ app.get('/files/list', (req: Request, res: Response) => {
 })
 
 app.get('/files/read', (req: Request, res: Response) => {
-  const target = path.resolve(ROOT_PATH, (req.query.path as string) || '.')
-  if (!isPathSafe(target)) return res.status(403).json({ error: 'Path not allowed' })
+  const root = getRequestRoot(req)
+  const target = path.resolve(root, (req.query.path as string) || '.')
+  if (!isPathSafe(target, root)) return res.status(403).json({ error: 'Path not allowed' })
   if (!fs.existsSync(target)) return res.status(404).json({ error: 'File not found' })
   const stat = fs.statSync(target)
   if (stat.isDirectory()) return res.status(400).json({ error: 'Path is a directory, not a file' })
@@ -407,8 +423,9 @@ app.get('/files/read', (req: Request, res: Response) => {
 
 app.post('/files/write', (req: Request, res: Response) => {
   const { path: filePath, content, createDirs } = req.body
-  const target = path.resolve(ROOT_PATH, filePath || '')
-  if (!isPathSafe(target)) return res.status(403).json({ error: 'Path not allowed' })
+  const root = getRequestRoot(req)
+  const target = path.resolve(root, filePath || '')
+  if (!isPathSafe(target, root)) return res.status(403).json({ error: 'Path not allowed' })
 
   if (createDirs) {
     const dir = path.dirname(target)
@@ -426,8 +443,9 @@ app.post('/files/write', (req: Request, res: Response) => {
 app.post('/files/create', (req: Request, res: Response) => {
   const { path: filePath, type, content, template } = req.body
   if (!filePath) return res.status(400).json({ error: 'Path is required' })
-  const target = path.resolve(ROOT_PATH, filePath)
-  if (!isPathSafe(target)) return res.status(403).json({ error: 'Path not allowed' })
+  const root = getRequestRoot(req)
+  const target = path.resolve(root, filePath)
+  if (!isPathSafe(target, root)) return res.status(403).json({ error: 'Path not allowed' })
 
   const dir = path.dirname(target)
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
@@ -450,8 +468,9 @@ app.post('/files/create', (req: Request, res: Response) => {
 app.put('/files/edit', (req: Request, res: Response) => {
   const { path: filePath, edits } = req.body
   if (!filePath || !edits || !Array.isArray(edits)) return res.status(400).json({ error: 'path and edits[] are required' })
-  const target = path.resolve(ROOT_PATH, filePath)
-  if (!isPathSafe(target)) return res.status(403).json({ error: 'Path not allowed' })
+  const root = getRequestRoot(req)
+  const target = path.resolve(root, filePath)
+  if (!isPathSafe(target, root)) return res.status(403).json({ error: 'Path not allowed' })
   if (!fs.existsSync(target)) return res.status(404).json({ error: 'File not found' })
 
   autoCheckpoint(req, filePath)
@@ -497,8 +516,9 @@ app.put('/files/edit', (req: Request, res: Response) => {
 app.delete('/files/delete', (req: Request, res: Response) => {
   const { path: filePath, recursive } = req.body
   if (!filePath) return res.status(400).json({ error: 'Path is required' })
-  const target = path.resolve(ROOT_PATH, filePath)
-  if (!isPathSafe(target)) return res.status(403).json({ error: 'Path not allowed' })
+  const root = getRequestRoot(req)
+  const target = path.resolve(root, filePath)
+  if (!isPathSafe(target, root)) return res.status(403).json({ error: 'Path not allowed' })
   if (!fs.existsSync(target)) return res.status(404).json({ error: 'Path not found' })
 
   if (!fs.existsSync(TRASH_DIR)) fs.mkdirSync(TRASH_DIR, { recursive: true })
@@ -513,9 +533,10 @@ app.delete('/files/delete', (req: Request, res: Response) => {
 
 app.post('/files/move', (req: Request, res: Response) => {
   const { from, to } = req.body
-  const fromPath = path.resolve(ROOT_PATH, from || '')
-  const toPath = path.resolve(ROOT_PATH, to || '')
-  if (!isPathSafe(fromPath) || !isPathSafe(toPath)) return res.status(403).json({ error: 'Path not allowed' })
+  const root = getRequestRoot(req)
+  const fromPath = path.resolve(root, from || '')
+  const toPath = path.resolve(root, to || '')
+  if (!isPathSafe(fromPath, root) || !isPathSafe(toPath, root)) return res.status(403).json({ error: 'Path not allowed' })
   if (!fs.existsSync(fromPath)) return res.status(404).json({ error: 'Source not found' })
 
   const toDir = path.dirname(toPath)
@@ -527,9 +548,10 @@ app.post('/files/move', (req: Request, res: Response) => {
 
 app.post('/files/copy', (req: Request, res: Response) => {
   const { from, to } = req.body
-  const fromPath = path.resolve(ROOT_PATH, from || '')
-  const toPath = path.resolve(ROOT_PATH, to || '')
-  if (!isPathSafe(fromPath) || !isPathSafe(toPath)) return res.status(403).json({ error: 'Path not allowed' })
+  const root = getRequestRoot(req)
+  const fromPath = path.resolve(root, from || '')
+  const toPath = path.resolve(root, to || '')
+  if (!isPathSafe(fromPath, root) || !isPathSafe(toPath, root)) return res.status(403).json({ error: 'Path not allowed' })
   if (!fs.existsSync(fromPath)) return res.status(404).json({ error: 'Source not found' })
 
   const toDir = path.dirname(toPath)
@@ -542,8 +564,9 @@ app.post('/files/copy', (req: Request, res: Response) => {
 app.post('/files/rename', (req: Request, res: Response) => {
   const { path: filePath, newName } = req.body
   if (!filePath || !newName) return res.status(400).json({ error: 'path and newName are required' })
-  const target = path.resolve(ROOT_PATH, filePath)
-  if (!isPathSafe(target)) return res.status(403).json({ error: 'Path not allowed' })
+  const root = getRequestRoot(req)
+  const target = path.resolve(root, filePath)
+  if (!isPathSafe(target, root)) return res.status(403).json({ error: 'Path not allowed' })
   if (!fs.existsSync(target)) return res.status(404).json({ error: 'Path not found' })
 
   const newPath = path.join(path.dirname(target), sanitize(newName))
@@ -560,8 +583,9 @@ app.get('/files/search', (req: Request, res: Response) => {
 
   if (!query) return res.status(400).json({ error: 'query is required' })
 
-  const target = path.resolve(ROOT_PATH, searchPath)
-  if (!isPathSafe(target)) return res.status(403).json({ error: 'Path not allowed' })
+  const root = getRequestRoot(req)
+  const target = path.resolve(root, searchPath)
+  if (!isPathSafe(target, root)) return res.status(403).json({ error: 'Path not allowed' })
 
   const results = searchFiles(target, query, regex, caseSensitive, fileTypes)
 
@@ -574,7 +598,8 @@ app.get('/files/search', (req: Request, res: Response) => {
   res.json({ results, total: results.length })
 })
 
-app.get('/files/recent', (_req: Request, res: Response) => {
+app.get('/files/recent', (req: Request, res: Response) => {
+  const root = getRequestRoot(req)
   const files: { path: string; modified: string; size: number }[] = []
   const skipDirs = new Set(['node_modules', '.next', '.git', '.ide-trash', 'dist', '.turbo'])
 
@@ -590,7 +615,7 @@ app.get('/files/recent', (_req: Request, res: Response) => {
           try {
             const stat = fs.statSync(fullPath)
             if (stat.size <= MAX_FILE_SIZE) {
-              files.push({ path: fullPath.replace(ROOT_PATH, '').replace(/\\/g, '/'), modified: stat.mtime.toISOString(), size: stat.size })
+              files.push({ path: fullPath.replace(root, '').replace(/\\/g, '/'), modified: stat.mtime.toISOString(), size: stat.size })
             }
           } catch { /* skip */ }
         }
@@ -598,17 +623,18 @@ app.get('/files/recent', (_req: Request, res: Response) => {
     } catch { /* skip */ }
   }
 
-  scan(ROOT_PATH)
+  scan(root)
   files.sort((a, b) => new Date(b.modified).getTime() - new Date(a.modified).getTime())
   res.json({ files: files.slice(0, 20) })
 })
 
 app.get('/files/diff', (req: Request, res: Response) => {
-  const target = path.resolve(ROOT_PATH, (req.query.path as string) || '.')
-  if (!isPathSafe(target)) return res.status(403).json({ error: 'Path not allowed' })
+  const root = getRequestRoot(req)
+  const target = path.resolve(root, (req.query.path as string) || '.')
+  if (!isPathSafe(target, root)) return res.status(403).json({ error: 'Path not allowed' })
   if (!fs.existsSync(target)) return res.status(404).json({ error: 'File not found' })
 
-  exec(`git --no-pager diff HEAD -- "${target}"`, { cwd: ROOT_PATH, maxBuffer: 10 * 1024 * 1024 }, (err, stdout) => {
+  exec(`git --no-pager diff HEAD -- "${target}"`, { cwd: root, maxBuffer: 10 * 1024 * 1024 }, (err, stdout) => {
     if (err) return res.json({ diff: '', error: err.message })
     res.json({ diff: stdout })
   })
@@ -617,18 +643,19 @@ app.get('/files/diff', (req: Request, res: Response) => {
 app.post('/files/restore', (req: Request, res: Response) => {
   const { path: filePath } = req.body
   if (!filePath) return res.status(400).json({ error: 'Path is required' })
+  const root = getRequestRoot(req)
   const trashTarget = path.resolve(TRASH_DIR, path.basename(filePath))
   if (!fs.existsSync(trashTarget)) {
     const matches = fs.readdirSync(TRASH_DIR).filter(f => f.endsWith('_' + path.basename(filePath)))
     if (matches.length === 0) return res.status(404).json({ error: 'File not found in trash' })
     matches.sort().reverse()
-    const restoreTarget = path.resolve(ROOT_PATH, filePath)
+    const restoreTarget = path.resolve(root, filePath)
     const restoreDir = path.dirname(restoreTarget)
     if (!fs.existsSync(restoreDir)) fs.mkdirSync(restoreDir, { recursive: true })
     fs.renameSync(path.join(TRASH_DIR, matches[0]), restoreTarget)
     return res.json({ success: true, restoredTo: restoreTarget })
   }
-  const restoreTarget = path.resolve(ROOT_PATH, filePath)
+  const restoreTarget = path.resolve(root, filePath)
   const restoreDir = path.dirname(restoreTarget)
   if (!fs.existsSync(restoreDir)) fs.mkdirSync(restoreDir, { recursive: true })
   fs.renameSync(trashTarget, restoreTarget)

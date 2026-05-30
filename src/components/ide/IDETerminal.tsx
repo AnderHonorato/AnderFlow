@@ -3,10 +3,9 @@
 import { useState, useRef, useEffect } from 'react'
 import { Terminal, X, Plus, Loader2, ChevronRight, ChevronDown, AlertCircle, GitBranch, Wand2 } from 'lucide-react'
 import type { Diagnostic, GitStats } from './ide-types'
+import { getIDEHeaders } from '@/lib/ide-workspace'
 
 const IDE_SERVER_URL = process.env.NEXT_PUBLIC_IDE_SERVER_URL || 'http://localhost:3002'
-const IDE_KEY = process.env.NEXT_PUBLIC_IDE_KEY || 'anderflow-ide-dev-key'
-
 interface TerminalLine {
   id: string
   type: 'input' | 'output' | 'error'
@@ -252,7 +251,7 @@ function TerminalContent({ tabId, lines, setTabs }: { tabId: string; lines: Term
     try {
       const res = await fetch(`${IDE_SERVER_URL}/terminal/run`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-IDE-Key': IDE_KEY },
+        headers: getIDEHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ command: cmd, timeout: 60000 })
       })
       const data = await res.json()
@@ -351,7 +350,7 @@ function ProblemsContent({
     setRunning(true)
     try {
       const res = await fetch(`${IDE_SERVER_URL}/lsp/diagnostics`, {
-        headers: { 'X-IDE-Key': IDE_KEY }
+        headers: getIDEHeaders()
       })
       const data = await res.json()
       onUpdateDiagnostics(data.errors || [])
@@ -466,7 +465,7 @@ function OutputContent() {
     const interval = setInterval(async () => {
       try {
         const res = await fetch(`${IDE_SERVER_URL}/health`, {
-          headers: { 'X-IDE-Key': IDE_KEY },
+          headers: getIDEHeaders(),
           signal: AbortSignal.timeout(3000)
         })
         const data = await res.json()
@@ -539,7 +538,7 @@ function GitContent({ gitStats }: { gitStats: GitStats }) {
   const fetchLog = async () => {
     try {
       const res = await fetch(`${IDE_SERVER_URL}/git/log?limit=8`, {
-        headers: { 'X-IDE-Key': IDE_KEY }
+        headers: getIDEHeaders()
       })
       const data = await res.json()
       setCommits(data.commits || [])
@@ -549,7 +548,7 @@ function GitContent({ gitStats }: { gitStats: GitStats }) {
   const stageFile = async (file: string) => {
     try {
       await fetch(`${IDE_SERVER_URL}/git/stage`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json', 'X-IDE-Key': IDE_KEY },
+        method: 'POST', headers: getIDEHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ files: [file] })
       })
     } catch { /* ignore */ }
@@ -558,7 +557,7 @@ function GitContent({ gitStats }: { gitStats: GitStats }) {
   const unstageFile = async (file: string) => {
     try {
       await fetch(`${IDE_SERVER_URL}/git/unstage`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json', 'X-IDE-Key': IDE_KEY },
+        method: 'POST', headers: getIDEHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ files: [file] })
       })
     } catch { /* ignore */ }
@@ -577,12 +576,12 @@ function GitContent({ gitStats }: { gitStats: GitStats }) {
     setLoading(true)
     try {
       await fetch(`${IDE_SERVER_URL}/git/commit`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json', 'X-IDE-Key': IDE_KEY },
+        method: 'POST', headers: getIDEHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ message: commitMsg })
       })
       if (pushAfter) {
         await fetch(`${IDE_SERVER_URL}/git/push`, {
-          method: 'POST', headers: { 'Content-Type': 'application/json', 'X-IDE-Key': IDE_KEY },
+          method: 'POST', headers: getIDEHeaders({ 'Content-Type': 'application/json' }),
           body: JSON.stringify({})
         })
       }

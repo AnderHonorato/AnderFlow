@@ -5,10 +5,9 @@ import {
   Send, Check, ChevronDown, ChevronRight, X, Pause, Play,
   Edit3, Loader2, FileDiff, RotateCcw, FileText
 } from 'lucide-react'
+import { getIDEHeaders } from '@/lib/ide-workspace'
 
 const IDE_SERVER_URL = process.env.NEXT_PUBLIC_IDE_SERVER_URL || 'http://localhost:3002'
-const IDE_KEY = process.env.NEXT_PUBLIC_IDE_KEY || 'anderflow-ide-dev-key'
-
 type Phase = 'input' | 'plan' | 'executing' | 'review'
 type Autonomy = 'always' | 'perFile' | 'total'
 type StepStatus = 'pending' | 'running' | 'done' | 'failed'
@@ -62,7 +61,7 @@ export function IDEAgentMode({ onClose, activeFilePath, onOpenFile }: IDEAgentMo
     try {
       const res = await fetch(`${IDE_SERVER_URL}/checkpoint/create`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-IDE-Key': IDE_KEY },
+        headers: getIDEHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ name, files: [] })
       })
       const data = await res.json()
@@ -177,7 +176,7 @@ Contexto: Voce esta executando um plano multi-etapas no modo agente.
   const completeExecution = async () => {
     try {
       const res = await fetch(`${IDE_SERVER_URL}/lsp/diagnostics`, {
-        headers: { 'X-IDE-Key': IDE_KEY }
+        headers: getIDEHeaders()
       })
       const data = await res.json()
       setTypecheckResult((data.errors || []).length === 0 ? 'ok' : 'error')
@@ -199,7 +198,7 @@ Contexto: Voce esta executando um plano multi-etapas no modo agente.
     try {
       await fetch(`${IDE_SERVER_URL}/checkpoint/restore/${checkpointId}`, {
         method: 'POST',
-        headers: { 'X-IDE-Key': IDE_KEY }
+        headers: getIDEHeaders()
       })
     } catch { /* ignore */ }
     setPhase('input')
