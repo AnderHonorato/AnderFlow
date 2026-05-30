@@ -164,9 +164,13 @@ function getRequestRoot(req: Request): string {
   try {
     const resolved = path.resolve(requestedRoot)
     if (fs.existsSync(resolved) && fs.statSync(resolved).isDirectory()) {
+      console.log(`[IDE Server] Workspace root: ${resolved}`)
       return resolved
     }
-  } catch { /* fall through */ }
+    console.log(`[IDE Server] Workspace root not found: ${resolved} (requested: ${requestedRoot})`)
+  } catch (err: any) {
+    console.log(`[IDE Server] Workspace root error: ${err.message}`)
+  }
   return ROOT_PATH
 }
 
@@ -403,7 +407,7 @@ app.get('/files/list', (req: Request, res: Response) => {
   const tree = walkDir(target)
   const totalFiles = countFiles(tree)
   const totalSize = humanSize(totalSizeBytes(tree))
-  res.json({ tree, totalFiles, totalSize })
+  res.json({ tree, totalFiles, totalSize, workspaceRoot: root })
 })
 
 app.get('/files/read', (req: Request, res: Response) => {
@@ -1187,9 +1191,15 @@ app.get('/sessions/:id', (req: Request, res: Response) => {
 })
 
 app.put('/sessions/:id', (req: Request, res: Response) => {
-  const { messages, summary } = req.body
+  const { messages, summary, name } = req.body
   const existing = db.prepare('SELECT id FROM sessions WHERE id = ?').get(req.params.id)
-  if (!existing) return res.status(404).json({ error: 'Session not found' })
+  
+  if (!existing) {
+    const now = new Date().toISOString()
+    db.prepare('INSERT INTO sessions (id, name, messages, context, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)')
+      .run(req.params.id, name || 'Chat', messages ? JSON.stringify(messages) : '[]', null, now, now)
+    return res.json({ success: true, id: req.params.id, created: true })
+  }
 
   const updates: string[] = []
   const params: unknown[] = []

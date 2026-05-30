@@ -82,6 +82,7 @@ export function IDEChat({ onToggle, activeFileContent, activeFilePath, onModeCha
   const [input, setInput] = useState('')
   const [isStreaming, setIsStreaming] = useState(false)
   const [streamingContent, setStreamingContent] = useState('')
+  const [streamingTools, setStreamingTools] = useState<ToolCall[]>([])
   const [showToolLog, setShowToolLog] = useState(false)
   const [showSessions, setShowSessions] = useState(false)
   const [sessionsList, setSessionsList] = useState<{ id: string; updatedAt: string; messageCount: number }[]>([])
@@ -236,6 +237,7 @@ export function IDEChat({ onToggle, activeFileContent, activeFilePath, onModeCha
     setInput('')
     setIsStreaming(true)
     setStreamingContent('')
+    setStreamingTools([])
 
     const apiMessages = [
       ...messages.map(m => ({
@@ -293,13 +295,15 @@ export function IDEChat({ onToggle, activeFileContent, activeFilePath, onModeCha
               setStreamingContent(assistantContent)
               break
             case 'tool_use':
-              toolCalls.push({
+              const newTc: ToolCall = {
                 id: `tool_${Date.now()}_${toolCalls.length}`,
                 name: parsed.tool,
                 input: parsed.input || {},
                 status: 'running',
                 duration: undefined
-              })
+              }
+              toolCalls.push(newTc)
+              setStreamingTools([...toolCalls])
               setStreamingContent(assistantContent)
               break
             case 'tool_result':
@@ -309,6 +313,7 @@ export function IDEChat({ onToggle, activeFileContent, activeFilePath, onModeCha
                 tc.status = parsed.result?.error ? 'error' : 'success'
                 tc.duration = Date.now() - new Date(tc.id.replace('tool_', '')).getTime()
               }
+              setStreamingTools([...toolCalls])
               setStreamingContent(assistantContent)
               break
             case 'usage':
@@ -619,6 +624,16 @@ export function IDEChat({ onToggle, activeFileContent, activeFilePath, onModeCha
                 <div dangerouslySetInnerHTML={{ __html: simpleMarkdown(streamingContent) }} />
                 <span className="inline-block w-1.5 h-4 bg-[#58a6ff] animate-pulse ml-0.5 align-middle rounded-sm" />
               </div>
+            </div>
+          </div>
+        )}
+        {isStreaming && streamingTools.length > 0 && (
+          <div className="flex gap-2 justify-start">
+            <div className="w-6 h-6 shrink-0 mt-1" />
+            <div className="max-w-[85%] space-y-1">
+              {streamingTools.map(tc => (
+                <ToolCallCard key={tc.id} toolCall={tc} />
+              ))}
             </div>
           </div>
         )}

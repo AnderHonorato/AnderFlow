@@ -65,6 +65,9 @@ npx tsx prisma/seed.ts
 # Rodar servidor de desenvolvimento
 npm run dev
 
+#rodar servidor do IDE
+npm run ide-server
+
 # Roda com edição em tempo real
 npm run watch
 # → http://localhost:3000

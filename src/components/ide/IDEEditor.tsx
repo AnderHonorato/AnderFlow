@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { XCircle, Copy, Wand2, Pencil, Save, X, GitCompare, Eye, PanelLeftOpen } from 'lucide-react'
+import { XCircle, Copy, Wand2, Pencil, Save, X, GitCompare, Eye } from 'lucide-react'
 import type { Tab, FileContent, Diagnostic } from './ide-types'
 import { getIDEHeaders } from '@/lib/ide-workspace'
 
@@ -20,6 +20,7 @@ interface IDEEditorProps {
   gitDiffAfter?: string
   onAcceptDiff?: () => void
   onRejectDiff?: () => void
+  onToggleTerminal?: () => void
 }
 
 const FILE_ICONS: Record<string, string> = {
@@ -134,7 +135,8 @@ export function IDEEditor({
   gitDiffBefore,
   gitDiffAfter,
   onAcceptDiff,
-  onRejectDiff
+  onRejectDiff,
+  onToggleTerminal
 }: IDEEditorProps) {
   const [editContent, setEditContent] = useState('')
   const [isEditing, setIsEditing] = useState(false)
@@ -369,6 +371,45 @@ export function IDEEditor({
             </div>
           ))
         )}
+      </div>
+    )
+  }
+
+  const isMdPreview = activeFile && (activeFile.path.endsWith('.md') || activeFile.path.endsWith('.MD'))
+
+  return (
+    <div className="flex flex-col overflow-hidden" style={{ gridArea: 'editor' }}>
+      <div
+        ref={tabsScrollRef}
+        className="flex items-center shrink-0 border-b border-[#21262d] bg-[#161b22] overflow-x-auto scrollbar-none"
+        style={{ height: '32px' }}
+      >
+        {openFiles.map(tab => {
+          const ext = getExt(tab.name)
+          return (
+            <div
+              key={tab.id}
+              onClick={() => onTabSelect(tab.id)}
+              className={`flex items-center gap-1.5 px-3 cursor-pointer border-r border-[#21262d] shrink-0 select-none group h-full ${
+                tab.id === activeTabId
+                  ? 'bg-[#0d1117] text-[#e6edf3] border-t-[1px] border-t-[#1f6feb]'
+                  : 'text-[#8b949e] hover:bg-[#21262d]'
+              }`}
+            >
+              <span className="w-3.5 h-3.5 flex items-center justify-center shrink-0"
+                dangerouslySetInnerHTML={{ __html: getFileIcon(ext) }} />
+              <span className="text-[12px] truncate max-w-[140px]">{tab.name}</span>
+              {tab.isDirty && <span className="text-orange-400 text-[10px] leading-none">●</span>}
+              <button
+                onClick={(e) => { e.stopPropagation(); onTabClose(tab.id) }}
+                className={`p-0.5 rounded hover:bg-[#30363d] ${tab.id === activeTabId ? '' : 'opacity-0 group-hover:opacity-100'}`}
+              >
+                <XCircle className="w-3 h-3" />
+              </button>
+            </div>
+          )
+        })}
+
         <div className="flex-1" />
 
         <button
@@ -381,6 +422,7 @@ export function IDEEditor({
           )}
         </button>
         <button
+          onClick={onToggleTerminal}
           className="flex items-center gap-1 px-2.5 h-full text-[11px] text-[#8b949e] hover:bg-[#21262d] shrink-0 border-l border-[#21262d]"
         >
           TERMINAL
@@ -403,12 +445,6 @@ export function IDEEditor({
             DIFF
           </button>
         )}
-        <button
-          className="flex items-center justify-center w-8 h-full text-[#8b949e] hover:bg-[#21262d] shrink-0 border-l border-[#21262d]"
-          title="Split Editor"
-        >
-          <PanelLeftOpen className="w-3 h-3" />
-        </button>
       </div>
 
       {activeFile && (
@@ -467,7 +503,13 @@ export function IDEEditor({
             )}
           </div>
         ) : (
-          renderWelcome()
+          <div className="flex flex-col items-center justify-center h-full text-center">
+            <div className="text-6xl mb-4 opacity-20">📄</div>
+            <p className="text-[13px] text-[#484f58] mb-1">Nenhum arquivo aberto</p>
+            <p className="text-[11px] text-[#484f58]">
+              Use <kbd className="px-1.5 py-0.5 rounded bg-[#21262d] text-[#8b949e] text-[10px] border border-[#30363d]">Ctrl+P</kbd> para abrir um arquivo
+            </p>
+          </div>
         )}
       </div>
     </div>
