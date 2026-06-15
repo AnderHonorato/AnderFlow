@@ -21,6 +21,7 @@ interface IDEEditorProps {
   onAcceptDiff?: () => void
   onRejectDiff?: () => void
   onToggleTerminal?: () => void
+  onToggleChat?: () => void
 }
 
 const FILE_ICONS: Record<string, string> = {
@@ -136,7 +137,8 @@ export function IDEEditor({
   gitDiffAfter,
   onAcceptDiff,
   onRejectDiff,
-  onToggleTerminal
+  onToggleTerminal,
+  onToggleChat
 }: IDEEditorProps) {
   const [editContent, setEditContent] = useState('')
   const [isEditing, setIsEditing] = useState(false)
@@ -420,6 +422,12 @@ export function IDEEditor({
           {fileDiagnostics.length > 0 && (
             <span className="text-red-400 text-[10px]">{fileDiagnostics.length}</span>
           )}
+        </button>
+        <button
+          onClick={onToggleChat}
+          className="flex items-center gap-1 px-2.5 h-full text-[11px] text-[#8b949e] hover:bg-[#21262d] shrink-0 border-l border-[#21262d]"
+        >
+          CHAT
         </button>
         <button
           onClick={onToggleTerminal}

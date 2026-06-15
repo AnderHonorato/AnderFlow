@@ -294,6 +294,7 @@ export function IDELayout({ onClose }: IDELayoutProps) {
         onTabClose={handleTabClose}
         onSendToChat={(content: string) => {}}
         onToggleTerminal={() => setTerminalOpen(prev => !prev)}
+        onToggleChat={() => setChatOpen(prev => !prev)}
         onUpdateTab={(tabId: string, updates: Partial<Tab>) => {
           setOpenFiles(prev => prev.map(t => t.id === tabId ? { ...t, ...updates } : t))
           if (tabId === activeTabId && updates.content !== undefined) {

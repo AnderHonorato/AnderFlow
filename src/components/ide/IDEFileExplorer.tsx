@@ -134,14 +134,20 @@ export function IDEFileExplorer({ onOpenFile, activeFilePath, diagnostics }: IDE
   const workspaceDropdownRef = useRef<HTMLDivElement>(null)
   const gitStatusRef = useRef<Map<string, string>>(new Map())
 
-  const [workspaces, setWorkspaces] = useState<Workspace[]>(loadWorkspaces)
-  const [activeWorkspaceId, setActiveWorkspaceId] = useState<string | null>(loadActiveWorkspaceId)
+  const [workspaces, setWorkspaces] = useState<Workspace[]>([])
+  const [activeWorkspaceId, setActiveWorkspaceId] = useState<string | null>(null)
   const [showWorkspaceDropdown, setShowWorkspaceDropdown] = useState(false)
   const [showNewWorkspace, setShowNewWorkspace] = useState(false)
   const [newWorkspacePath, setNewWorkspacePath] = useState('')
   const [newWorkspaceName, setNewWorkspaceName] = useState('')
+  const [workspaceCtxMenu, setWorkspaceCtxMenu] = useState<{ x: number; y: number; ws: Workspace } | null>(null)
 
   const activeWorkspace = workspaces.find(w => w.id === activeWorkspaceId) || null
+
+  useEffect(() => {
+    setWorkspaces(loadWorkspaces())
+    setActiveWorkspaceId(loadActiveWorkspaceId())
+  }, [])
 
   const diagMap = flatDiagnosticsMap(diagnostics)
 
@@ -244,6 +250,7 @@ export function IDEFileExplorer({ onOpenFile, activeFilePath, diagnostics }: IDE
         setShowWorkspaceDropdown(false)
       }
       setContextMenu(null)
+      setWorkspaceCtxMenu(null)
     }
     document.addEventListener('click', handleClickOutside)
     return () => document.removeEventListener('click', handleClickOutside)
@@ -278,8 +285,8 @@ export function IDEFileExplorer({ onOpenFile, activeFilePath, diagnostics }: IDE
     setShowWorkspaceDropdown(false)
   }
 
-  const handleDeleteWorkspace = (id: string, e: React.MouseEvent) => {
-    e.stopPropagation()
+  const handleDeleteWorkspace = (id: string, e?: React.MouseEvent | any) => {
+    e?.stopPropagation?.()
     const next = workspaces.filter(w => w.id !== id)
     setWorkspaces(next)
     if (activeWorkspaceId === id) {
@@ -297,11 +304,7 @@ export function IDEFileExplorer({ onOpenFile, activeFilePath, diagnostics }: IDE
     try {
       if ('showDirectoryPicker' in window) {
         const dirHandle = await (window as any).showDirectoryPicker({ mode: 'read' })
-        const name = dirHandle.name
-        setNewWorkspaceName(name)
-        if (!newWorkspacePath) {
-          setNewWorkspacePath(name)
-        }
+        setNewWorkspaceName(dirHandle.name)
       }
     } catch (err: any) {
       if (err?.name === 'AbortError') return
@@ -313,6 +316,12 @@ export function IDEFileExplorer({ onOpenFile, activeFilePath, diagnostics }: IDE
     setTree([])
     setLoading(false)
     setShowWorkspaceDropdown(false)
+  }
+
+  const handleWorkspaceContextMenu = (e: React.MouseEvent, ws: Workspace) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setWorkspaceCtxMenu({ x: e.clientX, y: e.clientY, ws })
   }
 
   const toggleFolder = (nodePath: string) => {
@@ -505,14 +514,18 @@ export function IDEFileExplorer({ onOpenFile, activeFilePath, diagnostics }: IDE
           {showWorkspaceDropdown && (
             <div className="absolute top-full left-0 mt-1 w-64 bg-[#161b22] border border-[#30363d] rounded-lg shadow-xl z-50 py-1">
               {workspaces.map(ws => (
-                <button
+                <div
                   key={ws.id}
                   onClick={() => handleSelectWorkspace(ws)}
-                  className={`flex items-center gap-2 w-full px-3 py-1.5 text-left text-[12px] group ${
+                  onContextMenu={(e) => handleWorkspaceContextMenu(e, ws)}
+                  className={`flex items-center gap-2 w-full px-3 py-1.5 text-left text-[12px] cursor-pointer ${
                     ws.id === activeWorkspaceId
                       ? 'bg-[#1f6feb]/20 text-[#58a6ff]'
                       : 'text-[#e6edf3] hover:bg-[#1c2128]'
                   }`}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => { if (e.key === 'Enter') handleSelectWorkspace(ws) }}
                 >
                   <FolderOpen className="w-3.5 h-3.5 shrink-0 text-[#8b949e]" />
                   <div className="flex-1 min-w-0">
@@ -522,17 +535,14 @@ export function IDEFileExplorer({ onOpenFile, activeFilePath, diagnostics }: IDE
                   {ws.id === activeWorkspaceId && (
                     <Check className="w-3.5 h-3.5 shrink-0 text-[#58a6ff]" />
                   )}
-                  <span
+                  <button
                     onClick={(e) => handleDeleteWorkspace(ws.id, e)}
-                    className="p-0.5 rounded hover:bg-[#30363d] opacity-0 group-hover:opacity-100 text-[#8b949e] hover:text-red-400 shrink-0 cursor-pointer"
-                    title="Remover"
-                    role="button"
-                    tabIndex={0}
-                    onKeyDown={(e) => { if (e.key === 'Enter') handleDeleteWorkspace(ws.id, e as any) }}
+                    className="p-0.5 rounded hover:bg-red-500/20 text-[#8b949e] hover:text-red-400 shrink-0"
+                    title="Remover da lista (não apaga arquivos)"
                   >
                     <X className="w-3 h-3" />
-                  </span>
-                </button>
+                  </button>
+                </div>
               ))}
 
               {activeWorkspaceId && (
@@ -555,6 +565,29 @@ export function IDEFileExplorer({ onOpenFile, activeFilePath, diagnostics }: IDE
                 <Plus className="w-3.5 h-3.5" />
                 Novo Espaço de Trabalho
               </button>
+
+              {workspaceCtxMenu && (
+                <div
+                  className="fixed z-[300] bg-[#161b22] border border-[#30363d] rounded-lg shadow-xl py-1 min-w-[180px] text-[12px]"
+                  style={{ left: workspaceCtxMenu.x, top: workspaceCtxMenu.y }}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <button
+                    onClick={() => { handleSelectWorkspace(workspaceCtxMenu.ws); setWorkspaceCtxMenu(null) }}
+                    className="flex items-center gap-2 w-full px-3 py-1.5 text-left text-[#e6edf3] hover:bg-[#1c2128]"
+                  >
+                    <FolderOpen className="w-3.5 h-3.5 text-[#58a6ff]" />
+                    Abrir
+                  </button>
+                  <button
+                    onClick={() => { handleDeleteWorkspace(workspaceCtxMenu.ws.id, {} as any); setWorkspaceCtxMenu(null) }}
+                    className="flex items-center gap-2 w-full px-3 py-1.5 text-left text-red-400 hover:bg-[#1c2128]"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    Remover da lista
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -634,7 +667,7 @@ export function IDEFileExplorer({ onOpenFile, activeFilePath, diagnostics }: IDE
             </div>
             <div className="p-4 space-y-3">
               <div>
-                <label className="text-[11px] text-[#8b949e] block mb-1">Caminho da pasta do projeto</label>
+                <label className="text-[11px] text-[#8b949e] block mb-1">Caminho absoluto da pasta</label>
                 <div className="flex gap-2">
                   <input
                     value={newWorkspacePath}
@@ -648,12 +681,14 @@ export function IDEFileExplorer({ onOpenFile, activeFilePath, diagnostics }: IDE
                     <button
                       onClick={handleBrowseFolder}
                       className="flex items-center gap-1.5 px-3 py-2 rounded bg-[#21262d] text-[#e6edf3] text-[12px] hover:bg-[#30363d] border border-[#30363d] shrink-0"
+                      title="Seleciona a pasta para preencher o nome automaticamente"
                     >
                       <FolderOpen className="w-3.5 h-3.5 text-[#58a6ff]" />
                       Procurar
                     </button>
                   )}
                 </div>
+                <p className="text-[9px] text-[#484f58] mt-1">Use o botão Procurar para preencher o nome. O caminho precisa ser absoluto (ex: C:\Projetos\meu-app).</p>
               </div>
               <div>
                 <label className="text-[11px] text-[#8b949e] block mb-1">Nome (opcional)</label>
